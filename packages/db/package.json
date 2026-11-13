@@ -1,0 +1,8 @@
+{
+  "name": "@baho/db",
+  "private": true,
+  "version": "0.0.0",
+  "devDependencies": {
+    "pgsql-parser": "^18.3.1"
+  }
+}

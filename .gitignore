@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.env
+.env.local
+*.local
+.DS_Store
+Thumbs.db
+
+# Supabase local dev
+.supabase/
+
+# PowerSync local dev
+.powersync/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+
+# Scratch ETL output (generated SQL shouldn't be committed — review and
+# apply it manually with psql, then discard or archive outside git)
+tools/excel-migration/*.sql
+tools/pw-test/

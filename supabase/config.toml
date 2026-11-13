@@ -1,0 +1,31 @@
+# Supabase project config for local dev (`supabase start`) once the
+# Supabase CLI is available in the dev environment. Schema lives in
+# packages/db/migrations (not supabase/migrations) so it stays the single
+# source of truth shared by local Supabase, PowerSync's Postgres
+# connection, and any future non-Supabase hosting option — point this
+# project at that folder rather than duplicating migrations here:
+#
+#   supabase db reset --db-url <local-db-url> && \
+#     for f in packages/db/migrations/*.sql; do psql <local-db-url> -f "$f"; done
+
+project_id = "baho-coffee-ims"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:5183"
+additional_redirect_urls = []
+jwt_expiry = 3600
+enable_signup = false # users are provisioned by an admin, not self-registration

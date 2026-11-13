@@ -1,0 +1,66 @@
+# PowerSync sync rules.
+#
+# Two kinds of buckets:
+#  - Reference/config data: synced UNCONDITIONALLY to every device, since
+#    offline estimate calculation (ratio x cherry input) needs these
+#    tables locally even with zero connectivity.
+#  - Per-facility transactional data: filtered to the facilities the
+#    signed-in user is assigned to via user_roles, so a clerk's device
+#    only pulls their own station's data (keeps local SQLite small on
+#    modest station hardware) while HQ/global roles see everything.
+#
+# request.jwt() exposes the Supabase Auth JWT claims. facility_ids is
+# populated by a Postgres function the JWT-minting hook calls (see
+# packages/db/migrations/0006_rls.sql's auth_user_facility_ids()).
+
+bucket_definitions:
+  reference_data:
+    data:
+      - SELECT * FROM roles
+      - SELECT * FROM crop_years
+      - SELECT * FROM admin_units
+      - SELECT * FROM expense_categories
+      - SELECT * FROM service_types
+      - SELECT * FROM export_grades
+      - SELECT * FROM facilities
+      - SELECT * FROM process_types
+      - SELECT * FROM process_grades
+      - SELECT * FROM process_grade_ratios
+      - SELECT * FROM sub_processes
+
+  station_data:
+    parameters: SELECT facility_id FROM user_roles WHERE user_id = request.user_id()
+    data:
+      - SELECT * FROM farmers WHERE home_facility_id = bucket.facility_id
+      - SELECT * FROM cherry_receipts WHERE facility_id = bucket.facility_id
+      - SELECT * FROM cherry_receipt_lines WHERE cherry_receipt_id IN (SELECT id FROM cherry_receipts WHERE facility_id = bucket.facility_id)
+      - SELECT * FROM cherry_payments WHERE cherry_receipt_id IN (SELECT id FROM cherry_receipts WHERE facility_id = bucket.facility_id)
+      - SELECT * FROM cash_ledger_entries WHERE facility_id = bucket.facility_id
+      - SELECT * FROM bank_transfers WHERE facility_id = bucket.facility_id
+      - SELECT * FROM casual_laborers WHERE facility_id = bucket.facility_id
+      - SELECT * FROM labor_pay_periods WHERE facility_id = bucket.facility_id
+      - SELECT * FROM labor_attendance WHERE pay_period_id IN (SELECT id FROM labor_pay_periods WHERE facility_id = bucket.facility_id)
+      - SELECT * FROM expense_receipts WHERE facility_id = bucket.facility_id
+      - SELECT * FROM processing_lots WHERE facility_id = bucket.facility_id
+      - SELECT * FROM processing_lot_cherry_sources WHERE processing_lot_id IN (SELECT id FROM processing_lots WHERE facility_id = bucket.facility_id)
+      - SELECT * FROM processing_lot_estimates WHERE processing_lot_id IN (SELECT id FROM processing_lots WHERE facility_id = bucket.facility_id)
+      - SELECT * FROM processing_lot_actuals WHERE processing_lot_id IN (SELECT id FROM processing_lots WHERE facility_id = bucket.facility_id)
+      - SELECT * FROM stock_movements WHERE facility_id = bucket.facility_id
+
+  hq_data:
+    # Global/HQ roles (ADMIN, HQ_FINANCE, HQ_DRY_MILL_OPERATOR, HQ_EXPORT_MANAGER)
+    # get the full HQ dataset regardless of facility_id — see auth_user_is_global()
+    # in 0006_rls.sql for the matching Postgres RLS predicate.
+    parameters: SELECT 1 AS dummy WHERE request.jwt() ->> 'is_global' = 'true'
+    data:
+      - SELECT * FROM suppliers
+      - SELECT * FROM hq_stock_receipts
+      - SELECT * FROM dry_mill_batches
+      - SELECT * FROM dry_mill_batch_grade_outputs
+      - SELECT * FROM dry_mill_input_sources
+      - SELECT * FROM clients
+      - SELECT * FROM export_shipments
+      - SELECT * FROM export_shipment_lines
+      - SELECT * FROM committed_export_volumes
+      - SELECT * FROM client_milling_services
+      - SELECT * FROM pss_samples

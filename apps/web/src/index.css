@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light;
+  --twentieth-font: "Twentieth Century", "Tw Cen MT", "Futura", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: var(--twentieth-font);
+}
+
+body {
+  color: #1f1a17;
+  background: #f6f1eb;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.02em;
+}
+
+button,
+input,
+textarea,
+select,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.mantine-Text-root,
+.mantine-Title-root,
+.mantine-NavLink-label,
+.mantine-Button-root,
+.mantine-Badge-root {
+  font-family: var(--twentieth-font) !important;
+}
