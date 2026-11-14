@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { AppShell, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
 import {
   IconBuildingWarehouse,
@@ -12,11 +11,10 @@ import { NavLink as RouterNavLink, Navigate, Route, Routes, useLocation, useNavi
 import { LoginPage } from './features/auth/LoginPage';
 import { allowedSections, canAccessSection, sectionForPath, type Section } from './lib/access';
 import { useAuth } from './lib/authContext';
-import { defaultCwsRegistry } from './features/cws/CwsRegistryPage';
-import { defaultProcessDefinitions, ProcessOnCwsPage } from './features/cws/ProcessOnCwsPage';
+import { ProcessOnCwsPage } from './features/cws/ProcessOnCwsPage';
 import { CherryReceiptForm } from './features/reception/CherryReceiptForm';
 import { ProcessingLotForm } from './features/processing/ProcessingLotForm';
-import { SourceRegistryPage, defaultSourceRegistry } from './features/drymill/SourceRegistryPage';
+import { SourceRegistryPage } from './features/drymill/SourceRegistryPage';
 import { StockUpdatePage } from './features/drymill/StockUpdatePage';
 import { ParchProcessingPage } from './features/drymill/ParchProcessingPage';
 import { ExportUpdatesPage } from './features/drymill/ExportUpdatesPage';
@@ -104,36 +102,6 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading, logout } = useAuth();
-  const [processDefinitions, setProcessDefinitions] = useState(() => {
-    const stored = localStorage.getItem('baho-process-definitions');
-    if (!stored) return defaultProcessDefinitions;
-
-    try {
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultProcessDefinitions;
-    } catch {
-      return defaultProcessDefinitions;
-    }
-  });
-  const [sourceRegistry, setSourceRegistry] = useState(() => {
-    const stored = localStorage.getItem('baho-source-registry');
-    if (!stored) return defaultSourceRegistry;
-
-    try {
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultSourceRegistry;
-    } catch {
-      return defaultSourceRegistry;
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('baho-source-registry', JSON.stringify(sourceRegistry));
-  }, [sourceRegistry]);
-
-  useEffect(() => {
-    localStorage.setItem('baho-process-definitions', JSON.stringify(processDefinitions));
-  }, [processDefinitions]);
 
   const isLoginPage = location.pathname === '/';
   const isDashboardPage = location.pathname === '/dashboard';
@@ -145,14 +113,6 @@ function App() {
     : currentSection === 'cws'
       ? [navSections[1]]
       : [];
-
-  const addProcessDefinition = (process: typeof defaultProcessDefinitions[number]) => {
-    setProcessDefinitions((previous) => [process, ...previous]);
-  };
-
-  const addSourceRegistryEntry = (source: typeof defaultSourceRegistry[number]) => {
-    setSourceRegistry((previous) => [source, ...previous]);
-  };
 
   if (loading) {
     return (
@@ -261,13 +221,13 @@ function App() {
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/dashboard" element={<DashboardLandingPage />} />
-          <Route path="/drymill/stock" element={<StockUpdatePage sourceList={sourceRegistry} />} />
-          <Route path="/drymill/sources" element={<SourceRegistryPage sourceList={sourceRegistry} onAddSource={addSourceRegistryEntry} />} />
+          <Route path="/drymill/stock" element={<StockUpdatePage />} />
+          <Route path="/drymill/sources" element={<SourceRegistryPage />} />
           <Route path="/drymill/processing" element={<ParchProcessingPage />} />
           <Route path="/drymill/export" element={<ExportUpdatesPage />} />
           <Route path="/reception" element={<CherryReceiptForm />} />
-          <Route path="/processing" element={<ProcessingLotForm processDefinitions={processDefinitions} />} />
-          <Route path="/cws/process" element={<ProcessOnCwsPage cwsList={defaultCwsRegistry} processDefinitions={processDefinitions} onAddProcess={addProcessDefinition} />} />
+          <Route path="/processing" element={<ProcessingLotForm />} />
+          <Route path="/cws/process" element={<ProcessOnCwsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell.Main>

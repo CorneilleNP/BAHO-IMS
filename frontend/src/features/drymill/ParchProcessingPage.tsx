@@ -1,336 +1,241 @@
 import { useMemo, useState } from 'react';
 import { BarChart } from '@mantine/charts';
-import { Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Progress, Select, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
+import { Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Progress, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { IconDroplet, IconFlask, IconScale } from '@tabler/icons-react';
-import { calculateOutturnPct } from '../../types';
+import { EmptyState, ErrorMessage, Loading, SuccessMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
-import { dryMillOrigins, greenOutputByOrigin, parchProcessingKpis, recentDryMillBatches } from '../../mock/drymill';
+import { api } from '../../lib/api';
+import { canWrite } from '../../lib/access';
+import { useAuth } from '../../lib/authContext';
+import { calculateOutturnPct, changeLabel, chartRows, kg, num, pct, today } from '../../lib/format';
+import { sourceFields, sourceOptions } from '../../lib/sources';
+import type { CoffeeSource, DryMillBatch, ExportGrade, ProcessingSummary } from '../../lib/types';
+import { errorText, query, useApi, useList } from '../../lib/useApi';
 
-const defaultProductBreakdown = [
-  { id: 'p1', name: '15+', kg: 0 },
-  { id: 'p2', name: 'GTR 15+', kg: 0 },
-  { id: 'p3', name: 'CRS 15+', kg: 0 },
-  { id: 'p4', name: '13/14', kg: 0 },
-  { id: 'p5', name: '13/14 - GTR', kg: 0 },
-  { id: 'p6', name: '13/14 - CRS', kg: 0 },
-  { id: 'p7', name: 'Chips', kg: 0 },
-  { id: 'p8', name: 'Inkuburano', kg: 0 },
-];
-
-const processProductOptions = [
-  'FULLWASHED A1',
-  'FULLWASHED A2',
-  'FULLWASHED A3',
-  'NATURAL A1',
-  'HONEY A1',
-  'FW HG',
-  'NATURAL HG',
-  'SEMI-WASHED A1',
-];
+// Suggestions only; any product name can be typed and is remembered once used.
+const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
 
 export function ParchProcessingPage() {
-  const [batches, setBatches] = useState(recentDryMillBatches);
+  const { user } = useAuth();
+  const writable = canWrite(user, 'drymill');
+  const [date, setDate] = useState('All');
+  const [source, setSource] = useState('All');
+  const [product, setProduct] = useState('All');
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('All');
-  const [selectedOrigin, setSelectedOrigin] = useState('All');
-  const [selectedProcess, setSelectedProcess] = useState('All');
-  const [selectedInputGrade, setSelectedInputGrade] = useState('All');
-  const [origin, setOrigin] = useState<string | null>('GITOKI');
-  const [processProduct, setProcessProduct] = useState<string | null>('FULLWASHED A1');
-  const [parchInputKg, setParchInputKg] = useState<number | ''>('');
-  const [outputBreakdown, setOutputBreakdown] = useState(defaultProductBreakdown);
+  const [saved, setSaved] = useState<string | null>(null);
 
-  const availableDates = useMemo(
-    () => [...new Set(batches.map((batch) => batch.processingDate))].sort().reverse(),
-    [batches],
+  const summary = useApi<ProcessingSummary>(`/reporting/drymill/processing/${query({ date, source, process_product: product })}`);
+  const batches = useList<DryMillBatch>(
+    `/drymill/batches/${query({ processing_date: date, process_product: product, source, page_size: 25 })}`,
   );
-
-  const filteredBatches = useMemo(() => {
-    return batches.filter((batch) => {
-      const dateMatch = selectedDate === 'All' || batch.processingDate === selectedDate;
-      const originMatch = selectedOrigin === 'All' || batch.origin === selectedOrigin || batch.sourceStation === selectedOrigin;
-      const processMatch = selectedProcess === 'All' || batch.processProduct === selectedProcess;
-      const inputGradeMatch = selectedInputGrade === 'All' || batch.inputGrade === selectedInputGrade;
-      return dateMatch && originMatch && processMatch && inputGradeMatch;
-    });
-  }, [batches, selectedDate, selectedOrigin, selectedProcess, selectedInputGrade]);
-
-  const dailyGrowthData = useMemo(() => {
-    const dates = [...new Set(batches.map((batch) => batch.processingDate))].sort();
-
-    return dates.map((date) => {
-      const dayBatches = batches.filter((batch) => batch.processingDate === date);
-      const dayOutputKg = dayBatches.reduce((sum, batch) => sum + batch.greenOutputKg, 0);
-      const previousDate = dates[dates.indexOf(date) - 1];
-      const previousOutput = previousDate
-        ? batches.filter((batch) => batch.processingDate === previousDate).reduce((sum, batch) => sum + batch.greenOutputKg, 0)
-        : dayOutputKg;
-
-      const growthRate = previousOutput === 0 ? 0 : ((dayOutputKg - previousOutput) / previousOutput) * 100;
-
-      return { date, growthRate, outputKg: dayOutputKg };
-    });
-  }, [batches]);
-
-  const totalOutputKg = useMemo(
-    () => outputBreakdown.reduce((sum, item) => sum + Number(item.kg || 0), 0),
-    [outputBreakdown],
-  );
-
-  const liveOutturn = parchInputKg !== '' && totalOutputKg > 0 ? calculateOutturnPct(totalOutputKg, Number(parchInputKg)) : 0;
-
-  const summary = useMemo(() => {
-    const totalInputKg = filteredBatches.reduce((sum, batch) => sum + batch.parchInputKg, 0);
-    const totalOutputKg = filteredBatches.reduce((sum, batch) => sum + batch.greenOutputKg, 0);
-    const fifteenPlusKg = filteredBatches.reduce((sum, batch) => {
-      const match = (batch.outputBreakdown ?? '').match(/15\+\s*:\s*([0-9,]+)\s*kg/i);
-      if (!match) return sum;
-      return sum + Number((match[1] ?? '0').replace(/,/g, ''));
-    }, 0);
-
-    return {
-      totalInputKg,
-      totalOutputKg,
-      fifteenPlusKg,
-      outturnPct: totalInputKg > 0 ? (totalOutputKg / totalInputKg) * 100 : 0,
-      hgOutturnPct: totalInputKg > 0 ? (fifteenPlusKg / totalInputKg) * 100 : 0,
-    };
-  }, [filteredBatches]);
-
-  const lastDayDeltaPct = dailyGrowthData.length > 1 ? dailyGrowthData[dailyGrowthData.length - 1].growthRate : 0;
-
-  function updateBreakdownItem(id: string, value: number | string) {
-    setOutputBreakdown((prev) => prev.map((item) => (item.id === id ? { ...item, kg: Number(value) || 0 } : item)));
-  }
-
-  function submitBatch() {
-    const input = Number(parchInputKg) || 0;
-    const breakdownText = outputBreakdown
-      .filter((item) => Number(item.kg) > 0)
-      .map((item) => `${item.name}: ${Number(item.kg).toLocaleString()}kg`)
-      .join(' • ');
-
-    setBatches((prev) => [
-      {
-        id: crypto.randomUUID(),
-        batchNo: `${Date.now()}-${origin ?? 'UNK'}-${processProduct ?? ''}`,
-        processingDate: new Date().toISOString().slice(0, 10),
-        origin: origin ?? 'UNKNOWN',
-        inputGrade: processProduct ?? '',
-        sourceStation: origin ?? 'UNKNOWN',
-        processProduct: processProduct ?? '',
-        outputBreakdown: breakdownText || 'No product breakdown entered',
-        parchInputKg: input,
-        greenOutputKg: totalOutputKg,
-        outturnPct: calculateOutturnPct(totalOutputKg, input),
-        status: 'COMPLETED',
-      },
-      ...prev,
-    ]);
-    setModalOpen(false);
-    setOrigin('GITOKI');
-    setProcessProduct('FULLWASHED A1');
-    setParchInputKg('');
-    setOutputBreakdown(defaultProductBreakdown);
-  }
+  const s = summary.data;
+  const delta = changeLabel(s?.change_vs_previous_day_pct, s ? 'previous day' : null);
+  const shownBatches = batches.items;
 
   return (
-    <div>
-      <Group justify="space-between" mb="lg" align="flex-end">
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-end">
         <div>
           <Title order={2}>Parchment Processing</Title>
-          <Text c="dimmed" size="sm">Parchment → green coffee conversion at the HQ dry mill, by batch and product breakdown</Text>
+          <Text c="dimmed" size="sm">Parchment → green coffee at the HQ dry mill, by batch and product</Text>
         </div>
-        <Button leftSection={<IconFlask size={16} />} onClick={() => setModalOpen(true)}>
-          Record dry mill batch
-        </Button>
+        {writable && (
+          <Button leftSection={<IconFlask size={16} />} onClick={() => setModalOpen(true)}>Record dry mill batch</Button>
+        )}
       </Group>
 
-      <Group justify="flex-end" gap="md" mb="lg">
-        <NativeSelect
-          label="Origin"
-          data={['All', ...dryMillOrigins]}
-          value={selectedOrigin}
-          onChange={(event) => setSelectedOrigin(event.currentTarget.value)}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <NativeSelect
-          label="Process"
-          data={['All', ...processProductOptions]}
-          value={selectedProcess}
-          onChange={(event) => setSelectedProcess(event.currentTarget.value)}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <NativeSelect
-          label="Input Grade"
-          data={['All', ...Array.from(new Set(batches.map((batch) => batch.inputGrade)))]}
-          value={selectedInputGrade}
-          onChange={(event) => setSelectedInputGrade(event.currentTarget.value)}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <NativeSelect
-          label="Date"
-          data={['All', ...availableDates]}
-          value={selectedDate}
-          onChange={(event) => setSelectedDate(event.currentTarget.value)}
-          styles={{ input: { minWidth: 180 } }}
-        />
+      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
+      <ErrorMessage>{summary.error}</ErrorMessage>
+
+      <Group justify="flex-end" gap="md">
+        <NativeSelect label="Source" data={['All', ...(s?.options.sources ?? [])]} value={source} onChange={(e) => setSource(e.currentTarget.value)} miw={170} />
+        <NativeSelect label="Process / product" data={['All', ...(s?.options.process_products ?? [])]} value={product} onChange={(e) => setProduct(e.currentTarget.value)} miw={190} />
+        <NativeSelect label="Date" data={['All', ...(s?.options.dates ?? [])]} value={date} onChange={(e) => setDate(e.currentTarget.value)} miw={150} />
       </Group>
 
-      <SimpleGrid cols={{ base: 1, sm: 4 }} mb="lg">
-        <KpiCard
-          label="Inputs quantity (Kg)"
-          value={summary.totalInputKg.toLocaleString()}
-          icon={IconScale}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="Green output quantity (Kg)"
-          value={summary.totalOutputKg.toLocaleString()}
-          icon={IconDroplet}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="Parch → Green out-turn (%)"
-          value={`${summary.outturnPct.toFixed(2)}%`}
-          icon={IconFlask}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="HG out-turn (%)"
-          value={`${summary.hgOutturnPct.toFixed(2)}%`}
-          icon={IconFlask}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+        <KpiCard label="Parchment input (kg)" value={kg(s?.totals.parch_input_kg)} icon={IconScale} />
+        <KpiCard label="Green output (kg)" value={kg(s?.totals.green_output_kg)} icon={IconDroplet} delta={delta} />
+        <KpiCard label="Parch → green out-turn" value={pct(s?.totals.outturn_pct, 2)} icon={IconFlask} />
+        <KpiCard label="HG out-turn (17+ & 15+)" value={pct(s?.totals.hg_outturn_pct, 2)} icon={IconFlask} />
       </SimpleGrid>
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="lg">
-        <KpiCard
-          label="15+ (Kg)"
-          value={summary.fifteenPlusKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="15+ GTR (Kg)"
-          value={parchProcessingKpis.gtrKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="15+ CRS (Kg)"
-          value={parchProcessingKpis.cstKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="13/14 (Kg)"
-          value={parchProcessingKpis.grade1314Kg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="13/14 - GTR (Kg)"
-          value={parchProcessingKpis.gtrKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="13/14 - CRS (Kg)"
-          value={parchProcessingKpis.cstKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="Chips (Kg)"
-          value={parchProcessingKpis.chipsKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
-        <KpiCard
-          label="Inkuburano (Kg)"
-          value={parchProcessingKpis.triageKg.toLocaleString()}
-          delta={`${lastDayDeltaPct >= 0 ? '+' : ''}${lastDayDeltaPct.toFixed(1)}% vs last day`}
-        />
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 5 }}>
+        {(s?.by_grade ?? []).map((g) => (
+          <KpiCard key={g.code} label={`${g.name} (kg)`} value={kg(g.kg)} />
+        ))}
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md" mb="lg">
-        <Text fw={600} mb="sm">Origin (Baho / Partner) by green output</Text>
-        <BarChart
-          h={280}
-          data={greenOutputByOrigin}
-          dataKey="origin"
-          series={[{ name: 'kg', color: 'coffee.6' }]}
-          orientation="vertical"
-          yAxisProps={{ width: 120 }}
-          withTooltip
-        />
+      <Card withBorder radius="md" p="md">
+        <Text fw={600} mb="sm">Green output by origin (Baho / partner)</Text>
+        {summary.loading && !s ? (
+          <Loading />
+        ) : !s?.by_source.length ? (
+          <EmptyState title="No batches yet" />
+        ) : (
+          <BarChart
+            h={Math.max(160, s.by_source.length * 34)}
+            data={chartRows(s.by_source)}
+            dataKey="label"
+            series={[{ name: 'kg', color: 'coffee.6' }]}
+            orientation="vertical"
+            yAxisProps={{ width: 130 }}
+            valueFormatter={(v) => `${v.toLocaleString()} kg`}
+            withTooltip
+          />
+        )}
       </Card>
 
       <Card withBorder radius="md" p="md">
         <Text fw={600} mb="sm">Recent dry mill batches</Text>
-        <Table striped highlightOnHover verticalSpacing="sm">
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Date</Table.Th>
-              <Table.Th>Origin</Table.Th>
-              <Table.Th>Process / product</Table.Th>
-              <Table.Th>Parch input (Kg)</Table.Th>
-              <Table.Th>Green output (Kg)</Table.Th>
-              <Table.Th>Product breakdown</Table.Th>
-              <Table.Th>Out-turn</Table.Th>
-              <Table.Th>Status</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {filteredBatches.map((b) => (
-              <Table.Tr key={b.id}>
-                <Table.Td>{b.processingDate}</Table.Td>
-                <Table.Td>{b.sourceStation ?? b.origin}</Table.Td>
-                <Table.Td>{b.processProduct ?? b.inputGrade}</Table.Td>
-                <Table.Td>{b.parchInputKg.toLocaleString()}</Table.Td>
-                <Table.Td>{b.greenOutputKg.toLocaleString()}</Table.Td>
-                <Table.Td>{b.outputBreakdown ?? '—'}</Table.Td>
-                <Table.Td style={{ minWidth: 140 }}>
-                  <Group gap={6}>
-                    <Progress value={b.outturnPct} size="sm" w={70} color="coffee" />
-                    <Text size="sm">{b.outturnPct.toFixed(1)}%</Text>
-                  </Group>
-                </Table.Td>
-                <Table.Td><Badge color={b.status === 'COMPLETED' ? 'teal' : 'blue'} variant="light">{b.status.replace('_', ' ')}</Badge></Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        {batches.loading && !batches.data ? (
+          <Loading />
+        ) : shownBatches.length === 0 ? (
+          <EmptyState title="No batches recorded yet">Use “Record dry mill batch” after each milling run.</EmptyState>
+        ) : (
+          <Table.ScrollContainer minWidth={950}>
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Batch</Table.Th>
+                  <Table.Th>Date</Table.Th>
+                  <Table.Th>Origin</Table.Th>
+                  <Table.Th>Process / product</Table.Th>
+                  <Table.Th ta="right">Parch input (kg)</Table.Th>
+                  <Table.Th ta="right">Green output (kg)</Table.Th>
+                  <Table.Th>Product breakdown</Table.Th>
+                  <Table.Th>Out-turn</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {shownBatches.map((b) => (
+                  <Table.Tr key={b.id}>
+                    <Table.Td ff="monospace">{b.batch_no}</Table.Td>
+                    <Table.Td>{b.processing_date}</Table.Td>
+                    <Table.Td>{b.source_name}</Table.Td>
+                    <Table.Td>{b.process_product}</Table.Td>
+                    <Table.Td ta="right">{kg(b.parch_input_kg)}</Table.Td>
+                    <Table.Td ta="right">{kg(b.green_output_kg)}</Table.Td>
+                    <Table.Td>
+                      <Text size="xs">{b.outputs.map((o) => `${o.grade_name}: ${kg(o.qty_kg)} kg`).join(' • ') || '—'}</Text>
+                    </Table.Td>
+                    <Table.Td miw={140}>
+                      <Group gap={6} wrap="nowrap">
+                        <Progress value={Math.min(num(b.outturn_pct), 100)} size="sm" w={70} color="coffee" />
+                        <Text size="sm">{pct(b.outturn_pct)}</Text>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={b.status === 'COMPLETED' ? 'teal' : 'blue'} variant="light">{b.status.replace('_', ' ')}</Badge>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
       </Card>
 
-      <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Record dry mill batch" size="lg">
-        <Stack gap="sm">
-          <Select label="Source CWS / station" data={dryMillOrigins} value={origin} onChange={setOrigin} />
-          <Select label="Process / product" data={processProductOptions} value={processProduct} onChange={setProcessProduct} />
-          <NumberInput label="Parchment input (Kg)" value={parchInputKg} onChange={(v) => setParchInputKg(v as number)} />
+      {modalOpen && (
+        <BatchModal
+          knownProducts={s?.options.process_products ?? []}
+          onClose={() => setModalOpen(false)}
+          onSaved={(batch) => {
+            setModalOpen(false);
+            setSaved(`Saved batch ${batch.batch_no}: ${kg(batch.green_output_kg)} kg green from ${kg(batch.parch_input_kg)} kg parchment (${pct(batch.outturn_pct, 2)}).`);
+            summary.reload();
+            batches.reload();
+          }}
+        />
+      )}
+    </Stack>
+  );
+}
 
-          <Card withBorder p="sm">
-            <Text fw={600} mb="sm">Green coffee product breakdown</Text>
-            <Stack gap="xs">
-              {outputBreakdown.map((item) => (
-                <Group key={item.id} align="center" grow>
-                  <Text size="sm" fw={500}>{item.name}</Text>
-                  <NumberInput
-                    label="Kg"
-                    hideControls
-                    value={item.kg}
-                    onChange={(value) => updateBreakdownItem(item.id, value as number)}
-                  />
-                </Group>
+function BatchModal({ knownProducts, onClose, onSaved }: { knownProducts: string[]; onClose: () => void; onSaved: (b: DryMillBatch) => void }) {
+  const sources = useApi<CoffeeSource[]>('/drymill/sources/');
+  const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
+  const [source, setSource] = useState<string | null>(null);
+  const [product, setProduct] = useState('');
+  const [processingDate, setProcessingDate] = useState(today());
+  const [batchNo, setBatchNo] = useState('');
+  const [inputKg, setInputKg] = useState<number | ''>('');
+  const [outputs, setOutputs] = useState<Record<string, number | ''>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const totalOutput = useMemo(() => Object.values(outputs).reduce<number>((sum, v) => sum + num(v), 0), [outputs]);
+  const liveOutturn = num(inputKg) > 0 ? calculateOutturnPct(totalOutput, num(inputKg)) : 0;
+
+  async function save() {
+    const origin = sourceFields(source);
+    if (!origin) return setError('Choose the source CWS or supplier.');
+    if (!product.trim()) return setError('Enter the process / product.');
+    if (num(inputKg) <= 0) return setError('Enter the parchment input.');
+    setSaving(true);
+    setError(null);
+    try {
+      const batch = await api<DryMillBatch>('/drymill/batches/', {
+        method: 'POST',
+        body: {
+          ...origin,
+          process_product: product.trim().toUpperCase(),
+          processing_date: processingDate,
+          batch_no: batchNo.trim(),
+          parch_input_kg: num(inputKg),
+          outputs: Object.entries(outputs)
+            .filter(([, v]) => num(v) > 0)
+            .map(([export_grade, v]) => ({ export_grade, qty_kg: num(v) })),
+        },
+      });
+      onSaved(batch);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal opened onClose={onClose} title="Record dry mill batch" size="lg">
+      <Stack gap="sm">
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>
+          <Select label="Source CWS / supplier" required data={sourceOptions(sources.data ?? [])} value={source} onChange={setSource} searchable />
+          <Autocomplete label="Process / product" required data={Array.from(new Set([...knownProducts, ...COMMON_PRODUCTS]))} value={product} onChange={setProduct} />
+          <TextInput label="Processing date" type="date" value={processingDate} onChange={(e) => setProcessingDate(e.currentTarget.value)} />
+          <TextInput label="Batch no." placeholder="Automatic if empty" value={batchNo} onChange={(e) => setBatchNo(e.currentTarget.value)} />
+          <NumberInput label="Parchment input (kg)" required value={inputKg} onChange={(v) => setInputKg(v === '' ? '' : Number(v))} min={0} hideControls thousandSeparator="," />
+        </SimpleGrid>
+
+        <Card withBorder p="sm">
+          <Text fw={600} mb="xs">Green coffee output by grade</Text>
+          {grades.loading && !grades.data ? (
+            <Loading />
+          ) : (
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+              {(grades.data ?? []).map((g) => (
+                <NumberInput
+                  key={g.id}
+                  label={`${g.name} (kg)`}
+                  value={outputs[g.id] ?? ''}
+                  onChange={(v) => setOutputs((prev) => ({ ...prev, [g.id]: v === '' ? '' : Number(v) }))}
+                  min={0}
+                  hideControls
+                  thousandSeparator=","
+                />
               ))}
-            </Stack>
-          </Card>
-
-          <Text size="sm" c="dimmed">
-            Total green output: <strong>{totalOutputKg.toLocaleString()} Kg</strong>
-          </Text>
-          {parchInputKg !== '' && totalOutputKg > 0 && (
-            <Text size="sm" c="dimmed" mb="md">
-              Live out-turn: <strong>{liveOutturn.toFixed(2)}%</strong>
-            </Text>
+            </SimpleGrid>
           )}
-          <Button fullWidth onClick={submitBatch}>Save batch</Button>
-        </Stack>
-      </Modal>
-    </div>
+        </Card>
+
+        <Text size="sm" c="dimmed">
+          Total green output: <strong>{kg(totalOutput)} kg</strong>
+          {num(inputKg) > 0 && totalOutput > 0 && <> · live out-turn <strong>{pct(liveOutturn, 2)}</strong></>}
+        </Text>
+        <ErrorMessage>{error}</ErrorMessage>
+        <Button onClick={save} loading={saving}>Save batch</Button>
+      </Stack>
+    </Modal>
   );
 }

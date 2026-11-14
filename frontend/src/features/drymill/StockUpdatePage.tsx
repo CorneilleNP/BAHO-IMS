@@ -1,426 +1,267 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { BarChart } from '@mantine/charts';
-import { Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Select, SimpleGrid, Table, Text, TextInput, Title } from '@mantine/core';
+import { Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { IconBuildingWarehouse, IconPackage, IconScale } from '@tabler/icons-react';
+import { EmptyState, ErrorMessage, Loading, SuccessMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
-import {
-  type HqStockReceiptRow,
-  netWeightByGrade,
-  netWeightByProcess,
-  netWeightBySource,
-  recentStockReceipts,
-} from '../../mock/drymill';
-import type { SourceRecord } from './SourceRegistryPage';
+import { api } from '../../lib/api';
+import { canWrite } from '../../lib/access';
+import { useAuth } from '../../lib/authContext';
+import { changeLabel, chartRows, kg, num, today } from '../../lib/format';
+import { sourceFields, sourceOptions } from '../../lib/sources';
+import type { CoffeeSource, HqStockReceipt, StockSummary } from '../../lib/types';
+import { errorText, query, useApi, useList } from '../../lib/useApi';
 
-const qualityColor: Record<HqStockReceiptRow['qualityStatus'], string> = {
-  PENDING: 'yellow',
-  ACCEPTED: 'green',
-  REJECTED: 'red',
-};
-const processingColor: Record<HqStockReceiptRow['processingStatus'], string> = {
-  NOT_STARTED: 'gray',
-  IN_PROGRESS: 'blue',
-  COMPLETED: 'teal',
-};
+const qualityColor: Record<HqStockReceipt['quality_status'], string> = { PENDING: 'yellow', ACCEPTED: 'green', REJECTED: 'red' };
+const processingColor: Record<HqStockReceipt['processing_status'], string> = { NOT_STARTED: 'gray', IN_PROGRESS: 'blue', COMPLETED: 'teal' };
 
-interface StockUpdatePageProps {
-  sourceList: SourceRecord[];
-}
+// Suggestions only: any process/grade name can be typed. Values already used are added automatically.
+const COMMON_PROCESSES = ['FW', 'NATURAL N', 'EX NAT', 'HONEY', 'ANAEROBIC W', 'FW SEASON B', 'WASHED NO 1'];
+const COMMON_GRADES = ['A1', 'A2', 'A3', 'A4', 'HG', 'HPC', 'FLOAT', 'HC'];
 
-const STORAGE_KEY = 'baho-drymill-receipts';
-
-export function StockUpdatePage({ sourceList }: StockUpdatePageProps) {
-  const [receipts, setReceipts] = useState<HqStockReceiptRow[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return recentStockReceipts;
-
-    try {
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : recentStockReceipts;
-    } catch {
-      return recentStockReceipts;
-    }
-  });
+export function StockUpdatePage() {
+  const { user } = useAuth();
+  const writable = canWrite(user, 'drymill');
+  const [date, setDate] = useState('');
+  const [process, setProcess] = useState('All');
+  const [grade, setGrade] = useState('All');
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('2026-09-17');
-  const [selectedProcess, setSelectedProcess] = useState('All');
-  const [selectedGrade, setSelectedGrade] = useState('All');
-  const [form, setForm] = useState({
-    source: '',
-    sourceType: '',
-    lotId: '',
-    arrivalDate: new Date().toISOString().slice(0, 10),
-    process: '',
-    grade: '',
-    deliveryNoteNo: '',
-    deliveryNoteQtyKg: '',
-    grossWeightKg: '',
-    netWeightKg: '',
-    numberOfBags: '',
-    tarePerBagKg: '',
-    weightOfBagsKg: '',
-    warehouseCell: '',
-    wrn: '',
-    stockCardNo: '',
-  });
+  const [saved, setSaved] = useState<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(receipts));
-  }, [receipts]);
+  const summary = useApi<StockSummary>(`/reporting/drymill/stock/${query({ date, process, grade })}`);
+  const receipts = useList<HqStockReceipt>(`/drymill/stock-receipts/${query({ process, grade, page_size: 25 })}`);
+  const s = summary.data;
+  const delta = changeLabel(s?.change_vs_previous_pct, s?.previous_date);
 
-  const availableDates = useMemo(() => [...new Set(receipts.map((receipt) => receipt.arrivalDate))].sort(), [receipts]);
-
-  const filteredReceipts = useMemo(() => {
-    return receipts.filter((receipt) => {
-      const dateMatch = selectedDate ? receipt.arrivalDate === selectedDate : true;
-      const processMatch = selectedProcess === 'All' || receipt.process === selectedProcess;
-      const gradeMatch = selectedGrade === 'All' || receipt.grade === selectedGrade;
-      return dateMatch && processMatch && gradeMatch;
-    });
-  }, [receipts, selectedDate, selectedProcess, selectedGrade]);
-
-  const previousDayNetWeight = useMemo(() => {
-    const index = availableDates.indexOf(selectedDate);
-    const previousDate = index > 0 ? availableDates[index - 1] : null;
-    if (!previousDate) return 0;
-
-    return receipts
-      .filter((receipt) => receipt.arrivalDate === previousDate)
-      .reduce((sum, receipt) => sum + receipt.netWeightKg, 0);
-  }, [availableDates, receipts, selectedDate]);
-
-  const kpis = useMemo(() => {
-    const netWeightKg = filteredReceipts.reduce((sum, receipt) => sum + receipt.netWeightKg, 0);
-    const weightOfBagsKg = filteredReceipts.reduce((sum, receipt) => sum + receipt.weightOfBagsKg, 0);
-    const pureWeightKg = netWeightKg - weightOfBagsKg;
-    const deltaPct = previousDayNetWeight === 0 ? 0 : ((netWeightKg - previousDayNetWeight) / previousDayNetWeight) * 100;
-
-    return { netWeightKg, weightOfBagsKg, pureWeightKg, deltaPct };
-  }, [filteredReceipts, previousDayNetWeight]);
-
-  const derived = useMemo(() => {
-    const netWeightKg = Number(form.netWeightKg) || 0;
-    const deliveryNoteQtyKg = Number(form.deliveryNoteQtyKg) || 0;
-    const weightOfBagsKg = Number(form.weightOfBagsKg) || 0;
-    const pureWeightKg = netWeightKg - weightOfBagsKg;
-    const varianceKg = netWeightKg - deliveryNoteQtyKg;
-    const stockProcessedKg = 0;
-    const stockBalanceKg = pureWeightKg - stockProcessedKg;
-
-    return {
-      weightOfBagsKg,
-      pureWeightKg,
-      varianceKg,
-      stockProcessedKg,
-      stockBalanceKg,
-    };
-  }, [form]);
-
-  const sourceOptions = useMemo(
-    () => sourceList.map((source) => ({ value: source.name, label: source.name })),
-    [sourceList],
-  );
-
-  function submitReceipt() {
-    const netWeightKg = Number(form.netWeightKg) || 0;
-    const weightOfBagsKg = Number(form.weightOfBagsKg) || 0;
-    setReceipts((prev) => [
-      {
-        id: crypto.randomUUID(),
-        arrivalDate: form.arrivalDate || new Date().toISOString().slice(0, 10),
-        source: form.source || 'UNKNOWN',
-        process: form.process || 'FW',
-        grade: form.grade || 'A1',
-        deliveryNoteQtyKg: Number(form.deliveryNoteQtyKg) || netWeightKg,
-        netWeightKg,
-        weightOfBagsKg,
-        qualityStatus: 'PENDING',
-        processingStatus: 'NOT_STARTED',
-      },
-      ...prev,
-    ]);
-    setModalOpen(false);
-    setForm({
-      source: '',
-      sourceType: '',
-      lotId: '',
-      arrivalDate: new Date().toISOString().slice(0, 10),
-      process: '',
-      grade: '',
-      deliveryNoteNo: '',
-      deliveryNoteQtyKg: '',
-      grossWeightKg: '',
-      netWeightKg: '',
-      numberOfBags: '',
-      tarePerBagKg: '',
-      weightOfBagsKg: '',
-      warehouseCell: '',
-      wrn: '',
-      stockCardNo: '',
-    });
-  }
+  const reloadAll = () => {
+    summary.reload();
+    receipts.reload();
+  };
 
   return (
-    <div>
-      <Group justify="space-between" mb="lg" align="flex-end">
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-end">
         <div>
           <Title order={2}>Baho Dry Mill Stock Update</Title>
-          <Text c="dimmed" size="sm">Inbound parchment &amp; green coffee received at HQ, across all CWS and partner suppliers</Text>
+          <Text c="dimmed" size="sm">Parchment &amp; green coffee received at HQ from Baho CWS and partner suppliers</Text>
         </div>
-        <Group gap="sm">
-          <TextInput
-            type="date"
-            label="Date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.currentTarget.value || availableDates[availableDates.length - 1])}
-            styles={{ input: { minWidth: 170 } }}
-          />
-          <Button leftSection={<IconPackage size={16} />} onClick={() => setModalOpen(true)}>
-            Log new stock receipt
-          </Button>
+        <Group gap="sm" align="flex-end">
+          <TextInput type="date" label="Arrival date" value={date || s?.date || ''} onChange={(e) => setDate(e.currentTarget.value)} />
+          {writable && (
+            <Button leftSection={<IconPackage size={16} />} onClick={() => setModalOpen(true)}>Log new stock receipt</Button>
+          )}
         </Group>
       </Group>
 
-      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="lg">
-        <KpiCard label="Net weight (Kg)" value={kpis.netWeightKg.toLocaleString()} icon={IconScale} delta={`${kpis.deltaPct >= 0 ? '+' : ''}${kpis.deltaPct.toFixed(1)}% vs last day`} />
-        <KpiCard label="Pure weight (Kg)" value={kpis.pureWeightKg.toLocaleString()} icon={IconBuildingWarehouse} delta={`${kpis.deltaPct >= 0 ? '+' : ''}${kpis.deltaPct.toFixed(1)}% vs last day`} />
-        <KpiCard label="Weight of bags (Kg)" value={kpis.weightOfBagsKg.toLocaleString()} icon={IconPackage} delta={`${kpis.deltaPct >= 0 ? '+' : ''}${kpis.deltaPct.toFixed(1)}% vs last day`} />
-      </SimpleGrid>
+      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
+      <ErrorMessage>{summary.error}</ErrorMessage>
 
-      <Group justify="flex-end" gap="md" mb="lg">
-        <NativeSelect
-          label="Process"
-          data={['All', ...Array.from(new Set(receipts.map((receipt) => receipt.process)))]}
-          value={selectedProcess}
-          onChange={(event) => setSelectedProcess(event.currentTarget.value)}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <NativeSelect
-          label="Grades"
-          data={['All', ...Array.from(new Set(receipts.map((receipt) => receipt.grade)))]}
-          value={selectedGrade}
-          onChange={(event) => setSelectedGrade(event.currentTarget.value)}
-          styles={{ input: { minWidth: 180 } }}
-        />
+      <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <KpiCard label={`Net weight (kg) · ${s?.date ?? '…'}`} value={kg(s?.day.net_weight_kg)} icon={IconScale} delta={delta} />
+        <KpiCard label="Pure weight (kg)" value={kg(s?.day.pure_weight_kg)} icon={IconBuildingWarehouse} />
+        <KpiCard label="Weight of bags (kg)" value={kg(s?.day.weight_of_bags_kg)} icon={IconPackage} />
+      </SimpleGrid>
+      <Text size="sm" c="dimmed">
+        Season to date: <strong>{kg(s?.season.net_weight_kg)} kg</strong> net from {s?.season.receipts ?? 0} receipts.
+      </Text>
+
+      <Group justify="flex-end" gap="md">
+        <NativeSelect label="Process" data={['All', ...(s?.options.processes ?? [])]} value={process} onChange={(e) => setProcess(e.currentTarget.value)} miw={180} />
+        <NativeSelect label="Grade" data={['All', ...(s?.options.grades ?? [])]} value={grade} onChange={(e) => setGrade(e.currentTarget.value)} miw={180} />
       </Group>
 
-      <SimpleGrid cols={{ base: 1, lg: 3 }} mb="lg">
-        <Card withBorder radius="md" p="md">
-          <Text fw={600} mb="sm">Net weight by process</Text>
-          <BarChart
-            h={340}
-            data={netWeightByProcess}
-            dataKey="process"
-            series={[{ name: 'kg', color: 'coffee.6' }]}
-            orientation="vertical"
-            yAxisProps={{ width: 100 }}
-            withTooltip
-          />
-        </Card>
-        <Card withBorder radius="md" p="md">
-          <Text fw={600} mb="sm">Net weight by grade</Text>
-          <BarChart
-            h={340}
-            data={netWeightByGrade}
-            dataKey="grade"
-            series={[{ name: 'kg', color: 'coffee.5' }]}
-            orientation="vertical"
-            yAxisProps={{ width: 60 }}
-            withTooltip
-          />
-        </Card>
-        <Card withBorder radius="md" p="md">
-          <Text fw={600} mb="sm">Net weight by source (CWS / supplier)</Text>
-          <BarChart
-            h={340}
-            data={netWeightBySource}
-            dataKey="source"
-            series={[{ name: 'netWeightKg', color: 'coffee.7' }]}
-            orientation="vertical"
-            yAxisProps={{ width: 90 }}
-            withTooltip
-          />
-        </Card>
+      <SimpleGrid cols={{ base: 1, lg: 3 }}>
+        <ChartCard title="Net weight by process" rows={s?.by_process ?? []} loading={summary.loading && !s} color="coffee.6" />
+        <ChartCard title="Net weight by grade" rows={s?.by_grade ?? []} loading={summary.loading && !s} color="coffee.5" />
+        <ChartCard title="Net weight by source (CWS / supplier)" rows={s?.by_source ?? []} loading={summary.loading && !s} color="coffee.7" />
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md" mb="lg">
+      <Card withBorder radius="md" p="md">
         <Text fw={600} mb="sm">Recent stock receipts</Text>
-        <Table striped highlightOnHover verticalSpacing="sm">
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Arrival</Table.Th>
-              <Table.Th>Source</Table.Th>
-              <Table.Th>Process</Table.Th>
-              <Table.Th>Grade</Table.Th>
-              <Table.Th>Net weight (Kg)</Table.Th>
-              <Table.Th>Quality</Table.Th>
-              <Table.Th>Processing</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {receipts.map((r) => (
-              <Table.Tr key={r.id}>
-                <Table.Td>{r.arrivalDate}</Table.Td>
-                <Table.Td>{r.source}</Table.Td>
-                <Table.Td>{r.process}</Table.Td>
-                <Table.Td>{r.grade}</Table.Td>
-                <Table.Td>{r.netWeightKg.toLocaleString()}</Table.Td>
-                <Table.Td><Badge color={qualityColor[r.qualityStatus]} variant="light">{r.qualityStatus}</Badge></Table.Td>
-                <Table.Td><Badge color={processingColor[r.processingStatus]} variant="light">{r.processingStatus.replace('_', ' ')}</Badge></Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        {receipts.loading && !receipts.data ? (
+          <Loading />
+        ) : receipts.items.length === 0 ? (
+          <EmptyState title="No stock received yet">Use “Log new stock receipt” when coffee arrives at HQ.</EmptyState>
+        ) : (
+          <Table.ScrollContainer minWidth={900}>
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Receipt</Table.Th>
+                  <Table.Th>Arrival</Table.Th>
+                  <Table.Th>Source</Table.Th>
+                  <Table.Th>Process</Table.Th>
+                  <Table.Th>Grade</Table.Th>
+                  <Table.Th ta="right">Net (kg)</Table.Th>
+                  <Table.Th ta="right">Pure (kg)</Table.Th>
+                  <Table.Th>Quality</Table.Th>
+                  <Table.Th>Processing</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {receipts.items.map((r) => (
+                  <Table.Tr key={r.id}>
+                    <Table.Td ff="monospace">{r.receipt_number}</Table.Td>
+                    <Table.Td>{r.arrival_date}</Table.Td>
+                    <Table.Td>{r.source_name}</Table.Td>
+                    <Table.Td>{r.process}</Table.Td>
+                    <Table.Td>{r.grade}</Table.Td>
+                    <Table.Td ta="right">{kg(r.net_weight_kg)}</Table.Td>
+                    <Table.Td ta="right">{kg(r.pure_weight_kg)}</Table.Td>
+                    <Table.Td><Badge color={qualityColor[r.quality_status]} variant="light">{r.quality_status}</Badge></Table.Td>
+                    <Table.Td><Badge color={processingColor[r.processing_status]} variant="light">{r.processing_status.replace('_', ' ')}</Badge></Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
       </Card>
 
-      <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Log new stock receipt" size="xl">
+      {modalOpen && (
+        <StockReceiptModal
+          knownProcesses={s?.options.processes ?? []}
+          knownGrades={s?.options.grades ?? []}
+          onClose={() => setModalOpen(false)}
+          onSaved={(receipt) => {
+            setModalOpen(false);
+            setDate(receipt.arrival_date);
+            setSaved(`Saved ${receipt.receipt_number}: ${kg(receipt.net_weight_kg)} kg ${receipt.process} ${receipt.grade} from ${receipt.source_name}.`);
+            reloadAll();
+          }}
+        />
+      )}
+    </Stack>
+  );
+}
+
+function ChartCard({ title, rows, loading, color }: { title: string; rows: Array<{ label: string; kg: string }>; loading: boolean; color: string }) {
+  return (
+    <Card withBorder radius="md" p="md">
+      <Text fw={600} mb="sm">{title}</Text>
+      {loading ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No data yet" />
+      ) : (
+        <BarChart
+          h={Math.max(160, rows.length * 34)}
+          data={chartRows(rows.slice(0, 12))}
+          dataKey="label"
+          series={[{ name: 'kg', color }]}
+          orientation="vertical"
+          yAxisProps={{ width: 100 }}
+          valueFormatter={(v) => `${v.toLocaleString()} kg`}
+          withTooltip
+        />
+      )}
+    </Card>
+  );
+}
+
+function StockReceiptModal({
+  knownProcesses,
+  knownGrades,
+  onClose,
+  onSaved,
+}: {
+  knownProcesses: string[];
+  knownGrades: string[];
+  onClose: () => void;
+  onSaved: (receipt: HqStockReceipt) => void;
+}) {
+  const sources = useApi<CoffeeSource[]>('/drymill/sources/');
+  const [source, setSource] = useState<string | null>(null);
+  const [text, setText] = useState({ arrival_date: today(), process: '', grade: '', lot_reference: '', delivery_note_no: '', wrn_number: '', warehouse_cell: '', stock_card_number: '' });
+  const [numbers, setNumbers] = useState<Record<string, number | ''>>({
+    delivery_note_qty_kg: '',
+    gross_weight_kg: '',
+    net_weight_kg: '',
+    number_of_bags: '',
+    tare_per_bag_kg: '',
+    weight_of_bags_kg: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const setT = (field: keyof typeof text) => (value: string) => setText((p) => ({ ...p, [field]: value }));
+  const setN = (field: string) => (value: number | string) => setNumbers((p) => ({ ...p, [field]: value === '' ? '' : Number(value) }));
+
+  const bagsKg = numbers.weight_of_bags_kg !== '' ? num(numbers.weight_of_bags_kg) : num(numbers.number_of_bags) * num(numbers.tare_per_bag_kg);
+  const pure = num(numbers.net_weight_kg) - bagsKg;
+  const variance = numbers.delivery_note_qty_kg === '' ? null : num(numbers.net_weight_kg) - num(numbers.delivery_note_qty_kg);
+  const merge = (known: string[], common: string[]) => Array.from(new Set([...known, ...common]));
+
+  async function save() {
+    const origin = sourceFields(source);
+    if (!origin) return setError('Choose where the coffee came from.');
+    if (!text.process.trim() || !text.grade.trim()) return setError('Enter the process and grade.');
+    if (num(numbers.net_weight_kg) <= 0) return setError('Enter the net weight.');
+    setSaving(true);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = { ...origin, ...text, process: text.process.trim().toUpperCase(), grade: text.grade.trim().toUpperCase() };
+      Object.entries(numbers).forEach(([field, value]) => {
+        if (value !== '') body[field] = value;
+      });
+      onSaved(await api<HqStockReceipt>('/drymill/stock-receipts/', { method: 'POST', body }));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal opened onClose={onClose} title="Log new stock receipt" size="xl">
+      <Stack gap="sm">
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          <div>
-            <TextInput
-              label="Supplier"
-              value={form.source}
-              onChange={(event) => {
-                const nextSourceName = (event.target as HTMLInputElement | null)?.value ?? '';
-                const nextSource = sourceList.find((source) => source.name === nextSourceName) ?? null;
-                setForm((f) => ({
-                  ...f,
-                  source: nextSourceName,
-                  sourceType: nextSource?.type ?? f.sourceType,
-                }));
-              }}
-              mb="sm"
-              placeholder="Type supplier name"
-              list="supplier-options"
-            />
-            <datalist id="supplier-options">
-              {sourceOptions.map((option) => (
-                <option key={option.value} value={option.value} />
-              ))}
-            </datalist>
-          </div>
-          <NativeSelect
-            label="Source type"
-            value={form.sourceType}
-            data={[
-              { value: '', label: 'Select source type' },
-              { value: 'CWS', label: 'CWS' },
-              { value: 'Supplier', label: 'Supplier' },
-            ]}
-            onChange={(event) => {
-              const value = ((event.currentTarget as HTMLSelectElement | null)?.value ?? '').trim().toLowerCase();
-              const nextType = value === 'supplier' || value === 'usual supplier' || value === 'partner supplier' || value === 'partner' ? 'Supplier' : value === 'cws' ? 'CWS' : '';
-              setForm((f) => ({
-                ...f,
-                sourceType: nextType,
-              }));
-            }}
-            mb="sm"
-          />
-          <TextInput
-            label="Lot ID"
-            value={form.lotId}
-            onChange={(event) => {
-              const nextValue = (event.target as HTMLInputElement | null)?.value ?? '';
-              setForm((f) => ({ ...f, lotId: nextValue }));
-            }}
-            mb="sm"
-          />
-          <TextInput
-            label="Arrival date"
-            type="date"
-            value={form.arrivalDate}
-            onChange={(event) => {
-              const nextValue = (event.target as HTMLInputElement | null)?.value ?? '';
-              setForm((f) => ({ ...f, arrivalDate: nextValue }));
-            }}
-            mb="sm"
-          />
-          <TextInput
-            label="Delivery note no."
-            value={form.deliveryNoteNo}
-            onChange={(event) => {
-              const nextValue = (event.target as HTMLInputElement | null)?.value ?? '';
-              setForm((f) => ({ ...f, deliveryNoteNo: nextValue }));
-            }}
-            mb="sm"
-          />
-          <TextInput
-            label="WRN"
-            value={form.wrn}
-            onChange={(event) => {
-              const nextValue = (event.target as HTMLInputElement | null)?.value ?? '';
-              setForm((f) => ({ ...f, wrn: nextValue }));
-            }}
-            mb="sm"
-          />
-          <TextInput
-            label="Warehouse cell"
-            value={form.warehouseCell}
-            onChange={(event) => {
-              const nextValue = (event.target as HTMLInputElement | null)?.value ?? '';
-              setForm((f) => ({ ...f, warehouseCell: nextValue }));
-            }}
-            mb="sm"
-          />
-          <TextInput
-            label="Stock card no."
-            value={form.stockCardNo}
-            onChange={(event) => {
-              const nextValue = (event.target as HTMLInputElement | null)?.value ?? '';
-              setForm((f) => ({ ...f, stockCardNo: nextValue }));
-            }}
-            mb="sm"
-          />
           <Select
-            label="Process"
-            data={['FW', 'NATURAL N', 'EX NAT', 'HONEY', 'ANAEROBIC W']}
-            value={form.process}
-            onChange={(v) => setForm((f) => ({ ...f, process: v ?? '' }))}
-            mb="sm"
+            label="Source (CWS or supplier)"
+            required
+            data={sourceOptions(sources.data ?? [])}
+            value={source}
+            onChange={setSource}
+            searchable
+            placeholder={sources.loading ? 'Loading…' : 'Choose source'}
+            nothingFoundMessage="Not found: register the supplier first"
           />
-          <Select
-            label="Grade"
-            data={['A1', 'A2', 'A3', 'HPC', 'HG']}
-            value={form.grade}
-            onChange={(v) => setForm((f) => ({ ...f, grade: v ?? '' }))}
-            mb="sm"
-          />
-          <NumberInput label="Delivery note quantity (Kg)" value={form.deliveryNoteQtyKg} onChange={(v) => setForm((f) => ({ ...f, deliveryNoteQtyKg: String(v) }))} mb="sm" />
-          <NumberInput label="Gross weight (Kg)" value={form.grossWeightKg} onChange={(v) => setForm((f) => ({ ...f, grossWeightKg: String(v) }))} mb="sm" />
-          <NumberInput label="Net weight (Kg)" value={form.netWeightKg} onChange={(v) => setForm((f) => ({ ...f, netWeightKg: String(v) }))} mb="sm" />
-          <NumberInput label="Number of bags" value={form.numberOfBags} onChange={(v) => setForm((f) => ({ ...f, numberOfBags: String(v) }))} mb="sm" />
-          <NumberInput label="Tare per bag (Kg)" value={form.tarePerBagKg} onChange={(v) => setForm((f) => ({ ...f, tarePerBagKg: String(v) }))} mb="sm" />
-          <NumberInput label="Weight of bags (Kg)" value={form.weightOfBagsKg} onChange={(v) => setForm((f) => ({ ...f, weightOfBagsKg: String(v) }))} mb="sm" />
+          <TextInput label="Arrival date" type="date" value={text.arrival_date} onChange={(e) => setT('arrival_date')(e.currentTarget.value)} />
+          <Autocomplete label="Process" required data={merge(knownProcesses, COMMON_PROCESSES)} value={text.process} onChange={setT('process')} />
+          <Autocomplete label="Grade" required data={merge(knownGrades, COMMON_GRADES)} value={text.grade} onChange={setT('grade')} />
+          <TextInput label="Lot ID" value={text.lot_reference} onChange={(e) => setT('lot_reference')(e.currentTarget.value)} />
+          <TextInput label="Delivery note no." value={text.delivery_note_no} onChange={(e) => setT('delivery_note_no')(e.currentTarget.value)} />
+          <NumberInput label="Delivery note quantity (kg)" value={numbers.delivery_note_qty_kg} onChange={setN('delivery_note_qty_kg')} min={0} hideControls thousandSeparator="," />
+          <NumberInput label="Gross weight (kg)" value={numbers.gross_weight_kg} onChange={setN('gross_weight_kg')} min={0} hideControls thousandSeparator="," />
+          <NumberInput label="Net weight (kg)" required value={numbers.net_weight_kg} onChange={setN('net_weight_kg')} min={0} hideControls thousandSeparator="," />
+          <NumberInput label="Number of bags" value={numbers.number_of_bags} onChange={setN('number_of_bags')} min={0} allowDecimal={false} hideControls />
+          <NumberInput label="Tare per bag (kg)" value={numbers.tare_per_bag_kg} onChange={setN('tare_per_bag_kg')} min={0} decimalScale={3} hideControls />
+          <NumberInput label="Weight of bags (kg)" description="Leave empty to use bags × tare" value={numbers.weight_of_bags_kg} onChange={setN('weight_of_bags_kg')} min={0} hideControls />
+          <TextInput label="WRN" value={text.wrn_number} onChange={(e) => setT('wrn_number')(e.currentTarget.value)} />
+          <TextInput label="Warehouse cell" value={text.warehouse_cell} onChange={(e) => setT('warehouse_cell')(e.currentTarget.value)} />
+          <TextInput label="Stock card no." value={text.stock_card_number} onChange={(e) => setT('stock_card_number')(e.currentTarget.value)} />
         </SimpleGrid>
 
-        <Card withBorder radius="md" p="md" mt="lg" mb="lg" bg="gray.0">
-          <Text fw={600} mb="sm">Calculated values</Text>
-          <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <Card withBorder radius="md" p="md" bg="gray.0">
+          <SimpleGrid cols={3}>
             <div>
               <Text size="xs" c="dimmed">Weight of bags</Text>
-              <Text fw={700}>{derived.weightOfBagsKg.toLocaleString()} Kg</Text>
+              <Text fw={700}>{kg(bagsKg, 2)} kg</Text>
             </div>
             <div>
               <Text size="xs" c="dimmed">Pure weight</Text>
-              <Text fw={700}>{derived.pureWeightKg.toLocaleString()} Kg</Text>
+              <Text fw={700}>{kg(pure, 2)} kg</Text>
             </div>
             <div>
-              <Text size="xs" c="dimmed">Variance</Text>
-              <Text fw={700}>{derived.varianceKg.toLocaleString()} Kg</Text>
-            </div>
-            <div>
-              <Text size="xs" c="dimmed">Stock processed</Text>
-              <Text fw={700}>{derived.stockProcessedKg.toLocaleString()} Kg</Text>
-            </div>
-            <div>
-              <Text size="xs" c="dimmed">Stock balance</Text>
-              <Text fw={700}>{derived.stockBalanceKg.toLocaleString()} Kg</Text>
+              <Text size="xs" c="dimmed">Variance vs delivery note</Text>
+              <Text fw={700}>{variance === null ? '—' : `${kg(variance, 2)} kg`}</Text>
             </div>
           </SimpleGrid>
         </Card>
 
-        <Button fullWidth onClick={submitReceipt}>Save receipt</Button>
-      </Modal>
-    </div>
+        <ErrorMessage>{error}</ErrorMessage>
+        <Button onClick={save} loading={saving}>Save receipt</Button>
+      </Stack>
+    </Modal>
   );
 }

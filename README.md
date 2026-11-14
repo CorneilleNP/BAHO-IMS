@@ -16,10 +16,18 @@ baho IMS/
 
 | Part | State |
 |---|---|
-| Backend: `core`, `organization`, `accounts` | Done: email + JWT login, roles per facility, facilities, crop years, address tree, Django admin, 18 tests |
-| Backend: farmers, reception, inventory, processing, finance, labor, drymill, sales, reporting, imports, notifications | App skeletons only: next to build, translating `backend/legacy/sql/` |
-| Frontend: sign-in | Real login against the database (JWT), session kept across reloads, pages protected, menu limited by role (CWS roles → CWS, HQ dry mill/export → Dry Mill, ADMIN/HQ finance → both) |
-| Frontend: business screens | Still on mock data; switch to the API screen by screen |
+| Accounts & organization | Email + JWT login, roles per station, facilities, crop years |
+| Farmers & cherry reception | Register farmers (auto code), record GRNs with Good/Float lines (auto GRN number) |
+| CWS processing | Register processes with grade estimate ratios; lots with fixed estimates, actuals, out-turn |
+| HQ dry mill | Partner suppliers, stock receipts (pure weight by the DB), parchment → green batches |
+| Export | Clients, shipments with product lines, status |
+| Dashboards | Stock / processing / export summaries calculated by the server from real records |
+| Not built yet | Cash ledger & expenses (`finance`), casual labor (`labor`), stock ledger (`inventory`), Excel import (`imports`), SMS (`notifications`) |
+
+**No mock data.** The frontend reads and writes only through the API. `seed_dev`
+loads configuration only (stations, users, export grades, Gitoki's real Fully
+Washed ratios); every farmer, GRN, lot, stock receipt, batch and shipment is
+registered through the screens. 52 backend tests.
 
 ## Running it locally (Windows, no admin rights needed)
 
@@ -53,6 +61,8 @@ python manage.py runserver
 - API docs (Swagger): http://localhost:8000/api/docs/
 - Django admin: http://localhost:8000/admin/ (`admin@baho.local` / `BahoDev2026!`)
 - Tests: `pytest` · Lint: `ruff check .` · Format: `ruff format .`
+- Start over with empty data: `python manage.py reset_dev_data --yes` (dev only:
+  deletes all registered records and restarts GRN/lot/batch numbering, keeps users and configuration)
 
 Dev users created by `seed_dev` (all with password `BahoDev2026!`):
 

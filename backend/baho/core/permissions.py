@@ -28,3 +28,32 @@ class IsAdminOrReadOnly(BasePermission):
         return request.user.is_superuser or get_user_access(request.user).has_any_role(
             RoleCode.ADMIN
         )
+
+
+class RoleAccess(BasePermission):
+    """Reads need one of `view.read_roles`, writes one of `view.write_roles`.
+
+    Superusers always pass. Facility scoping is applied separately by
+    FacilityScopedViewSetMixin / the services.
+    """
+
+    message = "Your role does not allow this action."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        roles = view.read_roles if request.method in SAFE_METHODS else view.write_roles
+        return get_user_access(user).has_any_role(*roles)
+
+
+def ensure_facility_access(user, facility) -> None:
+    """Raise 403 unless the user is assigned to `facility` (or is global)."""
+    from rest_framework.exceptions import PermissionDenied
+
+    if user.is_superuser:
+        return
+    if not get_user_access(user).can_access_facility(facility.id):
+        raise PermissionDenied(f"You are not assigned to {facility.name}.")

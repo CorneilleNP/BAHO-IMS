@@ -61,3 +61,17 @@ class AuditedModel(TimeStampedModel):
         self.deleted_at = timezone.now()
         self.updated_by = user
         self.save(update_fields=["is_deleted", "deleted_at", "updated_by", "updated_at"])
+
+
+class SequenceCounter(models.Model):
+    """Gap-free counters for human-readable numbers (GRN, lot, batch…).
+
+    One row per key, e.g. "grn:GITOKI:2026". Incremented under a row lock
+    inside the caller's transaction, so two clerks never get the same number.
+    """
+
+    key = models.CharField(max_length=120, primary_key=True)
+    value = models.PositiveBigIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.key} = {self.value}"

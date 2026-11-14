@@ -71,3 +71,17 @@ def get_user_access(user) -> UserAccess:
 def clear_user_access_cache(user) -> None:
     if hasattr(user, _CACHE_ATTR):
         delattr(user, _CACHE_ATTR)
+
+
+# --- Role groups used by the API (who may read / write each area) ---------
+CWS_READ_ROLES = (RoleCode.ADMIN, RoleCode.HQ_FINANCE, RoleCode.CWS_CLERK, RoleCode.CWS_MANAGER)
+CWS_WRITE_ROLES = (RoleCode.ADMIN, RoleCode.CWS_CLERK, RoleCode.CWS_MANAGER)
+
+DRYMILL_READ_ROLES = (
+    RoleCode.ADMIN,
+    RoleCode.HQ_FINANCE,
+    RoleCode.HQ_DRY_MILL_OPERATOR,
+    RoleCode.HQ_EXPORT_MANAGER,
+)
+DRYMILL_WRITE_ROLES = (RoleCode.ADMIN, RoleCode.HQ_DRY_MILL_OPERATOR)
+EXPORT_WRITE_ROLES = (RoleCode.ADMIN, RoleCode.HQ_EXPORT_MANAGER)

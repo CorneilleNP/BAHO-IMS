@@ -80,7 +80,42 @@ class Command(BaseCommand):
                 facility=facilities.get(facility_code) if facility_code else None,
             )
 
-        self.stdout.write(self.style.SUCCESS("Seeded crop year 2026, 5 facilities, 7 users."))
+        self._seed_gitoki_fully_washed(facilities["GITOKI"])
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Seeded crop year 2026, 5 facilities, 7 users, Gitoki Fully Washed process. "
+                "No transactions: farmers, receipts, lots, stock, batches and shipments "
+                "are registered through the app."
+            )
+        )
         self.stdout.write(f"Dev users (new ones get password '{password}'):")
         for email, _, role_code, facility_code in USERS:
             self.stdout.write(f"  {email:30} {role_code:22} {facility_code or 'ALL'}")
+
+    def _seed_gitoki_fully_washed(self, gitoki):
+        """Real estimate ratios read from the BAHO GITOKI CWS production workbook (FW sheet)."""
+        from baho.processing.models import GradeRatio, ProcessGrade, ProcessType
+
+        crop_year = CropYear.objects.get(label="2026")
+        process, _ = ProcessType.objects.get_or_create(
+            facility=gitoki, name="Fully Washed", sub_process="Standard Run"
+        )
+        for order, (code, name, ratio) in enumerate(
+            [
+                ("A1", "A1", "0.14"),
+                ("A2", "A2", "0.04"),
+                ("A3", "A3", "0.025"),
+                ("HPC", "HPC/A4", "0.015"),
+            ],
+            start=1,
+        ):
+            grade, _ = ProcessGrade.objects.update_or_create(
+                process_type=process, code=code, defaults={"name": name, "display_order": order}
+            )
+            GradeRatio.objects.update_or_create(
+                grade=grade,
+                crop_year=crop_year,
+                effective_from=crop_year.start_date,
+                defaults={"ratio": ratio},
+            )

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from baho.core.fields import ActiveFlagField
+
 from ..models import AdminUnit, CropYear, Facility
 
 
@@ -17,6 +19,8 @@ class CropYearSerializer(serializers.ModelSerializer):
 
 
 class FacilitySerializer(serializers.ModelSerializer):
+    is_active = ActiveFlagField()
+
     class Meta:
         model = Facility
         fields = [

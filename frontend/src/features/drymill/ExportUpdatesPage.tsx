@@ -1,255 +1,344 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { BarChart } from '@mantine/charts';
-import { Badge, Button, Card, Group, Modal, NumberInput, Select, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
-import { IconScale, IconShip, IconTruckDelivery } from '@tabler/icons-react';
+import { ActionIcon, Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { IconPlus, IconScale, IconShip, IconTrash, IconUserPlus } from '@tabler/icons-react';
+import { EmptyState, ErrorMessage, Loading, SuccessMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
-import { clients, exportedByClient, parchProcessingKpis, recentExportShipments } from '../../mock/drymill';
+import { api } from '../../lib/api';
+import { canWrite } from '../../lib/access';
+import { useAuth } from '../../lib/authContext';
+import { chartRows, kg, num, today } from '../../lib/format';
+import type { Client, ExportGrade, ExportShipment, ExportSummary } from '../../lib/types';
+import { errorText, query, useApi, useList } from '../../lib/useApi';
 
-const statusColor: Record<string, string> = { PLANNED: 'gray', SHIPPED: 'blue', DELIVERED: 'teal' };
-const exportProcesses = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
-const exportGrades = ['A1', 'A2', 'A3', 'A4', 'HG', 'HPC', 'FLOAT', 'HC'];
+const statusColor: Record<ExportShipment['status'], string> = { PLANNED: 'gray', SHIPPED: 'blue', DELIVERED: 'teal' };
+const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
 
 export function ExportUpdatesPage() {
-  const [shipments, setShipments] = useState(recentExportShipments);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState('All');
-  const [selectedProcess, setSelectedProcess] = useState('All');
-  const [selectedGrade, setSelectedGrade] = useState('All');
+  const { user } = useAuth();
+  const writable = canWrite(user, 'export');
+  const [client, setClient] = useState('All');
+  const [grade, setGrade] = useState('All');
+  const [product, setProduct] = useState('All');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [client, setClient] = useState<string | null>(null);
-  const [process, setProcess] = useState<string | null>(exportProcesses[0]);
-  const [grade, setGrade] = useState<string | null>(exportGrades[0]);
-  const [lineQty, setLineQty] = useState<number | ''>('');
-  const [lineItems, setLineItems] = useState<Array<{ process: string; grade: string; qtyKg: number }>>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
-  const filteredShipments = useMemo(() => {
-    return shipments.filter((shipment) => {
-      const clientMatch = selectedClient === 'All' || shipment.client === selectedClient;
-      const shipmentDate = shipment.deliveryToNaebDate;
-      const fromMatch = !dateFrom || shipmentDate >= dateFrom;
-      const toMatch = !dateTo || shipmentDate <= dateTo;
-      const processMatch = selectedProcess === 'All' || (shipment.exportedProcesses ?? []).some((item) => item.process === selectedProcess);
-      const gradeMatch = selectedGrade === 'All' || (shipment.exportedProcesses ?? []).some((item) => item.grade === selectedGrade);
-
-      return clientMatch && fromMatch && toMatch && processMatch && gradeMatch;
-    });
-  }, [shipments, selectedClient, dateFrom, dateTo, selectedProcess, selectedGrade]);
-
-  const exportedByGrade = useMemo(() => {
-    const totals: Record<string, number> = { '15+': 0, 'GTR 15+': 0, 'CRS 15+': 0, '13/14': 0, '13/14 - GTR': 0, '13/14 - CRS': 0, Chips: 0, Inkuburano: 0 };
-
-    shipments.forEach((shipment) => {
-      (shipment.exportedProcesses ?? []).forEach((item) => {
-        totals[item.grade] = (totals[item.grade] ?? 0) + item.qtyKg;
-      });
-    });
-
-    return totals;
-  }, [shipments]);
-
-  const exportedQuantityKg = useMemo(
-    () => shipments.reduce((sum, item) => sum + item.exportedQtyKg, 0),
-    [shipments],
+  const clients = useList<Client>('/sales/clients/?page_size=500');
+  const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
+  const summary = useApi<ExportSummary>(
+    `/reporting/drymill/export/${query({ client, export_grade: grade, process_product: product, date_from: dateFrom, date_to: dateTo })}`,
   );
+  const shipments = useList<ExportShipment>(
+    `/sales/shipments/${query({
+      client,
+      lines__export_grade: grade,
+      lines__process_product: product,
+      delivery_to_naeb_date__gte: dateFrom,
+      delivery_to_naeb_date__lte: dateTo,
+      page_size: 25,
+    })}`,
+  );
+  const s = summary.data;
 
-  const summary = useMemo(() => {
-    const totalProcessedKg = parchProcessingKpis.greenOutputQuantityKg ?? 0;
-    const processed15Plus = parchProcessingKpis.standard15Kg ?? 0;
-    const processed1314 = parchProcessingKpis.grade1314Kg ?? 0;
-    const processedGtr = parchProcessingKpis.gtrKg ?? 0;
-    const processedCst = parchProcessingKpis.cstKg ?? 0;
-
-    const exported15Plus = exportedByGrade['15+'] ?? 0;
-    const exported1314 = exportedByGrade['13/14'] ?? 0;
-    const exportedGtr = exportedByGrade['GTR 15+'] ?? 0;
-    const exportedCst = exportedByGrade['CRS 15+'] ?? 0;
-
-    return {
-      exportedQuantityKg,
-      stockBalanceQuantityKg: Math.max(totalProcessedKg - exportedQuantityKg, 0),
-      exp17Kg: exportedByGrade['17+'] ?? 0,
-      exp15Kg: exported15Plus,
-      exp1314Kg: exported1314,
-      expGtrKg: exportedGtr,
-      expCstKg: exportedCst,
-      bal15Kg: Math.max(processed15Plus - exported15Plus, 0),
-      bal1314Kg: Math.max(processed1314 - exported1314, 0),
-      balGtrKg: Math.max(processedGtr - exportedGtr, 0),
-      balCstKg: Math.max(processedCst - exportedCst, 0),
-    };
-  }, [exportedByGrade, exportedQuantityKg]);
-
-  function addLineItem() {
-    const qty = Number(lineQty) || 0;
-    if (!qty || !process || !grade) return;
-
-    setLineItems((prev) => [...prev, { process, grade, qtyKg: qty }]);
-    setLineQty('');
-  }
-
-  function submitShipment() {
-    const totalQty = lineItems.reduce((sum, item) => sum + item.qtyKg, 0);
-    const productSummary = lineItems
-      .map((item) => `${item.process} / ${item.grade}: ${item.qtyKg.toLocaleString()}kg`)
-      .join(' • ');
-
-    setShipments((prev) => [
-      {
-        id: crypto.randomUUID(),
-        deliveryToNaebDate: new Date().toISOString().slice(0, 10),
-        client: client ?? 'UNKNOWN',
-        exportedQtyKg: totalQty || Number(lineQty) || 0,
-        productSummary: productSummary || `${process ?? 'UNKNOWN'} / ${grade ?? 'UNKNOWN'}: ${Number(lineQty || 0).toLocaleString()}kg`,
-        exportedProcesses: lineItems.length > 0 ? lineItems : [{ process: process ?? 'UNKNOWN', grade: grade ?? 'UNKNOWN', qtyKg: Number(lineQty) || 0 }],
-        status: 'PLANNED',
-      },
-      ...prev,
-    ]);
-    setModalOpen(false);
-    setClient(null);
-    setProcess(exportProcesses[0]);
-    setGrade(exportGrades[0]);
-    setLineQty('');
-    setLineItems([]);
+  async function setStatus(shipment: ExportShipment, status: ExportShipment['status']) {
+    setStatusError(null);
+    try {
+      await api(`/sales/shipments/${shipment.id}/status/`, { method: 'POST', body: { status } });
+      setSaved(`${shipment.shipment_no} marked ${status.toLowerCase()}.`);
+      shipments.reload();
+    } catch (err) {
+      setStatusError(errorText(err));
+    }
   }
 
   return (
-    <div>
-      <Group justify="space-between" mb="lg">
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-end">
         <div>
           <Title order={2}>Export Updates</Title>
           <Text c="dimmed" size="sm">Green coffee shipped to clients, and remaining stock balance by grade</Text>
         </div>
-        <Button leftSection={<IconShip size={16} />} onClick={() => setModalOpen(true)}>
-          Record export shipment
-        </Button>
+        {writable && (
+          <Button leftSection={<IconShip size={16} />} onClick={() => setModalOpen(true)}>Record export shipment</Button>
+        )}
       </Group>
 
-      <Group justify="flex-end" gap="md" mb="lg">
-        <Select
-          label="Client name"
-          data={['All', ...clients]}
-          value={selectedClient}
-          onChange={(value) => setSelectedClient(value ?? 'All')}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <Select
-          label="Process"
-          data={['All', ...exportProcesses]}
-          value={selectedProcess}
-          onChange={(value) => setSelectedProcess(value ?? 'All')}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <Select
-          label="Grade"
-          data={['All', ...exportGrades]}
-          value={selectedGrade}
-          onChange={(value) => setSelectedGrade(value ?? 'All')}
-          styles={{ input: { minWidth: 180 } }}
-        />
-        <div>
-          <Text size="xs" c="dimmed" fw={600} mb={6}>Date range</Text>
-          <Group gap="sm">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(event) => setDateFrom(event.currentTarget.value)}
-              style={{ minWidth: 150, height: 36, borderRadius: 8, border: '1px solid #dfe3e8', padding: '0 10px', background: '#fff' }}
-            />
-            <Text c="dimmed">to</Text>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(event) => setDateTo(event.currentTarget.value)}
-              style={{ minWidth: 150, height: 36, borderRadius: 8, border: '1px solid #dfe3e8', padding: '0 10px', background: '#fff' }}
-            />
-          </Group>
-        </div>
+      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
+      <ErrorMessage>{summary.error ?? statusError}</ErrorMessage>
+
+      <Group justify="flex-end" gap="md" align="flex-end">
+        <NativeSelect label="Client" data={[{ value: 'All', label: 'All' }, ...clients.items.map((c) => ({ value: c.id, label: c.name }))]} value={client} onChange={(e) => setClient(e.currentTarget.value)} miw={170} />
+        <NativeSelect label="Process / product" data={['All', ...(s?.options.process_products ?? [])]} value={product} onChange={(e) => setProduct(e.currentTarget.value)} miw={180} />
+        <NativeSelect label="Grade" data={[{ value: 'All', label: 'All' }, ...(grades.data ?? []).map((g) => ({ value: g.id, label: g.name }))]} value={grade} onChange={(e) => setGrade(e.currentTarget.value)} miw={150} />
+        <TextInput type="date" label="From" value={dateFrom} onChange={(e) => setDateFrom(e.currentTarget.value)} />
+        <TextInput type="date" label="To" value={dateTo} onChange={(e) => setDateTo(e.currentTarget.value)} />
       </Group>
 
-      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="lg">
-        <KpiCard label="Exported quantity (Kg)" value={summary.exportedQuantityKg.toLocaleString()} icon={IconShip} />
-        <KpiCard label="Stock balance quantity (Kg)" value={summary.stockBalanceQuantityKg.toLocaleString()} icon={IconScale} />
+      <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <KpiCard label="Exported quantity (kg)" value={kg(s?.exported_kg)} icon={IconShip} />
+        <KpiCard label="Green produced (kg)" value={kg(s?.produced_kg)} icon={IconScale} />
+        <KpiCard label="Stock balance (kg)" value={kg(s?.stock_balance_kg)} icon={IconScale} accent="gray" />
       </SimpleGrid>
 
-      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xs">
-        <KpiCard label="Exp. 17 (Kg)" value={summary.exp17Kg.toLocaleString()} />
-        <KpiCard label="Exp. 15+ (Kg)" value={summary.exp15Kg.toLocaleString()} />
-        <KpiCard label="Exp. 13/14 (Kg)" value={summary.exp1314Kg.toLocaleString()} />
-        <KpiCard label="Exp. GTR (Kg)" value={summary.expGtrKg.toLocaleString()} />
-      </SimpleGrid>
-      <SimpleGrid cols={{ base: 2, sm: 4 }} mb="lg">
-        <KpiCard label="Bal. 15+ (Kg)" value={summary.bal15Kg.toLocaleString()} accent="gray" />
-        <KpiCard label="Bal. 13/14 (Kg)" value={summary.bal1314Kg.toLocaleString()} accent="gray" />
-        <KpiCard label="Bal. GTR (Kg)" value={summary.balGtrKg.toLocaleString()} accent="gray" />
-        <KpiCard label="Bal. CST (Kg)" value={summary.balCstKg.toLocaleString()} accent="gray" />
-      </SimpleGrid>
+      <Card withBorder radius="md" p="md">
+        <Text fw={600} mb="sm">By grade: produced, exported, balance</Text>
+        {summary.loading && !s ? (
+          <Loading />
+        ) : (
+          <Table.ScrollContainer minWidth={560}>
+            <Table striped>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Grade</Table.Th>
+                  <Table.Th ta="right">Produced (kg)</Table.Th>
+                  <Table.Th ta="right">Exported (kg)</Table.Th>
+                  <Table.Th ta="right">Balance (kg)</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {(s?.by_grade ?? []).map((g) => (
+                  <Table.Tr key={g.id}>
+                    <Table.Td fw={600}>{g.name}</Table.Td>
+                    <Table.Td ta="right">{kg(g.produced_kg)}</Table.Td>
+                    <Table.Td ta="right">{kg(g.exported_kg)}</Table.Td>
+                    <Table.Td ta="right" c={num(g.balance_kg) < 0 ? 'red' : undefined}>{kg(g.balance_kg)}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </Card>
 
-      <Card withBorder radius="md" p="md" mb="lg">
-        <Text fw={600} mb="sm">Client name by exported quantity</Text>
-        <BarChart
-          h={280}
-          data={exportedByClient}
-          dataKey="client"
-          series={[{ name: 'kg', color: 'coffee.6' }]}
-          orientation="vertical"
-          yAxisProps={{ width: 110 }}
-          withTooltip
-        />
+      <Card withBorder radius="md" p="md">
+        <Text fw={600} mb="sm">Exported quantity by client</Text>
+        {!s?.by_client.length ? (
+          <EmptyState title="No shipments yet" />
+        ) : (
+          <BarChart
+            h={Math.max(160, s.by_client.length * 34)}
+            data={chartRows(s.by_client)}
+            dataKey="label"
+            series={[{ name: 'kg', color: 'coffee.6' }]}
+            orientation="vertical"
+            yAxisProps={{ width: 120 }}
+            valueFormatter={(v) => `${v.toLocaleString()} kg`}
+            withTooltip
+          />
+        )}
       </Card>
 
       <Card withBorder radius="md" p="md">
         <Text fw={600} mb="sm">Recent export shipments</Text>
-        <Table striped highlightOnHover verticalSpacing="sm">
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Delivery to NAEB</Table.Th>
-              <Table.Th>Client</Table.Th>
-              <Table.Th>Process / grade</Table.Th>
-              <Table.Th>Exported qty (Kg)</Table.Th>
-              <Table.Th>Status</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {filteredShipments.map((s) => (
-              <Table.Tr key={s.id}>
-                <Table.Td>{s.deliveryToNaebDate}</Table.Td>
-                <Table.Td>{s.client}</Table.Td>
-                <Table.Td>{s.productSummary ?? '—'}</Table.Td>
-                <Table.Td>{s.exportedQtyKg.toLocaleString()}</Table.Td>
-                <Table.Td><Badge color={statusColor[s.status]} variant="light">{s.status}</Badge></Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        {shipments.loading && !shipments.data ? (
+          <Loading />
+        ) : shipments.items.length === 0 ? (
+          <EmptyState title="No shipments recorded yet">Use “Record export shipment” to add one.</EmptyState>
+        ) : (
+          <Table.ScrollContainer minWidth={850}>
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Shipment</Table.Th>
+                  <Table.Th>Delivery to NAEB</Table.Th>
+                  <Table.Th>Client</Table.Th>
+                  <Table.Th>Products</Table.Th>
+                  <Table.Th ta="right">Qty (kg)</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {shipments.items.map((sh) => (
+                  <Table.Tr key={sh.id}>
+                    <Table.Td ff="monospace">{sh.shipment_no}</Table.Td>
+                    <Table.Td>{sh.delivery_to_naeb_date}</Table.Td>
+                    <Table.Td>{sh.client_name}</Table.Td>
+                    <Table.Td>
+                      <Text size="xs">{sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${kg(l.qty_kg)} kg`).join(' • ')}</Text>
+                    </Table.Td>
+                    <Table.Td ta="right">{kg(sh.total_qty_kg)}</Table.Td>
+                    <Table.Td>
+                      {writable ? (
+                        <NativeSelect
+                          aria-label={`Status of ${sh.shipment_no}`}
+                          size="xs"
+                          data={['PLANNED', 'SHIPPED', 'DELIVERED']}
+                          value={sh.status}
+                          onChange={(e) => setStatus(sh, e.currentTarget.value as ExportShipment['status'])}
+                        />
+                      ) : (
+                        <Badge color={statusColor[sh.status]} variant="light">{sh.status}</Badge>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
       </Card>
 
-      <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Record export shipment" size="lg">
-        <Stack gap="sm">
-          <Select label="Client" data={clients} value={client} onChange={setClient} />
-          <Select label="Process" data={exportProcesses} value={process} onChange={setProcess} />
-          <Select label="Grade / quality" data={exportGrades} value={grade} onChange={setGrade} />
-          <NumberInput label="Exported quantity (Kg)" value={lineQty} onChange={(v) => setLineQty(v as number)} leftSection={<IconTruckDelivery size={16} />} />
+      {modalOpen && (
+        <ShipmentModal
+          clients={clients.items}
+          grades={grades.data ?? []}
+          knownProducts={s?.options.process_products ?? []}
+          onClientAdded={() => clients.reload()}
+          onClose={() => setModalOpen(false)}
+          onSaved={(sh) => {
+            setModalOpen(false);
+            setSaved(`Saved shipment ${sh.shipment_no} to ${sh.client_name}: ${kg(sh.total_qty_kg)} kg.`);
+            summary.reload();
+            shipments.reload();
+          }}
+        />
+      )}
+    </Stack>
+  );
+}
 
-          <Button variant="default" onClick={addLineItem} disabled={!process || !grade || !lineQty}>Add process line</Button>
+interface LineDraft {
+  key: number;
+  product: string;
+  gradeId: string | null;
+  qty: number | '';
+}
+let lineKey = 1;
 
-          {lineItems.length > 0 && (
-            <Card withBorder p="sm">
-              <Text fw={600} size="sm" mb="xs">Added export entries</Text>
-              {lineItems.map((item, index) => (
-                <Text key={`${item.process}-${item.grade}-${index}`} size="sm" c="dimmed">
-                  {item.process} / {item.grade}: {item.qtyKg.toLocaleString()}kg
-                </Text>
-              ))}
-            </Card>
-          )}
+function ShipmentModal({
+  clients,
+  grades,
+  knownProducts,
+  onClientAdded,
+  onClose,
+  onSaved,
+}: {
+  clients: Client[];
+  grades: ExportGrade[];
+  knownProducts: string[];
+  onClientAdded: () => void;
+  onClose: () => void;
+  onSaved: (s: ExportShipment) => void;
+}) {
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [extraClients, setExtraClients] = useState<Client[]>([]);
+  const [deliveryDate, setDeliveryDate] = useState(today());
+  const [status, setStatus] = useState<ExportShipment['status']>('PLANNED');
+  const [lines, setLines] = useState<LineDraft[]>(() => [{ key: lineKey++, product: '', gradeId: null, qty: '' }]);
+  const [newClient, setNewClient] = useState<{ name: string; country: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-          <Button fullWidth onClick={submitShipment} disabled={lineItems.length === 0 && (!process || !grade || !lineQty)}>
-            Save shipment
+  const allClients = [...clients, ...extraClients.filter((c) => !clients.some((x) => x.id === c.id))];
+  const total = lines.reduce((sum, l) => sum + num(l.qty), 0);
+  const update = (key: number, patch: Partial<LineDraft>) => setLines((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const products = Array.from(new Set([...knownProducts, ...COMMON_PRODUCTS]));
+
+  async function addClient() {
+    if (!newClient?.name.trim()) return;
+    try {
+      const created = await api<Client>('/sales/clients/', { method: 'POST', body: newClient });
+      setExtraClients((prev) => [...prev, created]);
+      setClientId(created.id);
+      setNewClient(null);
+      onClientAdded();
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  async function save() {
+    if (!clientId) return setError('Choose the client.');
+    const ready = lines.filter((l) => l.product.trim() && l.gradeId && num(l.qty) > 0);
+    if (!ready.length) return setError('Add at least one product line with grade and quantity.');
+    setSaving(true);
+    setError(null);
+    try {
+      const shipment = await api<ExportShipment>('/sales/shipments/', {
+        method: 'POST',
+        body: {
+          client: clientId,
+          delivery_to_naeb_date: deliveryDate,
+          status,
+          lines: ready.map((l) => ({ process_product: l.product.trim().toUpperCase(), export_grade: l.gradeId, qty_kg: num(l.qty) })),
+        },
+      });
+      onSaved(shipment);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal opened onClose={onClose} title="Record export shipment" size="xl">
+      <Stack gap="sm">
+        <SimpleGrid cols={{ base: 1, sm: 3 }}>
+          <Select
+            label="Client"
+            required
+            data={allClients.map((c) => ({ value: c.id, label: c.name }))}
+            value={clientId}
+            onChange={setClientId}
+            searchable
+            nothingFoundMessage="Not found: add the client"
+          />
+          <TextInput label="Delivery to NAEB" type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.currentTarget.value)} />
+          <Select
+            label="Status"
+            data={[
+              { value: 'PLANNED', label: 'Planned' },
+              { value: 'SHIPPED', label: 'Shipped' },
+              { value: 'DELIVERED', label: 'Delivered' },
+            ]}
+            value={status}
+            onChange={(v) => setStatus((v ?? 'PLANNED') as ExportShipment['status'])}
+            allowDeselect={false}
+          />
+        </SimpleGrid>
+
+        {newClient ? (
+          <Group align="flex-end" gap="xs">
+            <TextInput label="New client name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.currentTarget.value })} style={{ flex: 1 }} data-autofocus />
+            <TextInput label="Country" value={newClient.country} onChange={(e) => setNewClient({ ...newClient, country: e.currentTarget.value })} />
+            <Button onClick={addClient}>Add</Button>
+            <Button variant="subtle" onClick={() => setNewClient(null)}>Cancel</Button>
+          </Group>
+        ) : (
+          <Button variant="subtle" size="compact-sm" w="fit-content" leftSection={<IconUserPlus size={14} />} onClick={() => setNewClient({ name: '', country: '' })}>
+            New client
           </Button>
-        </Stack>
-      </Modal>
-    </div>
+        )}
+
+        <Card withBorder p="sm">
+          <Text fw={600} mb="xs">Products shipped</Text>
+          <Stack gap={6}>
+            {lines.map((l) => (
+              <Group key={l.key} gap="xs" wrap="nowrap" align="flex-end">
+                <Autocomplete label="Process / product" data={products} value={l.product} onChange={(v) => update(l.key, { product: v })} style={{ flex: 2 }} />
+                <Select label="Grade" data={grades.map((g) => ({ value: g.id, label: g.name }))} value={l.gradeId} onChange={(v) => update(l.key, { gradeId: v })} style={{ flex: 1 }} />
+                <NumberInput label="Qty (kg)" value={l.qty} onChange={(v) => update(l.key, { qty: v === '' ? '' : Number(v) })} min={0} hideControls thousandSeparator="," w={130} />
+                <ActionIcon variant="subtle" color="red" mb={4} aria-label="Remove line" disabled={lines.length <= 1} onClick={() => setLines((rows) => rows.filter((r) => r.key !== l.key))}>
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Group>
+            ))}
+          </Stack>
+          <Group justify="space-between" mt="xs">
+            <Button size="compact-sm" variant="subtle" leftSection={<IconPlus size={14} />} onClick={() => setLines((rows) => [...rows, { key: lineKey++, product: '', gradeId: null, qty: '' }])}>
+              Add line
+            </Button>
+            <Text size="sm">Total: <strong>{kg(total)} kg</strong></Text>
+          </Group>
+        </Card>
+
+        <ErrorMessage>{error}</ErrorMessage>
+        <Button onClick={save} loading={saving}>Save shipment</Button>
+      </Stack>
+    </Modal>
   );
 }

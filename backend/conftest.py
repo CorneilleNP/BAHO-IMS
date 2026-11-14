@@ -33,3 +33,53 @@ def gitoki_clerk(gitoki):
     user = UserFactory(email="clerk@test.local")
     assign(user, "CWS_CLERK", gitoki)
     return user
+
+
+@pytest.fixture(autouse=True)
+def crop_year(db):
+    """A crop year covering today, so services can date transactions."""
+    from datetime import date
+
+    from baho.organization.models import CropYear
+
+    today = date.today()
+    return CropYear.objects.create(
+        label=str(today.year), start_date=date(today.year, 1, 1), end_date=date(today.year, 12, 31)
+    )
+
+
+@pytest.fixture
+def hq(db):
+    from baho.organization.models import Facility
+
+    return FacilityFactory(
+        code="HQ", name="HQ Dry Mill", facility_type=Facility.FacilityType.HQ_DRY_MILL
+    )
+
+
+@pytest.fixture
+def bugoyi_clerk(bugoyi):
+    user = UserFactory(email="clerk.bugoyi@test.local")
+    assign(user, "CWS_CLERK", bugoyi)
+    return user
+
+
+@pytest.fixture
+def drymill_operator(hq):
+    user = UserFactory(email="drymill@test.local")
+    assign(user, "HQ_DRY_MILL_OPERATOR")
+    return user
+
+
+@pytest.fixture
+def export_manager(hq):
+    user = UserFactory(email="export@test.local")
+    assign(user, "HQ_EXPORT_MANAGER")
+    return user
+
+
+@pytest.fixture
+def hq_finance(db):
+    user = UserFactory(email="finance@test.local")
+    assign(user, "HQ_FINANCE")
+    return user

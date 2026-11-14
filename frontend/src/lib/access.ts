@@ -49,6 +49,21 @@ export function allowedSections(user: CurrentUser | null): Section[] {
   return (['drymill', 'cws'] as Section[]).filter((section) => canAccessSection(user, section));
 }
 
+export type WriteArea = 'cws' | 'drymill' | 'export';
+
+// Mirrors the backend's *_WRITE_ROLES; the server still enforces them.
+const WRITE_ROLES: Record<WriteArea, RoleCode[]> = {
+  cws: ['ADMIN', 'CWS_CLERK', 'CWS_MANAGER'],
+  drymill: ['ADMIN', 'HQ_DRY_MILL_OPERATOR'],
+  export: ['ADMIN', 'HQ_EXPORT_MANAGER'],
+};
+
+/** Whether the user may create/change records in this area (hides buttons for read-only roles). */
+export function canWrite(user: CurrentUser | null, area: WriteArea): boolean {
+  if (!user) return false;
+  return user.roles.some((assignment) => WRITE_ROLES[area].includes(assignment.role));
+}
+
 /** Which section a URL belongs to (null for shared pages like /dashboard). */
 export function sectionForPath(pathname: string): Section | null {
   if (pathname.startsWith('/drymill/')) return 'drymill';
