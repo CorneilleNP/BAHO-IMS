@@ -227,25 +227,109 @@ def check_receipt_can_be_voided(receipt: HqStockReceipt) -> None:
         )
 
 
+def available_stock(
+    *, process=None, sub_process=None, grade="", source_facility=None, source_supplier=None
+):
+    """Accepted parchment with a balance matching a selection, oldest first (FIFO order)."""
+    qs = HqStockReceipt.objects.filter(
+        quality_status=HqStockReceipt.QualityStatus.ACCEPTED,
+        item_type=HqStockReceipt.ItemType.PARCH,
+        stock_balance_kg__gt=0,
+    )
+    if process is not None:
+        qs = qs.filter(process=process)
+    if sub_process is not None:
+        qs = qs.filter(sub_process=sub_process)
+    if grade:
+        qs = qs.filter(grade=grade.strip().upper())
+    if source_facility is not None:
+        qs = qs.filter(source_facility=source_facility)
+    if source_supplier is not None:
+        qs = qs.filter(source_supplier=source_supplier)
+    return qs.order_by("arrival_date", "receipt_number")
+
+
+def _describe(line) -> str:
+    parts = [
+        getattr(line.get("process"), "name", "") or "any process",
+        getattr(line.get("sub_process"), "name", ""),
+        (line.get("grade") or "").upper(),
+        getattr(line.get("source_facility") or line.get("source_supplier"), "name", ""),
+    ]
+    return " / ".join(p for p in parts if p)
+
+
+def allocate_from_stock(stock_lines) -> list[dict]:
+    """Turn "mill N kg of <process / sub-process / grade / source>" into receipt deductions.
+
+    Takes from the available (accepted, parchment) stock matching each line, oldest
+    receipts first, so the user never has to pick receipts. Rows are locked.
+    """
+    taken: dict = {}  # receipt pk -> [receipt, kg] so two lines can share a receipt
+    problems = []
+    for line in stock_lines:
+        need = Decimal(line["qty_kg"])
+        if need <= 0:
+            continue
+        if line.get("process") is None:
+            problems.append("Choose the process of the parchment being milled.")
+            continue
+        pool = available_stock(
+            process=line.get("process"),
+            sub_process=line.get("sub_process"),
+            grade=line.get("grade") or "",
+            source_facility=line.get("source_facility"),
+            source_supplier=line.get("source_supplier"),
+        ).select_for_update()
+        receipts = list(pool)
+        free = sum(
+            (r.stock_balance_kg - taken.get(r.pk, [r, Decimal("0")])[1] for r in receipts),
+            Decimal("0"),
+        )
+        if need > free:
+            problems.append(
+                f"Only {free:,.2f} kg available for {_describe(line)}; {need:,.2f} kg requested."
+            )
+            continue
+        for receipt in receipts:
+            if need <= 0:
+                break
+            already = taken.get(receipt.pk, [receipt, Decimal("0")])[1]
+            take = min(receipt.stock_balance_kg - already, need)
+            if take > 0:
+                taken[receipt.pk] = [receipt, already + take]
+                need -= take
+    if problems:
+        raise ValidationError({"stock_lines": problems})
+    return [{"receipt": receipt, "qty_kg": kg} for receipt, kg in taken.values()]
+
+
 @transaction.atomic
 def create_dry_mill_batch(
     *,
     user,
     processing_date,
     process_product,
-    inputs,
     outputs,
+    stock_lines=None,
+    inputs=None,
     batch_no="",
     status=DryMillBatch.Status.COMPLETED,
 ) -> DryMillBatch:
-    """Mill parchment taken from specific stock receipts.
+    """Mill parchment taken out of the available stock.
 
-    `inputs`:  [{"receipt": HqStockReceipt, "qty_kg": Decimal}]  (the stock deduction)
-    `outputs`: [{"export_grade": ExportGrade, "qty_kg": Decimal}] — zero lines are skipped.
+    `stock_lines`: [{"process", "sub_process"?, "grade"?, "source_facility"?, "source_supplier"?,
+                    "qty_kg"}] — what was milled; deducted from matching stock, oldest first.
+    `inputs`:      [{"receipt", "qty_kg"}] — explicit receipts (imports / corrections only).
+    `outputs`:     [{"export_grade", "qty_kg"}] — zero lines are skipped.
     """
-    inputs = [i for i in inputs if i["qty_kg"] > 0]
+    if stock_lines:
+        inputs = allocate_from_stock(stock_lines)
+    inputs = [i for i in (inputs or []) if i["qty_kg"] > 0]
     if not inputs:
-        raise ValidationError({"inputs": ["Choose the stock receipts this batch mills."]})
+        raise ValidationError(
+            {"stock_lines": ["Enter the parchment taken from stock (process and kg)."]}
+        )
     ids = [i["receipt"].pk for i in inputs]
     if len(ids) != len(set(ids)):
         raise ValidationError({"inputs": ["Each stock receipt can be used once per batch."]})

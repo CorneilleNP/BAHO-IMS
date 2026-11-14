@@ -1,31 +1,40 @@
-import { useMemo, useState } from 'react';
-import { ActionIcon, Autocomplete, Badge, Button, Group, NumberInput, ScrollArea, Select, SimpleGrid, Stack, Table, Text, TextInput, Tooltip } from '@mantine/core';
-import { IconArrowDownCircle, IconTrash } from '@tabler/icons-react';
-import { EmptyState } from '../../components/Feedback';
+import { useCallback, useEffect } from 'react';
+import { ActionIcon, Autocomplete, Badge, Button, Card, Group, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput } from '@mantine/core';
+import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { FormWizard } from '../../components/FormWizard';
-import { FormSkeleton, TableSkeleton } from '../../components/Skeletons';
+import { FormSkeleton } from '../../components/Skeletons';
 import { api } from '../../lib/api';
 import { calculateOutturnPct, kg, num, pct, today } from '../../lib/format';
+import { sourceFields, sourceOptions } from '../../lib/sources';
 import { toast } from '../../lib/toast';
-import type { CatalogProcess, CoffeeSource, DryMillBatch, ExportGrade, HqStockReceipt, Paginated } from '../../lib/types';
+import type { CatalogProcess, CatalogSubProcess, CoffeeSource, DryMillBatch, ExportGrade } from '../../lib/types';
 import { query, useApi } from '../../lib/useApi';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
 
 const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
+const COMMON_GRADES = ['A1', 'A2', 'A3', 'A4', 'HG', 'HPC', 'FLOAT', 'HC', 'LG'];
+
+/** One "what was milled" line: N kg of a process / sub-process / grade (from a source). */
+interface StockLine {
+  key: number;
+  process: string | null;
+  sub_process: string | null;
+  grade: string;
+  source: string | null;
+  qty: number | '';
+}
 
 interface BatchForm {
   process_product: string;
   processing_date: string;
   batch_no: string;
-  /** receipt id -> kg taken (the stock deduction) */
-  inputs: Record<string, number | ''>;
-  /** remembered so the review/inputs list still shows receipts filtered out later */
-  picked: Record<string, Pick<HqStockReceipt, 'receipt_number' | 'source_name' | 'grade' | 'process_name' | 'stock_balance_kg' | 'arrival_date'>>;
+  lines: StockLine[];
   outputs: Record<string, number | ''>;
 }
 
-const blank = (): BatchForm => ({ process_product: '', processing_date: today(), batch_no: '', inputs: {}, picked: {}, outputs: {} });
+const newLine = (key = Date.now()): StockLine => ({ key, process: null, sub_process: null, grade: '', source: null, qty: '' });
+const blank = (): BatchForm => ({ process_product: '', processing_date: today(), batch_no: '', lines: [newLine(1)], outputs: {} });
 
 interface Props {
   knownProducts: string[];
@@ -33,29 +42,40 @@ interface Props {
   onSaved: (batch: DryMillBatch) => void;
 }
 
-/** Record a dry mill batch: what product, which stock receipts it takes parchment from, and the green output per grade. */
+/**
+ * Record a dry mill batch. Say what parchment was milled (process, optionally
+ * sub-process / grade / source, and kg): it is taken out of the available stock
+ * automatically, oldest accepted parchment first. No receipt picking.
+ */
 export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
-  const draft = useDraft<BatchForm>('dry-mill-batch', blank);
+  const draft = useDraft<BatchForm>('dry-mill-batch-v2', blank);
   const form = draft.value;
   const submit = useSubmit();
   const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
+  const processes = useApi<CatalogProcess[]>('/processing/catalog/processes/');
+  const sources = useApi<CoffeeSource[]>('/drymill/sources/');
+  // Each line reports how much stock is available for its selection.
+  const available = useDraft<Record<number, number>>(null, () => ({}));
+  const setAvailable = available.setValue;
+  const reportAvailable = useCallback(
+    (lineKey: number, kgAvailable: number) => setAvailable((prev) => (prev[lineKey] === kgAvailable ? prev : { ...prev, [lineKey]: kgAvailable })),
+    [setAvailable],
+  );
 
-  const inputTotal = Object.values(form.inputs).reduce<number>((sum, v) => sum + num(v), 0);
+  const lines = form.lines.filter((l) => l.process && num(l.qty) > 0);
+  const inputTotal = lines.reduce((sum, l) => sum + num(l.qty), 0);
   const outputTotal = Object.values(form.outputs).reduce<number>((sum, v) => sum + num(v), 0);
   const outturn = inputTotal > 0 ? calculateOutturnPct(outputTotal, inputTotal) : 0;
-  const pickedIds = Object.keys(form.inputs).filter((id) => num(form.inputs[id]) > 0);
+  const processName = (id: string | null) => processes.data?.find((p) => p.id === id)?.name ?? '';
+  const sourceName = (value: string | null) => sources.data?.find((s) => `${s.origin_type}:${s.id}` === value)?.name ?? '';
 
-  const setInput = (receipt: Pick<HqStockReceipt, 'id'> & BatchForm['picked'][string], qty: number | '') =>
-    draft.setValue((prev) => ({
-      ...prev,
-      inputs: { ...prev.inputs, [receipt.id]: qty },
-      picked: { ...prev.picked, [receipt.id]: receipt },
-    }));
+  const updateLine = (key: number, patch: Partial<StockLine>) =>
+    draft.setValue((prev) => ({ ...prev, lines: prev.lines.map((l) => (l.key === key ? { ...l, ...patch } : l)) }));
 
   const steps = [
     {
       label: 'Product',
-      description: 'What is milled',
+      description: 'What is produced',
       validate: () => (!form.process_product.trim() ? 'Enter the process / product being milled.' : !form.processing_date ? 'Enter the processing date.' : null),
       content: (
         <SimpleGrid cols={{ base: 1, sm: 3 }}>
@@ -73,13 +93,38 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
     },
     {
       label: 'Parchment from stock',
-      description: 'Which receipts',
+      description: 'Process, grade, kg',
       validate: () => {
-        if (inputTotal <= 0) return 'Choose at least one stock receipt and how many kg the batch takes from it.';
-        const over = pickedIds.find((id) => num(form.inputs[id]) > num(form.picked[id]?.stock_balance_kg));
-        return over ? `${form.picked[over].receipt_number} only has ${kg(form.picked[over].stock_balance_kg)} kg left.` : null;
+        if (form.lines.some((l) => num(l.qty) > 0 && !l.process)) return 'Choose the process for each line.';
+        if (inputTotal <= 0) return 'Enter how many kg of parchment were milled.';
+        const short = lines.find((l) => num(l.qty) > (available.value[l.key] ?? Infinity));
+        return short ? `Only ${kg(available.value[short.key])} kg available for that selection.` : null;
       },
-      content: <StockPicker form={form} setInput={setInput} inputTotal={inputTotal} />,
+      content: (
+        <Stack gap="sm">
+          <Text size="sm" c="dimmed">
+            Say what was milled. It is deducted from the available stock (accepted parchment), oldest first. Leave sub-process, grade or source empty for “any”.
+          </Text>
+          {form.lines.map((line) => (
+            <StockLineEditor
+              key={line.key}
+              line={line}
+              processes={processes.data ?? []}
+              sources={sources.data ?? []}
+              removable={form.lines.length > 1}
+              onChange={(patch) => updateLine(line.key, patch)}
+              onRemove={() => draft.setValue((prev) => ({ ...prev, lines: prev.lines.filter((l) => l.key !== line.key) }))}
+              onAvailable={reportAvailable}
+            />
+          ))}
+          <Group justify="space-between">
+            <Button size="compact-sm" variant="subtle" leftSection={<IconPlus size={14} />} onClick={() => draft.setValue((prev) => ({ ...prev, lines: [...prev.lines, newLine()] }))}>
+              Add another process / grade
+            </Button>
+            <Text size="sm">Total parchment: <strong>{kg(inputTotal)} kg</strong></Text>
+          </Group>
+        </Stack>
+      ),
     },
     {
       label: 'Green output',
@@ -87,7 +132,7 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
       validate: () => (outputTotal > inputTotal ? 'Green output cannot be more than the parchment input.' : null),
       content: (
         <Stack gap="sm">
-          <Text size="sm" c="dimmed">Parchment input: <strong>{kg(inputTotal)} kg</strong> from {pickedIds.length} receipt{pickedIds.length === 1 ? '' : 's'}.</Text>
+          <Text size="sm" c="dimmed">Parchment input: <strong>{kg(inputTotal)} kg</strong>.</Text>
           {grades.loading && !grades.data ? (
             <FormSkeleton fields={6} />
           ) : (
@@ -105,9 +150,7 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
               ))}
             </SimpleGrid>
           )}
-          <Text size="sm">
-            Total green <strong>{kg(outputTotal)} kg</strong> · out-turn <strong>{pct(outturn, 2)}</strong>
-          </Text>
+          <Text size="sm">Total green <strong>{kg(outputTotal)} kg</strong> · out-turn <strong>{pct(outturn, 2)}</strong></Text>
         </Stack>
       ),
     },
@@ -125,15 +168,18 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
       </Group>
       <Table striped withTableBorder>
         <Table.Thead>
-          <Table.Tr><Table.Th>Receipt</Table.Th><Table.Th>Source</Table.Th><Table.Th ta="right">Taken (kg)</Table.Th><Table.Th ta="right">Left after (kg)</Table.Th></Table.Tr>
+          <Table.Tr><Table.Th>Taken from stock</Table.Th><Table.Th ta="right">kg</Table.Th><Table.Th ta="right">Left in stock after</Table.Th></Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {pickedIds.map((id) => (
-            <Table.Tr key={id}>
-              <Table.Td ff="monospace">{form.picked[id].receipt_number}</Table.Td>
-              <Table.Td>{form.picked[id].source_name}</Table.Td>
-              <Table.Td ta="right">{kg(form.inputs[id])}</Table.Td>
-              <Table.Td ta="right">{kg(num(form.picked[id].stock_balance_kg) - num(form.inputs[id]))}</Table.Td>
+          {lines.map((l) => (
+            <Table.Tr key={l.key}>
+              <Table.Td>
+                {processName(l.process)}
+                {l.grade && <Badge ml={6} size="xs" variant="light">{l.grade}</Badge>}
+                {l.source && <Text span size="xs" c="dimmed"> · {sourceName(l.source)}</Text>}
+              </Table.Td>
+              <Table.Td ta="right">{kg(l.qty)}</Table.Td>
+              <Table.Td ta="right">{available.value[l.key] === undefined ? '—' : kg(available.value[l.key] - num(l.qty))}</Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>
@@ -152,7 +198,17 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
           process_product: form.process_product.trim(),
           processing_date: form.processing_date,
           batch_no: form.batch_no.trim(),
-          inputs: pickedIds.map((receipt) => ({ receipt, qty_kg: num(form.inputs[receipt]) })),
+          stock_lines: lines.map((l) => {
+            const origin = sourceFields(l.source);
+            return {
+              process: l.process,
+              sub_process: l.sub_process,
+              grade: l.grade.trim().toUpperCase(),
+              source_facility: origin?.source_facility ?? null,
+              source_supplier: origin?.source_supplier ?? null,
+              qty_kg: num(l.qty),
+            };
+          }),
           outputs: Object.entries(form.outputs)
             .filter(([, v]) => num(v) > 0)
             .map(([export_grade, v]) => ({ export_grade, qty_kg: num(v) })),
@@ -160,143 +216,95 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
       }),
     );
     if (!batch) return;
-    toast.success(`${batch.batch_no}: ${kg(batch.green_output_kg)} kg green from ${kg(batch.parch_input_kg)} kg parchment (${pct(batch.outturn_pct, 2)}).`, 'Batch saved');
+    toast.success(`${batch.batch_no}: ${kg(batch.parch_input_kg)} kg parchment taken from stock, ${kg(batch.green_output_kg)} kg green (${pct(batch.outturn_pct, 2)}).`, 'Batch saved');
     draft.reset();
     onSaved(batch);
   }
 
-  return (
-    <FormWizard opened onClose={onClose} title="Record dry mill batch" steps={steps} review={review} onSubmit={save} submitLabel="Save batch" saving={submit.saving} error={submit.error} size="80rem" />
-  );
+  return <FormWizard opened onClose={onClose} title="Record dry mill batch" steps={steps} review={review} onSubmit={save} submitLabel="Save batch" saving={submit.saving} error={submit.error} size="70rem" />;
 }
 
-function StockPicker({
-  form,
-  setInput,
-  inputTotal,
+function StockLineEditor({
+  line,
+  processes,
+  sources,
+  removable,
+  onChange,
+  onRemove,
+  onAvailable,
 }: {
-  form: BatchForm;
-  setInput: (receipt: HqStockReceipt, qty: number | '') => void;
-  inputTotal: number;
+  line: StockLine;
+  processes: CatalogProcess[];
+  sources: CoffeeSource[];
+  removable: boolean;
+  onChange: (patch: Partial<StockLine>) => void;
+  onRemove: () => void;
+  /** Stable callback (useCallback): reports the stock available for this line's selection. */
+  onAvailable: (lineKey: number, kgAvailable: number) => void;
 }) {
-  const [source, setSource] = useState<string | null>(null);
-  const [process, setProcess] = useState<string | null>(null);
-  const [grade, setGrade] = useState('');
-  const [fillKg, setFillKg] = useState<number | ''>('');
-  const sources = useApi<CoffeeSource[]>('/drymill/sources/');
-  const processes = useApi<CatalogProcess[]>('/processing/catalog/processes/');
-  const available = useApi<Paginated<HqStockReceipt>>(
-    `/drymill/stock-receipts/${query({
-      quality_status: 'ACCEPTED',
-      has_balance: 'true',
-      item_type: 'PARCH',
-      source,
-      process,
-      grade: grade.trim().toUpperCase(),
-      ordering: 'arrival_date',
-      page_size: 200,
-    })}`,
+  const subs = useApi<CatalogSubProcess[]>(line.process ? `/processing/catalog/sub-processes/?process=${line.process}&is_active=true` : null);
+  const origin = sourceFields(line.source);
+  const stock = useApi<{ available_kg: string; receipts: number; oldest_arrival: string | null }>(
+    line.process
+      ? `/drymill/stock-receipts/available/${query({
+          process: line.process,
+          sub_process: line.sub_process,
+          grade: line.grade.trim().toUpperCase(),
+          source_facility: origin?.source_facility,
+          source_supplier: origin?.source_supplier,
+        })}`
+      : null,
   );
-  const rows = useMemo(() => available.data?.results ?? [], [available.data]);
-
-  /** First in, first out: take from the oldest receipts until `fillKg` is reached. */
-  function fillOldestFirst() {
-    let remaining = num(fillKg);
-    rows.forEach((r) => {
-      const already = num(form.inputs[r.id]);
-      const room = num(r.stock_balance_kg) - already;
-      const take = Math.max(0, Math.min(room, remaining));
-      if (take > 0) setInput(r, already + take);
-      remaining -= take;
-    });
-    if (remaining > 0) toast.info(`Only ${kg(num(fillKg) - remaining)} kg available with these filters.`);
-  }
+  const availableKg = stock.data ? num(stock.data.available_kg) : null;
+  useEffect(() => {
+    if (availableKg !== null) onAvailable(line.key, availableKg);
+  }, [availableKg, line.key, onAvailable]);
+  const over = availableKg !== null && num(line.qty) > availableKg;
 
   return (
-    <Stack gap="sm">
-      <Group gap="sm" align="flex-end" wrap="wrap">
+    <Card withBorder radius="md" p="sm">
+      <Group gap="xs" align="flex-end" wrap="wrap">
         <Select
-          label="Source"
-          placeholder="All"
-          data={(sources.data ?? []).map((s) => ({ value: s.origin_type === 'OWN_CWS' ? s.code : s.name, label: s.name }))}
-          value={source}
-          onChange={setSource}
+          label="Process"
+          required
+          data={processes.map((p) => ({ value: p.id, label: p.name }))}
+          value={line.process}
+          onChange={(v) => onChange({ process: v, sub_process: null })}
+          w={210}
+        />
+        <Select
+          label="Sub-process"
+          placeholder={line.process ? 'Any' : 'Choose process'}
+          data={(subs.data ?? []).map((s) => ({ value: s.id, label: s.name }))}
+          value={line.sub_process}
+          onChange={(v) => onChange({ sub_process: v })}
+          disabled={!line.process}
           searchable
           clearable
-          w={180}
+          w={190}
         />
-        <Select label="Process" placeholder="All" data={(processes.data ?? []).map((p) => ({ value: p.id, label: p.name }))} value={process} onChange={setProcess} clearable w={210} />
-        <TextInput label="Grade" placeholder="All" value={grade} onChange={(e) => setGrade(e.currentTarget.value)} w={90} />
-        <NumberInput label="Quantity to take (kg)" value={fillKg} onChange={(v) => setFillKg(v === '' ? '' : Number(v))} min={0} hideControls thousandSeparator="," w={170} />
-        <Tooltip label="Takes from the oldest accepted receipts first (FIFO)" withArrow>
-          <Button variant="light" leftSection={<IconArrowDownCircle size={16} />} disabled={!fillKg || rows.length === 0} onClick={fillOldestFirst}>
-            Fill oldest first
+        <Autocomplete label="Grade" placeholder="Any" data={COMMON_GRADES} value={line.grade} onChange={(v) => onChange({ grade: v.toUpperCase() })} w={100} />
+        <Select label="Source" placeholder="Any" data={sourceOptions(sources)} value={line.source} onChange={(v) => onChange({ source: v })} searchable clearable w={180} />
+        <NumberInput label="Milled (kg)" required value={line.qty} onChange={(v) => onChange({ qty: v === '' ? '' : Number(v) })} min={0} hideControls thousandSeparator="," error={over} w={130} />
+        {availableKg !== null && (
+          <Button size="compact-sm" variant="subtle" mb={6} onClick={() => onChange({ qty: availableKg })} disabled={availableKg <= 0}>
+            All
           </Button>
-        </Tooltip>
+        )}
+        {removable && (
+          <ActionIcon variant="subtle" color="red" mb={6} aria-label="Remove line" onClick={onRemove}>
+            <IconTrash size={16} />
+          </ActionIcon>
+        )}
       </Group>
-      <Text size="sm">
-        Selected: <strong>{kg(inputTotal)} kg</strong> from {Object.values(form.inputs).filter((v) => num(v) > 0).length} receipt(s)
-        {available.data && available.data.count > rows.length && <Text span c="dimmed"> · showing oldest {rows.length} of {available.data.count}; narrow the filters to see more</Text>}
+      <Text size="xs" mt={6} c={over ? 'red' : 'dimmed'}>
+        {!line.process
+          ? 'Choose a process to see the available stock.'
+          : stock.loading && !stock.data
+            ? 'Checking available stock…'
+            : `Available to mill: ${kg(availableKg)} kg in ${stock.data?.receipts ?? 0} receipts${stock.data?.oldest_arrival ? ` (oldest ${stock.data.oldest_arrival})` : ''}`}
       </Text>
-      {available.loading && !available.data ? (
-        <TableSkeleton rows={5} columns={6} />
-      ) : rows.length === 0 ? (
-        <EmptyState title="No accepted parchment in stock with these filters">Only quality-accepted parchment with a balance can be milled.</EmptyState>
-      ) : (
-        <ScrollArea h={340} type="auto">
-          <Table striped highlightOnHover stickyHeader>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Receipt</Table.Th>
-                <Table.Th>Arrival</Table.Th>
-                <Table.Th>Source</Table.Th>
-                <Table.Th>Process / grade</Table.Th>
-                <Table.Th ta="right">In stock (kg)</Table.Th>
-                <Table.Th w={210}>Take (kg)</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {rows.map((r) => {
-                const taken = form.inputs[r.id] ?? '';
-                const over = num(taken) > num(r.stock_balance_kg);
-                return (
-                  <Table.Tr key={r.id} bg={num(taken) > 0 ? 'var(--mantine-color-coffee-0)' : undefined}>
-                    <Table.Td ff="monospace">{r.receipt_number}</Table.Td>
-                    <Table.Td>{r.arrival_date}</Table.Td>
-                    <Table.Td>{r.source_name}</Table.Td>
-                    <Table.Td>
-                      {r.process_name || <Badge size="xs" color="orange">not assigned</Badge>} {r.grade && <Badge size="xs" variant="light">{r.grade}</Badge>}
-                    </Table.Td>
-                    <Table.Td ta="right">{kg(r.stock_balance_kg)}</Table.Td>
-                    <Table.Td>
-                      <Group gap={4} wrap="nowrap">
-                        <NumberInput
-                          aria-label={`Take from ${r.receipt_number}`}
-                          size="xs"
-                          value={taken}
-                          onChange={(v) => setInput(r, v === '' ? '' : Number(v))}
-                          min={0}
-                          max={num(r.stock_balance_kg)}
-                          hideControls
-                          error={over}
-                          w={110}
-                        />
-                        <Button size="compact-xs" variant="subtle" onClick={() => setInput(r, num(r.stock_balance_kg))}>All</Button>
-                        {num(taken) > 0 && (
-                          <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Remove" onClick={() => setInput(r, '')}>
-                            <IconTrash size={12} />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                );
-              })}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
-      )}
-    </Stack>
+    </Card>
   );
 }
 

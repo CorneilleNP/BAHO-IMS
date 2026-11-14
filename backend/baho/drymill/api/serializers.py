@@ -274,10 +274,34 @@ class DryMillInputSerializer(serializers.ModelSerializer):
         ]
 
 
+class StockLineSerializer(serializers.Serializer):
+    """What was milled: N kg of a process (optionally sub-process / grade / source)."""
+
+    process = serializers.PrimaryKeyRelatedField(queryset=Process.objects.filter(is_active=True))
+    sub_process = serializers.PrimaryKeyRelatedField(
+        queryset=SubProcess.objects.all(), required=False, allow_null=True
+    )
+    grade = serializers.CharField(required=False, allow_blank=True, default="")
+    source_facility = serializers.PrimaryKeyRelatedField(
+        queryset=CWS_FACILITIES, required=False, allow_null=True
+    )
+    source_supplier = serializers.PrimaryKeyRelatedField(
+        queryset=Supplier.objects.all(), required=False, allow_null=True
+    )
+    qty_kg = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=ZERO)
+
+
+class AvailableStockSerializer(serializers.Serializer):
+    available_kg = serializers.DecimalField(max_digits=14, decimal_places=2)
+    receipts = serializers.IntegerField()
+    oldest_arrival = serializers.DateField(allow_null=True)
+
+
 class DryMillBatchSerializer(serializers.ModelSerializer):
     processing_date = serializers.DateField(default=date.today)
     batch_no = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
-    inputs = DryMillInputSerializer(many=True)
+    stock_lines = StockLineSerializer(many=True, write_only=True, required=False)
+    inputs = DryMillInputSerializer(many=True, required=False)
     outputs = DryMillOutputSerializer(many=True)
     source_name = serializers.CharField(read_only=True)
     source_code = serializers.CharField(read_only=True)
@@ -295,6 +319,7 @@ class DryMillBatchSerializer(serializers.ModelSerializer):
             "source_code",
             "process_product",
             "parch_input_kg",
+            "stock_lines",
             "inputs",
             "outputs",
             "green_output_kg",
@@ -304,6 +329,13 @@ class DryMillBatchSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["origin_type", "parch_input_kg", "created_at"]
         extra_kwargs = {"batch_no": {"validators": []}}
+
+    def validate(self, attrs):
+        if not attrs.get("stock_lines") and not attrs.get("inputs"):
+            raise serializers.ValidationError(
+                {"stock_lines": "Enter the parchment taken from stock (process and kg)."}
+            )
+        return attrs
 
     def get_outturn_pct(self, obj) -> str:
         if not obj.parch_input_kg:

@@ -247,3 +247,70 @@ def test_receipts_filter_by_balance(api, drymill_operator, gitoki, hq):
     api.post(BATCHES, batch_payload((full, 100), outputs=()), format="json")
     assert api.get(f"{RECEIPTS}?has_balance=true").data["count"] == 1
     assert HqStockReceipt.objects.get(pk=full.pk).processing_status == "COMPLETED"
+
+
+# --- Milling from available stock (no receipt picking) --------------------------------
+
+
+def stock_payload(qty, outputs=(), **line):
+    return {
+        "process_product": "FULLWASHED A1",
+        "stock_lines": [{"process": str(fw().id), "qty_kg": str(qty), **line}],
+        "outputs": [
+            {"export_grade": str(ExportGrade.objects.get(code=code).id), "qty_kg": kg}
+            for code, kg in outputs
+        ],
+    }
+
+
+def test_batch_takes_from_available_stock_oldest_first(api, drymill_operator, gitoki, hq):
+    from datetime import date, timedelta
+
+    today = date.today()
+    older = stock_receipt(gitoki, net="300", arrival_date=today - timedelta(days=2))
+    newer = stock_receipt(gitoki, net="1000", arrival_date=today - timedelta(days=1))
+    login(api, drymill_operator)
+    res = api.post(BATCHES, stock_payload(500, outputs=(("15PLUS", "350"),)), format="json")
+    assert res.status_code == 201, res.data
+    assert Decimal(res.data["parch_input_kg"]) == Decimal("500")
+    taken = {i["receipt_number"]: Decimal(i["qty_kg"]) for i in res.data["inputs"]}
+    assert taken == {older.receipt_number: Decimal("300"), newer.receipt_number: Decimal("200")}
+    older.refresh_from_db()
+    newer.refresh_from_db()
+    assert (older.stock_balance_kg, older.processing_status) == (Decimal("0"), "COMPLETED")
+    assert newer.stock_balance_kg == Decimal("800")
+
+
+def test_batch_refused_when_not_enough_stock(api, drymill_operator, gitoki, hq):
+    stock_receipt(gitoki, net="100")
+    login(api, drymill_operator)
+    res = api.post(BATCHES, stock_payload(150), format="json")
+    assert res.status_code == 400
+    assert "Only 100.00 kg available for Fully Washed" in str(res.data)
+
+
+def test_stock_line_filters_grade_sub_process_and_source(api, drymill_operator, gitoki, bugoyi, hq):
+    sub = SubProcess.objects.create(name="WASHED NO 1", process=fw())
+    a1 = stock_receipt(gitoki, net="500", grade="A1")
+    a2 = stock_receipt(gitoki, net="500", grade="A2", sub_process=sub)
+    other = stock_receipt(bugoyi, net="500", grade="A2", sub_process=sub)
+    login(api, drymill_operator)
+    res = api.post(
+        BATCHES,
+        stock_payload(200, grade="a2", sub_process=str(sub.id), source_facility=str(gitoki.id)),
+        format="json",
+    )
+    assert res.status_code == 201, res.data
+    assert [i["receipt_number"] for i in res.data["inputs"]] == [a2.receipt_number]
+    for r, balance in ((a1, "500"), (a2, "300"), (other, "500")):
+        r.refresh_from_db()
+        assert r.stock_balance_kg == Decimal(balance)
+
+
+def test_pending_quality_is_not_available(api, drymill_operator, gitoki, hq):
+    stock_receipt(gitoki, net="400", quality="PENDING")
+    stock_receipt(gitoki, net="100")
+    login(api, drymill_operator)
+    data = api.get(f"{RECEIPTS}available/?process={fw().id}&grade=A1").data
+    assert (Decimal(data["available_kg"]), data["receipts"]) == (Decimal("100"), 1)
+    assert api.post(BATCHES, stock_payload(150), format="json").status_code == 400

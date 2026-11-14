@@ -1,10 +1,10 @@
 from decimal import Decimal
 
 import django_filters
-from django.db.models import Q, Sum
+from django.db.models import Count, Min, Q, Sum
 from django.db.models.functions import Coalesce
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +19,7 @@ from ..models import DryMillBatch, ExportGrade, HqStockReceipt, Supplier
 from ..selectors import batches_with_totals, coffee_sources, receipt_history, stock_receipts
 from ..services import (
     adjust_stock,
+    available_stock,
     check_receipt_can_be_voided,
     create_dry_mill_batch,
     create_stock_receipt,
@@ -28,6 +29,7 @@ from ..services import (
     update_stock_receipt,
 )
 from .serializers import (
+    AvailableStockSerializer,
     CoffeeSourceSerializer,
     DryMillBatchSerializer,
     ExportGradeSerializer,
@@ -215,6 +217,31 @@ class HqStockReceiptViewSet(
             stock_balance_kg=Coalesce(Sum("stock_balance_kg"), ZERO),
         )
         return Response(StockTotalsSerializer({"receipts": qs.count(), **agg}).data)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("process", OpenApiTypes.UUID),
+            OpenApiParameter("sub_process", OpenApiTypes.UUID),
+            OpenApiParameter("grade", str),
+            OpenApiParameter("source_facility", OpenApiTypes.UUID),
+            OpenApiParameter("source_supplier", OpenApiTypes.UUID),
+        ],
+        responses=AvailableStockSerializer,
+    )
+    @action(detail=False)
+    def available(self, request):
+        """Accepted parchment available to mill for a process / sub-process / grade / source."""
+        params = request.query_params
+        qs = available_stock(grade=params.get("grade", ""))
+        for field in ("process", "sub_process", "source_facility", "source_supplier"):
+            if params.get(field):
+                qs = qs.filter(**{f"{field}_id": params[field]})
+        agg = qs.aggregate(
+            available_kg=Coalesce(Sum("stock_balance_kg"), ZERO),
+            receipts=Count("id"),
+            oldest_arrival=Min("arrival_date"),
+        )
+        return Response(AvailableStockSerializer(agg).data)
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     @action(detail=True)

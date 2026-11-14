@@ -127,8 +127,10 @@ position is **calculated, never typed**:
 
     balance = pure weight − kg taken by dry mill batches + adjustments
 
-- A dry mill batch must say which receipts it mills (wizard step 2, with
-  "fill oldest first"); only quality-accepted parchment, never more than the balance.
+- A dry mill batch says what was milled (process, optionally sub-process /
+  grade / source, and kg). It is deducted from the **available stock** for that
+  selection automatically, oldest accepted parchment first; nobody picks
+  receipts, and it can never take more than is available.
 - Processing status (Not started / Partially processed / Completed) and
   processing date follow automatically.
 - Corrections after milling are **stock adjustments** with a reason; weights lock.
