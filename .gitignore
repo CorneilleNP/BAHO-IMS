@@ -1,22 +1,27 @@
+# --- Node / frontend ---
 node_modules/
 dist/
-.env
-.env.local
 *.local
+
+# --- Python / backend ---
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+backend/staticfiles/
+backend/media/
+
+# --- Secrets ---
+.env
+!.env.example
+
+# --- OS / editor ---
 .DS_Store
 Thumbs.db
-
-# Supabase local dev
-.supabase/
-
-# PowerSync local dev
-.powersync/
-
-# Editor
 .vscode/*
 !.vscode/extensions.json
 
-# Scratch ETL output (generated SQL shouldn't be committed — review and
-# apply it manually with psql, then discard or archive outside git)
-tools/excel-migration/*.sql
+# Scratch ETL output (review and apply manually, never commit)
+backend/legacy/excel_migration/*.sql
 tools/pw-test/
