@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ActionIcon, Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
-import { IconPlus, IconScale, IconShip, IconTrash, IconUserPlus } from '@tabler/icons-react';
+import { Badge, Button, Card, Group, NativeSelect, SimpleGrid, Stack, Text } from '@mantine/core';
+import { IconScale, IconShip } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
 import { DateRangeFilter } from '../../components/DateRangeFilter';
@@ -13,14 +13,14 @@ import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { confirmAction } from '../../lib/confirm';
 import { fetchAllPages } from '../../lib/exportTable';
-import { ANY_DATE, kg, num, today, type DateRange } from '../../lib/format';
+import { ANY_DATE, kg, num, type DateRange } from '../../lib/format';
 import { toast } from '../../lib/toast';
 import type { Client, ExportGrade, ExportShipment, ExportSummary } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
+import { ShipmentWizard } from './ShipmentWizard';
 
 const statusColor: Record<ExportShipment['status'], string> = { PLANNED: 'gray', SHIPPED: 'blue', DELIVERED: 'teal' };
-const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
 
 export function ExportUpdatesPage() {
   const { user } = useAuth();
@@ -179,15 +179,15 @@ export function ExportUpdatesPage() {
       </Card>
 
       {modalOpen && (
-        <ShipmentModal
+        <ShipmentWizard
           clients={clients.items}
           grades={grades.data ?? []}
+          balances={Object.fromEntries((s?.by_grade ?? []).map((g) => [g.id, num(g.balance_kg)]))}
           knownProducts={s?.options.process_products ?? []}
           onClientAdded={() => clients.reload()}
           onClose={() => setModalOpen(false)}
-          onSaved={(sh) => {
+          onSaved={() => {
             setModalOpen(false);
-            toast.success(`${sh.shipment_no} to ${sh.client_name}: ${kg(sh.total_qty_kg)} kg.`, 'Shipment saved');
             summary.reload();
             shipments.reload();
           }}
@@ -197,136 +197,3 @@ export function ExportUpdatesPage() {
   );
 }
 
-interface LineDraft {
-  key: number;
-  product: string;
-  gradeId: string | null;
-  qty: number | '';
-}
-let lineKey = 1;
-const newLine = (): LineDraft => ({ key: lineKey++, product: '', gradeId: null, qty: '' });
-
-function ShipmentModal({
-  clients,
-  grades,
-  knownProducts,
-  onClientAdded,
-  onClose,
-  onSaved,
-}: {
-  clients: Client[];
-  grades: ExportGrade[];
-  knownProducts: string[];
-  onClientAdded: () => void;
-  onClose: () => void;
-  onSaved: (s: ExportShipment) => void;
-}) {
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [extraClients, setExtraClients] = useState<Client[]>([]);
-  const [deliveryDate, setDeliveryDate] = useState(today());
-  const [status, setStatus] = useState<ExportShipment['status']>('PLANNED');
-  const [lines, setLines] = useState<LineDraft[]>(() => [newLine()]);
-  const [newClient, setNewClient] = useState<{ name: string; country: string } | null>(null);
-  const submit = useSubmit();
-
-  const allClients = [...clients, ...extraClients.filter((c) => !clients.some((x) => x.id === c.id))];
-  const total = lines.reduce((sum, l) => sum + num(l.qty), 0);
-  const update = (key: number, patch: Partial<LineDraft>) => setLines((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
-  const products = Array.from(new Set([...knownProducts, ...COMMON_PRODUCTS]));
-
-  async function addClient() {
-    if (!newClient?.name.trim()) return submit.fail('Enter the client name.');
-    const created = await submit.run(() => api<Client>('/sales/clients/', { method: 'POST', body: newClient }));
-    if (!created) return;
-    setExtraClients((prev) => [...prev, created]);
-    setClientId(created.id);
-    setNewClient(null);
-    onClientAdded();
-  }
-
-  async function save() {
-    if (!clientId) return submit.fail('Choose the client.');
-    const ready = lines.filter((l) => l.product.trim() && l.gradeId && num(l.qty) > 0);
-    if (!ready.length) return submit.fail('Add at least one product line with grade and quantity.');
-    const shipment = await submit.run(() =>
-      api<ExportShipment>('/sales/shipments/', {
-        method: 'POST',
-        body: {
-          client: clientId,
-          delivery_to_naeb_date: deliveryDate,
-          status,
-          lines: ready.map((l) => ({ process_product: l.product.trim().toUpperCase(), export_grade: l.gradeId, qty_kg: num(l.qty) })),
-        },
-      }),
-    );
-    if (shipment) onSaved(shipment);
-  }
-
-  return (
-    <Modal opened onClose={onClose} title="Record export shipment" size="xl">
-      <Stack gap="sm">
-        <SimpleGrid cols={{ base: 1, sm: 3 }}>
-          <Select
-            label="Client"
-            required
-            data={allClients.map((c) => ({ value: c.id, label: c.name }))}
-            value={clientId}
-            onChange={setClientId}
-            searchable
-            nothingFoundMessage="Not found: add the client"
-          />
-          <TextInput label="Delivery to NAEB" type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.currentTarget.value)} />
-          <Select
-            label="Status"
-            data={[
-              { value: 'PLANNED', label: 'Planned' },
-              { value: 'SHIPPED', label: 'Shipped' },
-              { value: 'DELIVERED', label: 'Delivered' },
-            ]}
-            value={status}
-            onChange={(v) => setStatus((v ?? 'PLANNED') as ExportShipment['status'])}
-            allowDeselect={false}
-          />
-        </SimpleGrid>
-
-        {newClient ? (
-          <Group align="flex-end" gap="xs">
-            <TextInput label="New client name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.currentTarget.value })} style={{ flex: 1 }} data-autofocus />
-            <TextInput label="Country" value={newClient.country} onChange={(e) => setNewClient({ ...newClient, country: e.currentTarget.value })} />
-            <Button onClick={addClient} loading={submit.saving}>Add</Button>
-            <Button variant="subtle" onClick={() => setNewClient(null)}>Cancel</Button>
-          </Group>
-        ) : (
-          <Button variant="subtle" size="compact-sm" w="fit-content" leftSection={<IconUserPlus size={14} />} onClick={() => setNewClient({ name: '', country: '' })}>
-            New client
-          </Button>
-        )}
-
-        <Card withBorder p="sm">
-          <Text fw={600} mb="xs">Products shipped</Text>
-          <Stack gap={6}>
-            {lines.map((l) => (
-              <Group key={l.key} gap="xs" wrap="nowrap" align="flex-end">
-                <Autocomplete label="Process / product" data={products} value={l.product} onChange={(v) => update(l.key, { product: v })} style={{ flex: 2 }} />
-                <Select label="Grade" data={grades.map((g) => ({ value: g.id, label: g.name }))} value={l.gradeId} onChange={(v) => update(l.key, { gradeId: v })} style={{ flex: 1 }} />
-                <NumberInput label="Qty (kg)" value={l.qty} onChange={(v) => update(l.key, { qty: v === '' ? '' : Number(v) })} min={0} hideControls thousandSeparator="," w={130} />
-                <ActionIcon variant="subtle" color="red" mb={4} aria-label="Remove line" disabled={lines.length <= 1} onClick={() => setLines((rows) => rows.filter((r) => r.key !== l.key))}>
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Group>
-            ))}
-          </Stack>
-          <Group justify="space-between" mt="xs">
-            <Button size="compact-sm" variant="subtle" leftSection={<IconPlus size={14} />} onClick={() => setLines((rows) => [...rows, newLine()])}>
-              Add line
-            </Button>
-            <Text size="sm">Total: <strong>{kg(total)} kg</strong></Text>
-          </Group>
-        </Card>
-
-        <ErrorMessage>{submit.error}</ErrorMessage>
-        <Button onClick={save} loading={submit.saving}>Save shipment</Button>
-      </Stack>
-    </Modal>
-  );
-}

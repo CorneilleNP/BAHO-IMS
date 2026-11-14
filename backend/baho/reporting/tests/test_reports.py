@@ -4,6 +4,8 @@ from decimal import Decimal
 import pytest
 
 from baho.drymill.models import ExportGrade
+from baho.processing.models import Process
+from tests.factories import produce_green
 from tests.helpers import login
 
 pytestmark = pytest.mark.django_db
@@ -19,7 +21,7 @@ def test_empty_database_gives_zero_dashboards(api, hq_finance):
     assert export["stock_balance_kg"] == 0
 
 
-def test_stock_summary_totals_by_day_and_source(api, drymill_operator, gitoki):
+def test_stock_summary_totals_by_day_and_source(api, drymill_operator, gitoki, hq):
     login(api, drymill_operator)
     today = date.today()
     yesterday = today - timedelta(days=1)
@@ -30,9 +32,8 @@ def test_stock_summary_totals_by_day_and_source(api, drymill_operator, gitoki):
             "/api/v1/drymill/stock-receipts/",
             {
                 "arrival_date": day.isoformat(),
-                "origin_type": "OWN_CWS",
                 "source_facility": str(gitoki.id),
-                "process": "FW",
+                "process": str(Process.objects.get(code="FW").id),
                 "grade": "A1",
                 "net_weight_kg": kg,
                 "weight_of_bags_kg": "10",
@@ -46,22 +47,13 @@ def test_stock_summary_totals_by_day_and_source(api, drymill_operator, gitoki):
     assert Decimal(data["day"]["pure_weight_kg"]) == Decimal("1980")
     assert Decimal(data["change_vs_previous_pct"]) == Decimal("100.00")
     assert data["by_source"] == [{"label": "GITOKI", "kg": Decimal("3000.00")}]
+    assert data["by_process"] == [{"label": "Fully Washed", "kg": Decimal("3000.00")}]
+    assert Decimal(data["season"]["stock_balance_kg"]) == Decimal("2970")
 
 
-def test_export_balance_is_produced_minus_exported(api, drymill_operator, export_manager, gitoki):
+def test_export_balance_is_produced_minus_exported(api, export_manager, gitoki, hq):
     g15 = ExportGrade.objects.get(code="15PLUS")
-    login(api, drymill_operator)
-    api.post(
-        "/api/v1/drymill/batches/",
-        {
-            "origin_type": "OWN_CWS",
-            "source_facility": str(gitoki.id),
-            "process_product": "FULLWASHED A1",
-            "parch_input_kg": "10000",
-            "outputs": [{"export_grade": str(g15.id), "qty_kg": "7000"}],
-        },
-        format="json",
-    )
+    produce_green(gitoki, "15PLUS", kg="7000", parch="10000")
     login(api, export_manager)
     client = api.post("/api/v1/sales/clients/", {"name": "RTC"}).data
     api.post(

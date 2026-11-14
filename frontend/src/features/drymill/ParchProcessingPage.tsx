@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Progress, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { useState } from 'react';
+import { Badge, Button, Card, Group, NativeSelect, Progress, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconDroplet, IconFlask, IconScale } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
@@ -7,22 +7,15 @@ import { DateRangeFilter } from '../../components/DateRangeFilter';
 import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
-import { FormSkeleton } from '../../components/Skeletons';
-import { SourceSelect } from '../../components/SourceSelect';
 import { VoidButton } from '../../components/VoidButton';
-import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { fetchAllPages } from '../../lib/exportTable';
-import { ANY_DATE, calculateOutturnPct, changeLabel, kg, num, pct, today, type DateRange } from '../../lib/format';
-import { toast } from '../../lib/toast';
-import { sourceFields } from '../../lib/sources';
-import type { DryMillBatch, ExportGrade, ProcessingSummary } from '../../lib/types';
+import { ANY_DATE, changeLabel, kg, num, pct, type DateRange } from '../../lib/format';
+import type { DryMillBatch, ProcessingSummary } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
-import { useSubmit } from '../../lib/useSubmit';
+import { BatchWizard } from './BatchWizard';
 
-// Suggestions only; any product name can be typed and is remembered once used.
-const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
 
 export function ParchProcessingPage() {
   const { user } = useAuth();
@@ -88,6 +81,12 @@ export function ParchProcessingPage() {
             { key: 'date', header: 'Date', render: (b) => b.processing_date },
             { key: 'origin', header: 'Origin', render: (b) => b.source_name },
             { key: 'product', header: 'Process / product', render: (b) => b.process_product },
+            {
+              key: 'from',
+              header: 'Parchment from',
+              exportValue: (b) => b.inputs.map((i) => `${i.receipt_number} (${i.source_name}): ${i.qty_kg}`).join('; '),
+              render: (b) => <Text size="xs">{b.inputs.map((i) => `${i.receipt_number} · ${kg(i.qty_kg)} kg`).join(' • ') || '—'}</Text>,
+            },
             { key: 'in', header: 'Parch input (kg)', align: 'right', render: (b) => kg(b.parch_input_kg), exportValue: (b) => b.parch_input_kg },
             { key: 'out', header: 'Green output (kg)', align: 'right', render: (b) => kg(b.green_output_kg), exportValue: (b) => b.green_output_kg },
             {
@@ -133,12 +132,11 @@ export function ParchProcessingPage() {
       </Card>
 
       {modalOpen && (
-        <BatchModal
+        <BatchWizard
           knownProducts={s?.options.process_products ?? []}
           onClose={() => setModalOpen(false)}
-          onSaved={(batch) => {
+          onSaved={() => {
             setModalOpen(false);
-            toast.success(`${batch.batch_no}: ${kg(batch.green_output_kg)} kg green from ${kg(batch.parch_input_kg)} kg parchment (${pct(batch.outturn_pct, 2)}).`, 'Batch saved');
             summary.reload();
             batches.reload();
           }}
@@ -148,81 +146,3 @@ export function ParchProcessingPage() {
   );
 }
 
-function BatchModal({ knownProducts, onClose, onSaved }: { knownProducts: string[]; onClose: () => void; onSaved: (b: DryMillBatch) => void }) {
-  const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
-  const [source, setSource] = useState<string | null>(null);
-  const [product, setProduct] = useState('');
-  const [processingDate, setProcessingDate] = useState(today());
-  const [batchNo, setBatchNo] = useState('');
-  const [inputKg, setInputKg] = useState<number | ''>('');
-  const [outputs, setOutputs] = useState<Record<string, number | ''>>({});
-  const submit = useSubmit();
-
-  const totalOutput = useMemo(() => Object.values(outputs).reduce<number>((sum, v) => sum + num(v), 0), [outputs]);
-  const liveOutturn = num(inputKg) > 0 ? calculateOutturnPct(totalOutput, num(inputKg)) : 0;
-
-  async function save() {
-    const origin = sourceFields(source);
-    if (!origin) return submit.fail('Choose the source CWS or supplier.');
-    if (!product.trim()) return submit.fail('Enter the process / product.');
-    if (num(inputKg) <= 0) return submit.fail('Enter the parchment input.');
-    const batch = await submit.run(() =>
-      api<DryMillBatch>('/drymill/batches/', {
-        method: 'POST',
-        body: {
-          ...origin,
-          process_product: product.trim().toUpperCase(),
-          processing_date: processingDate,
-          batch_no: batchNo.trim(),
-          parch_input_kg: num(inputKg),
-          outputs: Object.entries(outputs)
-            .filter(([, v]) => num(v) > 0)
-            .map(([export_grade, v]) => ({ export_grade, qty_kg: num(v) })),
-        },
-      }),
-    );
-    if (batch) onSaved(batch);
-  }
-
-  return (
-    <Modal opened onClose={onClose} title="Record dry mill batch" size="lg">
-      <Stack gap="sm">
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          <SourceSelect label="Source CWS / supplier" value={source} onChange={setSource} required />
-          <Autocomplete label="Process / product" required data={Array.from(new Set([...knownProducts, ...COMMON_PRODUCTS]))} value={product} onChange={setProduct} />
-          <TextInput label="Processing date" type="date" value={processingDate} onChange={(e) => setProcessingDate(e.currentTarget.value)} />
-          <TextInput label="Batch no." placeholder="Automatic if empty" value={batchNo} onChange={(e) => setBatchNo(e.currentTarget.value)} />
-          <NumberInput label="Parchment input (kg)" required value={inputKg} onChange={(v) => setInputKg(v === '' ? '' : Number(v))} min={0} hideControls thousandSeparator="," />
-        </SimpleGrid>
-
-        <Card withBorder p="sm">
-          <Text fw={600} mb="xs">Green coffee output by grade</Text>
-          {grades.loading && !grades.data ? (
-            <FormSkeleton fields={6} />
-          ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
-              {(grades.data ?? []).map((g) => (
-                <NumberInput
-                  key={g.id}
-                  label={`${g.name} (kg)`}
-                  value={outputs[g.id] ?? ''}
-                  onChange={(v) => setOutputs((prev) => ({ ...prev, [g.id]: v === '' ? '' : Number(v) }))}
-                  min={0}
-                  hideControls
-                  thousandSeparator=","
-                />
-              ))}
-            </SimpleGrid>
-          )}
-        </Card>
-
-        <Text size="sm" c="dimmed">
-          Total green output: <strong>{kg(totalOutput)} kg</strong>
-          {num(inputKg) > 0 && totalOutput > 0 && <> · live out-turn <strong>{pct(liveOutturn, 2)}</strong></>}
-        </Text>
-        <ErrorMessage>{submit.error}</ErrorMessage>
-        <Button onClick={save} loading={submit.saving}>Save batch</Button>
-      </Stack>
-    </Modal>
-  );
-}

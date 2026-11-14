@@ -1,19 +1,13 @@
 import { useState } from 'react';
-import { Badge, Button, Card, SimpleGrid, Stack, Text, TextInput, Textarea } from '@mantine/core';
+import { Badge, Button, Card, Stack, Text } from '@mantine/core';
 import { IconBuildingWarehouse } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
-import { ErrorMessage } from '../../components/Feedback';
-import { LocationPicker } from '../../components/LocationPicker';
 import { PageHeader } from '../../components/PageHeader';
-import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
-import { toast } from '../../lib/toast';
 import type { CoffeeSource, Facility, Paginated, Supplier } from '../../lib/types';
 import { useApi, useList } from '../../lib/useApi';
-import { useSubmit } from '../../lib/useSubmit';
-
-const blank = { name: '', contact_name: '', phone: '', tin: '', notes: '' };
+import { SupplierWizard } from './SupplierWizard';
 
 /** Coffee sources for the dry mill: Baho CWS stations (automatic) + partner suppliers (registered here). */
 export function SourceRegistryPage() {
@@ -22,85 +16,63 @@ export function SourceRegistryPage() {
   const sources = useApi<CoffeeSource[]>('/drymill/sources/');
   const suppliers = useList<Supplier>('/drymill/suppliers/?page_size=500');
   const stations = useApi<Paginated<Facility>>('/organization/facilities/?facility_type=CWS&page_size=200');
-  const [form, setForm] = useState(blank);
-  const [location, setLocation] = useState<string | null>(null);
-  const submit = useSubmit();
+  const [wizard, setWizard] = useState<{ supplier: Supplier | null } | null>(null);
 
-  const set = (field: keyof typeof blank) => (event: { currentTarget: { value: string } }) => {
-    const value = event.currentTarget.value;
-    setForm((previous) => ({ ...previous, [field]: value }));
-  };
-
+  const supplierById = new Map(suppliers.items.map((s) => [s.id, s]));
   // One location label per source, whether it is a station or a supplier.
   const details = new Map<string, { contact: string; location: string }>();
   suppliers.items.forEach((s) => details.set(s.id, { contact: [s.contact_name, s.phone].filter(Boolean).join(' · '), location: s.location_label }));
   (stations.data?.results ?? []).forEach((f) => details.set(f.id, { contact: '', location: f.location_label }));
 
-  async function save() {
-    if (!form.name.trim()) return submit.fail('Enter the supplier name.');
-    const supplier = await submit.run(() => api<Supplier>('/drymill/suppliers/', { method: 'POST', body: { ...form, location } }));
-    if (!supplier) return;
-    toast.success(supplier.name, 'Supplier registered');
-    setForm(blank);
-    setLocation(null);
-    sources.reload();
-    suppliers.reload();
-  }
-
   return (
     <Stack gap="lg" maw={1300}>
-      <PageHeader eyebrow="Registry" title="Suppliers and sources" />
+      <PageHeader
+        eyebrow="Registry"
+        title="Suppliers and sources"
+        description="Baho CWS stations are listed automatically (new stations are added by an administrator). Click a partner supplier to edit it."
+        actions={writable && <Button leftSection={<IconBuildingWarehouse size={16} />} onClick={() => setWizard({ supplier: null })}>Register supplier</Button>}
+      />
 
-      <SimpleGrid cols={{ base: 1, lg: writable ? 2 : 1 }} spacing="lg">
-        {writable && (
-          <Card withBorder radius="md" p="lg">
-            <Stack gap="sm">
-              <Text fw={700} size="lg">Register partner supplier</Text>
-              <Text size="sm" c="dimmed">
-                Baho&apos;s own CWS stations are listed automatically. New stations are added by an administrator.
-              </Text>
-              <TextInput label="Supplier name" required value={form.name} onChange={set('name')} />
-              <SimpleGrid cols={{ base: 1, sm: 3 }}>
-                <TextInput label="Contact person" value={form.contact_name} onChange={set('contact_name')} />
-                <TextInput label="Phone" value={form.phone} onChange={set('phone')} />
-                <TextInput label="TIN" value={form.tin} onChange={set('tin')} />
-              </SimpleGrid>
-              <LocationPicker legend="Supplier location" value={location} onChange={setLocation} />
-              <Textarea label="Notes" value={form.notes} onChange={set('notes')} autosize minRows={2} />
-              <ErrorMessage>{submit.error}</ErrorMessage>
-              <Button leftSection={<IconBuildingWarehouse size={16} />} onClick={save} loading={submit.saving}>Save supplier</Button>
-            </Stack>
-          </Card>
-        )}
+      <Card withBorder radius="md" p="lg">
+        <DataTable
+          rows={sources.data ?? []}
+          rowKey={(s) => `${s.origin_type}-${s.id}`}
+          loading={sources.loading}
+          error={sources.error}
+          minWidth={620}
+          empty={{ title: 'No sources yet' }}
+          exportName="coffee-sources"
+          onRowClick={writable ? (s) => supplierById.has(s.id) && setWizard({ supplier: supplierById.get(s.id)! }) : undefined}
+          columns={[
+            { key: 'name', header: 'Name', render: (s) => <Text fw={600} size="sm">{s.name}</Text>, exportValue: (s) => s.name },
+            {
+              key: 'type',
+              header: 'Type',
+              exportValue: (s) => (s.origin_type === 'OWN_CWS' ? 'Baho CWS' : 'Partner supplier'),
+              render: (s) => (
+                <Badge variant="light" color={s.origin_type === 'OWN_CWS' ? 'coffee' : 'blue'}>
+                  {s.origin_type === 'OWN_CWS' ? 'Baho CWS' : 'Partner supplier'}
+                </Badge>
+              ),
+            },
+            { key: 'contact', header: 'Contact', render: (s) => details.get(s.id)?.contact || '—' },
+            { key: 'location', header: 'Location', render: (s) => details.get(s.id)?.location || '—' },
+          ]}
+        />
+      </Card>
 
-        <Card withBorder radius="md" p="lg">
-          <Text fw={700} size="lg" mb="sm">All sources</Text>
-          <DataTable
-            rows={sources.data ?? []}
-            rowKey={(s) => `${s.origin_type}-${s.id}`}
-            loading={sources.loading}
-            error={sources.error}
-            minWidth={520}
-            empty={{ title: 'No sources yet' }}
-            exportName="coffee-sources"
-            columns={[
-              { key: 'name', header: 'Name', render: (s) => <Text fw={600} size="sm">{s.name}</Text>, exportValue: (s) => s.name },
-              {
-                key: 'type',
-                header: 'Type',
-                exportValue: (s) => (s.origin_type === 'OWN_CWS' ? 'Baho CWS' : 'Partner supplier'),
-                render: (s) => (
-                  <Badge variant="light" color={s.origin_type === 'OWN_CWS' ? 'coffee' : 'blue'}>
-                    {s.origin_type === 'OWN_CWS' ? 'Baho CWS' : 'Partner supplier'}
-                  </Badge>
-                ),
-              },
-              { key: 'contact', header: 'Contact', render: (s) => details.get(s.id)?.contact || '—' },
-              { key: 'location', header: 'Location', render: (s) => details.get(s.id)?.location || '—' },
-            ]}
-          />
-        </Card>
-      </SimpleGrid>
+      {wizard && (
+        <SupplierWizard
+          key={wizard.supplier?.id ?? 'new'}
+          supplier={wizard.supplier}
+          onClose={() => setWizard(null)}
+          onSaved={() => {
+            setWizard(null);
+            sources.reload();
+            suppliers.reload();
+          }}
+        />
+      )}
     </Stack>
   );
 }

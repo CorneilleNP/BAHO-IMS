@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import GradeRatio, LotGradeResult, ProcessGrade, ProcessingLot, ProcessType
+from .models import (
+    GradeRatio,
+    LotGradeResult,
+    Process,
+    ProcessGrade,
+    ProcessingLot,
+    ProcessType,
+    SubProcess,
+    SubProcessAlias,
+)
 
 
 class ProcessGradeInline(admin.TabularInline):
@@ -41,3 +50,22 @@ class ProcessingLotAdmin(admin.ModelAdmin):
     list_filter = ["facility", "status", "crop_year"]
     search_fields = ["lot_number"]
     inlines = [LotResultInline]
+
+
+@admin.register(Process)
+class ProcessAdmin(admin.ModelAdmin):
+    list_display = ["code", "name", "display_order", "is_active"]
+
+
+class AliasInline(admin.TabularInline):
+    model = SubProcessAlias
+    extra = 0
+    fields = ["label", "key"]
+
+
+@admin.register(SubProcess)
+class SubProcessAdmin(admin.ModelAdmin):
+    list_display = ["name", "process", "is_active"]
+    list_filter = ["process", "is_active"]
+    search_fields = ["name", "aliases__label"]
+    inlines = [AliasInline]

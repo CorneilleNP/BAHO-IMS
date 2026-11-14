@@ -126,35 +126,123 @@ export interface ExportGrade {
   display_order: number;
 }
 
+export type QualityStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+export type ProcessingStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+
+/** Every column of the BAHO STOCK UPDATE sheet + the calculated stock position. */
 export interface HqStockReceipt {
   id: string;
   receipt_number: string;
   arrival_date: string;
+  crop_year: string;
   origin_type: OriginType;
+  source_facility: string | null;
+  source_supplier: string | null;
   source_name: string;
   source_code: string;
-  process: string;
+  source_raw: string;
+  item_type: 'PARCH' | 'GREEN';
+  process: string | null;
+  process_name: string;
+  sub_process: string | null;
+  sub_process_name: string;
+  process_raw: string;
   grade: string;
   lot_reference: string;
+  purchase_contract_number: string;
+  weighing_status: 'PENDING' | 'DONE';
   delivery_note_no: string;
   delivery_note_qty_kg: Decimal | null;
+  gross_weight_kg: Decimal | null;
   net_weight_kg: Decimal;
+  number_of_bags: number | null;
+  tare_per_bag_kg: Decimal | null;
   weight_of_bags_kg: Decimal;
   pure_weight_kg: Decimal;
   variance_kg: Decimal | null;
-  quality_status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
-  processing_status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  wrn_number: string;
+  warehouse_cell: string;
+  stock_card_number: string;
+  quality_status: QualityStatus;
+  quality_comment: string;
+  processing_status: ProcessingStatus;
+  processing_date: string | null;
+  processed_kg: Decimal;
+  adjusted_kg: Decimal;
+  stock_balance_kg: Decimal;
+  import_batch: string;
+  source_row: number | null;
+  created_by_name: string;
+  updated_by_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockAdjustment {
+  id: string;
+  qty_kg: Decimal;
+  reason: string;
+  adjusted_on: string;
+  created_by_name: string;
+  created_at: string;
+}
+
+export interface HqStockReceiptDetail extends HqStockReceipt {
+  movements: Array<{ batch: string; batch_no: string; processing_date: string; qty_kg: Decimal }>;
+  adjustments: StockAdjustment[];
+}
+
+export interface HistoryEntry {
+  date: string;
+  user: string;
+  type: 'created' | 'changed' | 'deleted' | 'voided';
+  changes: Array<{ field: string; old: unknown; new: unknown }>;
+}
+
+export interface StockTotals {
+  receipts: number;
+  net_weight_kg: Decimal;
+  weight_of_bags_kg: Decimal;
+  pure_weight_kg: Decimal;
+  processed_kg: Decimal;
+  adjusted_kg: Decimal;
+  stock_balance_kg: Decimal;
+}
+
+// --- Process catalogue (5 processes and their sub-processes) -----------------------
+
+export interface CatalogProcess {
+  id: string;
+  code: string;
+  name: string;
+  display_order: number;
+  sub_processes: number;
+  receipts: number;
+  net_weight_kg: Decimal;
+}
+
+export interface CatalogSubProcess {
+  id: string;
+  name: string;
+  process: string | null;
+  process_name: string;
+  suggested_process: { id: string; name: string } | null;
+  is_active: boolean;
+  aliases: string[];
+  receipts: number;
+  net_weight_kg: Decimal;
 }
 
 export interface DryMillBatch {
   id: string;
   batch_no: string;
   processing_date: string;
-  origin_type: OriginType;
+  origin_type: OriginType | 'MIXED';
   source_name: string;
   source_code: string;
   process_product: string;
   parch_input_kg: Decimal;
+  inputs: Array<{ receipt: string; receipt_number: string; source_name: string; qty_kg: Decimal }>;
   outputs: Array<{ export_grade: string; grade_name: string; qty_kg: Decimal }>;
   green_output_kg: Decimal;
   outturn_pct: Decimal;
@@ -185,16 +273,28 @@ export interface RankedKg {
   kg: Decimal;
 }
 
+interface StockFigures {
+  net_weight_kg: Decimal;
+  pure_weight_kg: Decimal;
+  weight_of_bags_kg: Decimal;
+  processed_kg: Decimal;
+  stock_balance_kg: Decimal;
+  receipts: number;
+}
+
 export interface StockSummary {
   date: string;
-  day: { net_weight_kg: Decimal; pure_weight_kg: Decimal; weight_of_bags_kg: Decimal; receipts: number };
+  day: StockFigures;
   previous_date: string | null;
   change_vs_previous_pct: Decimal | null;
-  season: { net_weight_kg: Decimal; pure_weight_kg: Decimal; weight_of_bags_kg: Decimal; receipts: number };
+  season: StockFigures;
+  awaiting_quality: StockFigures;
   by_process: RankedKg[];
+  by_sub_process: RankedKg[];
   by_grade: RankedKg[];
+  balance_by_grade: RankedKg[];
   by_source: RankedKg[];
-  options: { processes: string[]; grades: string[]; dates: string[] };
+  options: { processes: Array<{ id: string; name: string }>; grades: string[]; dates: string[] };
 }
 
 export interface ProcessingSummary {

@@ -8,6 +8,7 @@ import pytest
 from baho.drymill.models import ExportGrade
 from baho.farmers.models import Farmer
 from baho.reception.models import CherryReceipt
+from tests.factories import produce_green
 from tests.helpers import login
 
 pytestmark = pytest.mark.django_db
@@ -72,21 +73,10 @@ def test_read_only_role_cannot_void(api, receipt_id, hq_finance):
 
 
 def test_voided_batch_and_shipment_leave_the_dashboards(
-    api, drymill_operator, export_manager, gitoki
+    api, drymill_operator, export_manager, gitoki, hq
 ):
     g15 = ExportGrade.objects.get(code="15PLUS")
-    login(api, drymill_operator)
-    batch = api.post(
-        "/api/v1/drymill/batches/",
-        {
-            "origin_type": "OWN_CWS",
-            "source_facility": str(gitoki.id),
-            "process_product": "FW",
-            "parch_input_kg": "1000",
-            "outputs": [{"export_grade": str(g15.id), "qty_kg": "700"}],
-        },
-        format="json",
-    ).data
+    batch = {"id": produce_green(gitoki, "15PLUS", kg="700", parch="1000").id}
     login(api, export_manager)
     client = api.post("/api/v1/sales/clients/", {"name": "RTC"}).data
     shipment = api.post(
@@ -118,8 +108,9 @@ def test_voided_batch_and_shipment_leave_the_dashboards(
     assert api.get("/api/v1/reporting/drymill/processing/").data["totals"]["green_output_kg"] == 0
 
 
-def test_only_planned_shipments_can_be_voided(api, export_manager):
+def test_only_planned_shipments_can_be_voided(api, export_manager, gitoki, hq):
     g15 = ExportGrade.objects.get(code="15PLUS")
+    produce_green(gitoki, "15PLUS", kg="10")
     login(api, export_manager)
     client = api.post("/api/v1/sales/clients/", {"name": "RTC"}).data
     shipment = api.post(

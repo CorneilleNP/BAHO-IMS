@@ -46,6 +46,10 @@ class VoidActionMixin:
     def check_can_void(self, instance) -> None:
         return None
 
+    def after_void(self, instance) -> None:
+        """Hook for side effects, e.g. giving stock back when a batch is voided."""
+        return None
+
     @extend_schema(request=VoidSerializer, responses=VoidSerializer)
     @action(detail=True, methods=["post"])
     def void(self, request, pk=None):
@@ -55,4 +59,5 @@ class VoidActionMixin:
         self.check_can_void(instance)
         with transaction.atomic():
             instance.soft_delete(user=request.user, reason=data.validated_data["reason"])
+            self.after_void(instance)
         return Response({"reason": instance.void_reason})

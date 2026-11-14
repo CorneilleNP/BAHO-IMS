@@ -3,10 +3,11 @@
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Count, Q, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Q, Sum, Value
+from django.db.models.functions import Coalesce, NullIf
 
 from baho.drymill.models import DryMillBatch, DryMillOutput, ExportGrade, HqStockReceipt
+from baho.processing.models import Process
 from baho.sales.models import ExportShipmentLine
 
 ZERO = Decimal("0")
@@ -55,15 +56,21 @@ def stock_summary(
     *,
     day: date | None = None,
     process: str = "",
+    sub_process: str = "",
     grade: str = "",
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> dict:
+    """`process` / `sub_process` are catalogue ids ("none" = not assigned yet)."""
     all_receipts = HqStockReceipt.objects.all()
     base = _in_range(all_receipts, "arrival_date", date_from, date_to)
     filtered = base
-    if process:
-        filtered = filtered.filter(process=process)
+    if process == "none":
+        filtered = filtered.filter(process__isnull=True)
+    elif process:
+        filtered = filtered.filter(process_id=process)
+    if sub_process:
+        filtered = filtered.filter(sub_process_id=sub_process)
     if grade:
         filtered = filtered.filter(grade=grade)
 
@@ -76,12 +83,16 @@ def stock_summary(
             net=Coalesce(Sum("net_weight_kg"), ZERO),
             pure=Coalesce(Sum("pure_weight_kg"), ZERO),
             bags=Coalesce(Sum("weight_of_bags_kg"), ZERO),
+            processed=Coalesce(Sum("processed_kg"), ZERO),
+            balance=Coalesce(Sum("stock_balance_kg"), ZERO),
             count=Count("id"),
         )
         return {
             "net_weight_kg": agg["net"],
             "pure_weight_kg": agg["pure"],
             "weight_of_bags_kg": agg["bags"],
+            "processed_kg": agg["processed"],
+            "stock_balance_kg": agg["balance"],
             "receipts": agg["count"],
         }
 
@@ -108,16 +119,33 @@ def stock_summary(
         "season": totals(filtered),
         "by_process": _ranked(
             (base.filter(grade=grade) if grade else base)
-            .values("process")
+            .annotate(label=Coalesce("process__name", Value("Not assigned yet")))
+            .values("label")
             .annotate(kg=Sum("net_weight_kg")),
-            "process",
+            "label",
+        ),
+        "by_sub_process": _ranked(
+            filtered.annotate(
+                label=Coalesce("sub_process__name", "process__name", Value("Not assigned yet"))
+            )
+            .values("label")
+            .annotate(kg=Sum("net_weight_kg")),
+            "label",
         ),
         "by_grade": _ranked(
-            (base.filter(process=process) if process else base)
-            .values("grade")
+            filtered.annotate(label=Coalesce(NullIf("grade", Value("")), Value("No grade")))
+            .values("label")
             .annotate(kg=Sum("net_weight_kg")),
-            "grade",
+            "label",
         ),
+        "balance_by_grade": _ranked(
+            filtered.filter(stock_balance_kg__gt=0)
+            .annotate(label=Coalesce(NullIf("grade", Value("")), Value("No grade")))
+            .values("label")
+            .annotate(kg=Sum("stock_balance_kg")),
+            "label",
+        ),
+        "awaiting_quality": totals(filtered.filter(quality_status="PENDING")),
         "by_source": _ranked(
             filtered.annotate(source=_source_label())
             .values("source")
@@ -125,8 +153,10 @@ def stock_summary(
             "source",
         ),
         "options": {
-            "processes": sorted(set(all_receipts.values_list("process", flat=True))),
-            "grades": sorted(set(all_receipts.values_list("grade", flat=True))),
+            "processes": [
+                {"id": str(p.id), "name": p.name} for p in Process.objects.filter(is_active=True)
+            ],
+            "grades": sorted({g for g in all_receipts.values_list("grade", flat=True) if g}),
             "dates": sorted(set(all_receipts.values_list("arrival_date", flat=True)), reverse=True)[
                 :60
             ],

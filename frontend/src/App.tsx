@@ -5,6 +5,7 @@ import {
   IconDroplet,
   IconLogout,
   IconShip,
+  IconSitemap,
   IconUsers,
 } from '@tabler/icons-react';
 import { NavLink as RouterNavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -15,6 +16,7 @@ import { ProcessOnCwsPage } from './features/cws/ProcessOnCwsPage';
 import { CherryReceiptForm } from './features/reception/CherryReceiptForm';
 import { ProcessingLotForm } from './features/processing/ProcessingLotForm';
 import { SourceRegistryPage } from './features/drymill/SourceRegistryPage';
+import { ProcessesPage } from './features/drymill/ProcessesPage';
 import { StockUpdatePage } from './features/drymill/StockUpdatePage';
 import { ParchProcessingPage } from './features/drymill/ParchProcessingPage';
 import { ExportUpdatesPage } from './features/drymill/ExportUpdatesPage';
@@ -25,6 +27,7 @@ const navSections = [
     items: [
       { to: '/drymill/stock', label: 'Stock Update', icon: IconBuildingWarehouse },
       { to: '/drymill/sources', label: 'Suppliers', icon: IconUsers },
+      { to: '/drymill/processes', label: 'Processes', icon: IconSitemap },
       { to: '/drymill/processing', label: 'Parchment Processing', icon: IconDroplet },
       { to: '/drymill/export', label: 'Export Updates', icon: IconShip },
     ],
@@ -223,6 +226,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardLandingPage />} />
           <Route path="/drymill/stock" element={<StockUpdatePage />} />
           <Route path="/drymill/sources" element={<SourceRegistryPage />} />
+          <Route path="/drymill/processes" element={<ProcessesPage />} />
           <Route path="/drymill/processing" element={<ParchProcessingPage />} />
           <Route path="/drymill/export" element={<ExportUpdatesPage />} />
           <Route path="/reception" element={<CherryReceiptForm />} />

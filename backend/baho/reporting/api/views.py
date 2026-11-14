@@ -15,6 +15,7 @@ class _Filters(serializers.Serializer):
     date_from = serializers.DateField(required=False)
     date_to = serializers.DateField(required=False)
     process = serializers.CharField(required=False, allow_blank=True, default="")
+    sub_process = serializers.CharField(required=False, allow_blank=True, default="")
     grade = serializers.CharField(required=False, allow_blank=True, default="")
     source = serializers.CharField(required=False, allow_blank=True, default="")
     process_product = serializers.CharField(required=False, allow_blank=True, default="")
@@ -42,7 +43,8 @@ class StockSummaryView(DryMillReport):
             OpenApiParameter("date", OpenApiTypes.DATE),
             OpenApiParameter("date_from", OpenApiTypes.DATE),
             OpenApiParameter("date_to", OpenApiTypes.DATE),
-            OpenApiParameter("process", str),
+            OpenApiParameter("process", str, description="Process id, or 'none'"),
+            OpenApiParameter("sub_process", str),
             OpenApiParameter("grade", str),
         ],
         responses=OpenApiTypes.OBJECT,
@@ -53,6 +55,7 @@ class StockSummaryView(DryMillReport):
             stock_summary(
                 day=f.get("date"),
                 process=f["process"],
+                sub_process=f["sub_process"],
                 grade=f["grade"],
                 date_from=f.get("date_from"),
                 date_to=f.get("date_to"),

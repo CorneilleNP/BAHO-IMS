@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Button, Group, Menu, Table } from '@mantine/core';
-import { IconDownload, IconFileSpreadsheet, IconFileTypeCsv } from '@tabler/icons-react';
+import { Button, Checkbox, Group, Menu, Pagination, Popover, Stack, Table, Text } from '@mantine/core';
+import { IconColumns, IconDownload, IconFileSpreadsheet, IconFileTypeCsv } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { exportCsv, exportExcel, type ExportColumn } from '../lib/exportTable';
 import { toast } from '../lib/toast';
@@ -13,10 +13,16 @@ export interface Column<T> {
   header: ReactNode;
   render: (row: T) => ReactNode;
   align?: 'left' | 'right' | 'center';
-  /** Monospace, for document numbers (GRN, lot, batch…). */
+  /** Monospace, for document numbers (GRN, lot, batch…). Never wraps. */
   mono?: boolean;
+  /** Keep on one line (dates, status badges). */
+  nowrap?: boolean;
   /** Plain value for CSV/Excel. Defaults to render() when that is text/number; false = leave out (e.g. action buttons). */
   exportValue?: ((row: T) => string | number | null | undefined) | false;
+  /** Cell for the totals row at the bottom. */
+  footer?: ReactNode;
+  /** Hidden until switched on in the column chooser. */
+  optional?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -31,23 +37,73 @@ interface DataTableProps<T> {
   exportName?: string;
   /** Rows to export (e.g. every page from the API). Defaults to the rows shown. */
   fetchAll?: () => Promise<T[]>;
+  /** Checkbox column; `selected` holds row keys. */
+  selection?: { selected: Set<string>; onChange: (next: Set<string>) => void };
+  onRowClick?: (row: T) => void;
+  /** Server-side paging. */
+  pagination?: { page: number; pageSize: number; total: number; onChange: (page: number) => void };
+  /** Adds a "Columns" chooser; the choice is remembered under this key. */
+  columnsKey?: string;
+  /** Extra buttons shown left of Columns / Export (e.g. bulk actions). */
+  toolbar?: ReactNode;
+}
+
+function readHidden(key: string | undefined, cols: Array<Column<unknown>>): Set<string> {
+  const fallback = new Set(cols.filter((c) => c.optional).map((c) => c.key));
+  if (!key) return fallback;
+  try {
+    const saved = localStorage.getItem(`baho.columns.${key}`);
+    return saved ? new Set(JSON.parse(saved) as string[]) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 /**
- * The one table used for every list: skeleton on first load, an error
- * message if the request failed, an empty state when there are no records,
- * and optional CSV/Excel export of everything matching the current filters.
+ * The one table used for every list: skeleton on first load, error and empty
+ * states, optional selection, row click, totals row, paging, column chooser
+ * and CSV/Excel export of everything matching the current filters.
  */
-export function DataTable<T>({ columns, rows, rowKey, loading = false, error, empty, minWidth = 700, exportName, fetchAll }: DataTableProps<T>) {
-  const cols = columns.filter(Boolean) as Array<Column<T>>;
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  loading = false,
+  error,
+  empty,
+  minWidth = 700,
+  exportName,
+  fetchAll,
+  selection,
+  onRowClick,
+  pagination,
+  columnsKey,
+  toolbar,
+}: DataTableProps<T>) {
+  const allCols = columns.filter(Boolean) as Array<Column<T>>;
   const [exporting, setExporting] = useState(false);
+  const [hidden, setHidden] = useState<Set<string>>(() => readHidden(columnsKey, allCols as Array<Column<unknown>>));
+  const cols = columnsKey ? allCols.filter((c) => !hidden.has(c.key)) : allCols.filter((c) => !c.optional);
+  const hasFooter = cols.some((c) => c.footer !== undefined);
+
+  function toggleColumn(key: string) {
+    const next = new Set(hidden);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setHidden(next);
+    try {
+      localStorage.setItem(`baho.columns.${columnsKey}`, JSON.stringify([...next]));
+    } catch {
+      // not remembered
+    }
+  }
 
   async function runExport(format: 'csv' | 'xlsx') {
     if (!exportName) return;
     setExporting(true);
     try {
       const all = fetchAll ? await fetchAll() : rows;
-      const exportColumns: ExportColumn<T>[] = cols
+      const exportColumns: ExportColumn<T>[] = allCols
         .filter((c) => c.exportValue !== false && typeof c.header === 'string' && c.header)
         .map((c) => ({
           header: c.header as string,
@@ -70,54 +126,146 @@ export function DataTable<T>({ columns, rows, rowKey, loading = false, error, em
   }
 
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
-  if (loading && rows.length === 0) return <TableSkeleton columns={Math.min(cols.length, 6)} />;
-  if (rows.length === 0) return <EmptyState title={empty.title}>{empty.hint}</EmptyState>;
+
+  const keys = rows.map(rowKey);
+  const allSelected = !!selection && keys.length > 0 && keys.every((k) => selection.selected.has(k));
+  const someSelected = !!selection && keys.some((k) => selection.selected.has(k));
+  const toggleAll = () => {
+    if (!selection) return;
+    const next = new Set(selection.selected);
+    keys.forEach((k) => (allSelected ? next.delete(k) : next.add(k)));
+    selection.onChange(next);
+  };
+  const toggleRow = (key: string) => {
+    if (!selection) return;
+    const next = new Set(selection.selected);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    selection.onChange(next);
+  };
+
+  const showToolbar = toolbar || exportName || columnsKey;
 
   return (
     <>
-      {exportName && (
-        <Group justify="flex-end" mb="xs">
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <Button size="compact-sm" variant="default" leftSection={<IconDownload size={14} />} loading={exporting}>
-                Export
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item leftSection={<IconFileSpreadsheet size={16} />} onClick={() => runExport('xlsx')}>
-                Excel (.xlsx)
-              </Menu.Item>
-              <Menu.Item leftSection={<IconFileTypeCsv size={16} />} onClick={() => runExport('csv')}>
-                CSV
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+      {showToolbar && (
+        <Group justify="space-between" mb="xs" gap="xs">
+          <Group gap="xs">{toolbar}</Group>
+          <Group gap="xs">
+            {columnsKey && (
+              <Popover position="bottom-end" withinPortal shadow="md">
+                <Popover.Target>
+                  <Button size="compact-sm" variant="default" leftSection={<IconColumns size={14} />}>
+                    Columns
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap={6} mah={360} style={{ overflowY: 'auto' }}>
+                    {allCols
+                      .filter((c) => typeof c.header === 'string' && c.header)
+                      .map((c) => (
+                        <Checkbox key={c.key} size="xs" label={c.header} checked={!hidden.has(c.key)} onChange={() => toggleColumn(c.key)} />
+                      ))}
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            )}
+            {exportName && rows.length > 0 && (
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <Button size="compact-sm" variant="default" leftSection={<IconDownload size={14} />} loading={exporting}>
+                    Export
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item leftSection={<IconFileSpreadsheet size={16} />} onClick={() => runExport('xlsx')}>
+                    Excel (.xlsx)
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconFileTypeCsv size={16} />} onClick={() => runExport('csv')}>
+                    CSV
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
+          </Group>
         </Group>
       )}
-      <Table.ScrollContainer minWidth={minWidth}>
-        <Table striped highlightOnHover verticalSpacing="sm" style={{ opacity: loading ? 0.6 : 1 }}>
-          <Table.Thead>
-            <Table.Tr>
-              {cols.map((col) => (
-                <Table.Th key={col.key} ta={col.align}>
-                  {col.header}
-                </Table.Th>
-              ))}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {rows.map((row) => (
-              <Table.Tr key={rowKey(row)}>
+
+      {loading && rows.length === 0 ? (
+        <TableSkeleton columns={Math.min(cols.length, 6)} />
+      ) : rows.length === 0 ? (
+        <EmptyState title={empty.title}>{empty.hint}</EmptyState>
+      ) : (
+        <Table.ScrollContainer minWidth={minWidth}>
+          <Table striped highlightOnHover verticalSpacing="sm" style={{ opacity: loading ? 0.6 : 1 }}>
+            <Table.Thead>
+              <Table.Tr>
+                {selection && (
+                  <Table.Th w={36}>
+                    <Checkbox aria-label="Select all rows" checked={allSelected} indeterminate={someSelected && !allSelected} onChange={toggleAll} />
+                  </Table.Th>
+                )}
                 {cols.map((col) => (
-                  <Table.Td key={col.key} ta={col.align} ff={col.mono ? 'monospace' : undefined}>
-                    {col.render(row)}
-                  </Table.Td>
+                  <Table.Th key={col.key} ta={col.align}>
+                    {col.header}
+                  </Table.Th>
                 ))}
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+            </Table.Thead>
+            <Table.Tbody>
+              {rows.map((row) => {
+                const key = rowKey(row);
+                return (
+                  <Table.Tr
+                    key={key}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    style={onRowClick ? { cursor: 'pointer' } : undefined}
+                    bg={selection?.selected.has(key) ? 'var(--mantine-color-coffee-0)' : undefined}
+                  >
+                    {selection && (
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <Checkbox aria-label="Select row" checked={selection.selected.has(key)} onChange={() => toggleRow(key)} />
+                      </Table.Td>
+                    )}
+                    {cols.map((col) => (
+                      <Table.Td
+                    key={col.key}
+                    ta={col.align}
+                    ff={col.mono ? 'monospace' : undefined}
+                    style={col.mono || col.nowrap ? { whiteSpace: 'nowrap' } : undefined}
+                  >
+                        {col.render(row)}
+                      </Table.Td>
+                    ))}
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+            {hasFooter && (
+              <Table.Tfoot>
+                <Table.Tr>
+                  {selection && <Table.Th />}
+                  {cols.map((col) => (
+                    <Table.Th key={col.key} ta={col.align}>
+                      {col.footer}
+                    </Table.Th>
+                  ))}
+                </Table.Tr>
+              </Table.Tfoot>
+            )}
+          </Table>
+        </Table.ScrollContainer>
+      )}
+
+      {pagination && pagination.total > pagination.pageSize && (
+        <Group justify="space-between" mt="sm">
+          <Text size="xs" c="dimmed">
+            {(pagination.page - 1) * pagination.pageSize + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.total)} of{' '}
+            {pagination.total.toLocaleString()}
+          </Text>
+          <Pagination size="sm" value={pagination.page} onChange={pagination.onChange} total={Math.ceil(pagination.total / pagination.pageSize)} />
+        </Group>
+      )}
     </>
   );
 }

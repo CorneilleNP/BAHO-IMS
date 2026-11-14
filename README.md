@@ -110,6 +110,46 @@ village, or just a district) and the API returns `location_path` +
 `location_label` for display. Use `LocationFieldsMixin` for any new model with
 a location; never add free-text province/district columns.
 
+## Processes (5) and sub-processes
+
+Baho runs five processes: Fully Washed, Anaerobic Fully Washed, Normal Natural,
+Anaerobic Natural, Honey & Honey Anaerobic. Every other label ("WASHED NO 1",
+"ECLIPSE NAT"…) is a **sub-process** of one of them. New labels (from imports or
+the "+" in the receipt wizard) start *Not assigned*; on **Dry Mill › Processes**
+select them and assign them to a process (or "Use suggestions"), merge spelling
+duplicates (the other names become aliases), rename or deactivate. Stock
+receipts follow their sub-process.
+
+## HQ stock: every sheet column + stock deduction
+
+A stock receipt holds every column of the BAHO STOCK UPDATE sheet. Its stock
+position is **calculated, never typed**:
+
+    balance = pure weight − kg taken by dry mill batches + adjustments
+
+- A dry mill batch must say which receipts it mills (wizard step 2, with
+  "fill oldest first"); only quality-accepted parchment, never more than the balance.
+- Processing status (Not started / Partially processed / Completed) and
+  processing date follow automatically.
+- Corrections after milling are **stock adjustments** with a reason; weights lock.
+- Voiding a batch gives its stock back; a receipt with movements can't be voided.
+- Shipments can't exceed the green coffee in stock per grade.
+- Every change to a receipt or batch is in its history (who, when, old → new).
+
+### Importing the sheet
+
+```powershell
+cd backend
+.venv\Scripts\python.exe manage.py import_stock_update "..\dataset\<file>.csv"            # dry run + report
+.venv\Scripts\python.exe manage.py import_stock_update "..\dataset\<file>.csv" --commit --user admin@baho.local
+```
+
+Rules: Ngororero is always Baho; other BAHO sources become CWS stations,
+PARTNER/UBUNTU/AGRINOS become suppliers (Kayenzi → Agrinos Ltd); FLOOT→FLOAT,
+HHPC→HPC; blank quality → Pending; "Completed" rows get an opening adjustment.
+Re-running skips rows already imported. **`reset_dev_data` deletes imported
+receipts too** — re-import afterwards.
+
 ## Voiding records
 
 GRNs, processing lots (unless closed), stock receipts, dry mill batches and
@@ -131,6 +171,8 @@ number is never reused. Nothing is ever hard-deleted from the app.
 | `ChartCard` | per-page bar charts |
 | `toast.success / error` (bottom-right) | success banners |
 | `ErrorMessage` (form validation), `EmptyState` | ad-hoc alerts |
+| `FormWizard` + `useDraft` (steps, checks, review, draft kept) | long single-page forms |
+| `ProcessPicker` (5 processes → sub-process, add new) | free-text process names |
 | `DateRangeFilter` (Today, Last 7 days, This month, Last month, This season) | separate from/to inputs |
 | `DataTable exportName` + `fetchAll` → **Export ▸ Excel (.xlsx) / CSV** of every row matching the filters | copy-paste to Excel |
 | `confirmAction({ … requireReason })`, `VoidButton` | deleting without asking |

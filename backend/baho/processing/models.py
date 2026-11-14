@@ -4,10 +4,14 @@ Legacy: 0003_processing.sql. Process types are per station because each CWS
 runs its own set (and its own estimate ratios).
 """
 
+import uuid
+
 from django.db import models
 from django.db.models import Q
 
 from baho.core.models import AuditedModel, TimeStampedModel
+
+from .labels import label_key
 
 
 class ProcessType(TimeStampedModel):
@@ -122,3 +126,73 @@ class LotGradeResult(TimeStampedModel):
                 name="lot_actual_non_negative",
             ),
         ]
+
+
+# --- Company-wide process catalogue -----------------------------------------------
+# Baho runs exactly five processes; every other label used in the field
+# ("WASHED NO 1", "NAT NO 2 MTC LOT", "ECLIPSE NAT"…) is a sub-process of one
+# of them. Sub-processes can sit "unassigned" (process = NULL) until someone
+# assigns them on the Processes screen; aliases make spelling variants of the
+# same label resolve to one sub-process.
+
+
+class Process(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=80, unique=True)
+    display_order = models.PositiveSmallIntegerField(default=0)
+    aliases = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Normalised labels that mean this process itself (no sub-process), e.g. FW.",
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["display_order", "name"]
+        verbose_name_plural = "processes"
+
+    def __str__(self):
+        return self.name
+
+
+class SubProcess(TimeStampedModel):
+    process = models.ForeignKey(
+        Process,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="sub_processes",
+        help_text="Empty = not assigned to a process yet.",
+    )
+    name = models.CharField(max_length=120)
+    key = models.CharField(max_length=120, unique=True, editable=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "sub-processes"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = label_key(self.name)
+        super().save(*args, **kwargs)
+
+
+class SubProcessAlias(models.Model):
+    """Another spelling that resolves to the same sub-process (e.g. "WASHED NO1")."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sub_process = models.ForeignKey(SubProcess, on_delete=models.CASCADE, related_name="aliases")
+    label = models.CharField(max_length=120)
+    key = models.CharField(max_length=120, unique=True)
+
+    class Meta:
+        ordering = ["label"]
+        verbose_name_plural = "sub-process aliases"
+
+    def __str__(self):
+        return self.label
