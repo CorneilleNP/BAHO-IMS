@@ -20,7 +20,10 @@ switch ($Command) {
   'start'  { & "$Bin\pg_ctl.exe" -D $Data -l $Log -o "-c listen_addresses=localhost -p 5432" -w start }
   'stop'   { & "$Bin\pg_ctl.exe" -D $Data -w stop }
   'status' { & "$Bin\pg_ctl.exe" -D $Data status }
-  'psql'   { & "$Bin\psql.exe" -h localhost -U postgres -d baho_ims }
+  'psql'   {
+    chcp 1252 > $null   # match Windows code page; silences psql's code-page warning
+    & "$Bin\psql.exe" -h localhost -U postgres -d baho_ims
+  }
   'tables' {
     & "$Bin\psql.exe" -h localhost -U postgres -d baho_ims -c "select relname as table, n_live_tup as rows from pg_stat_user_tables order by relname;"
   }
