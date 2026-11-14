@@ -5,3 +5,4 @@
 *.jpeg binary
 *.png binary
 *.svg text
+*.cmd text eol=crlf

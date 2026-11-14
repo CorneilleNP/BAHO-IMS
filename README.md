@@ -24,17 +24,19 @@ baho IMS/
 
 ### 1. Database (portable PostgreSQL 17 in `~/tools`)
 
+Run one command at a time:
+
 ```powershell
-.\scripts\db.ps1 start      # start Postgres (needed after every reboot)
-.\scripts\db.ps1 status     # check it is running
-.\scripts\db.ps1 tables     # list tables and row counts
-.\scripts\db.ps1 psql       # SQL shell
-.\scripts\db.ps1 pgadmin    # graphical tool: add server localhost:5432, user/pass postgres
-.\scripts\db.ps1 stop
+.\scripts\db.cmd start      # start Postgres (needed after every reboot)
+.\scripts\db.cmd status     # check it is running
+.\scripts\db.cmd tables     # list tables and row counts
+.\scripts\db.cmd psql       # SQL shell (type \q to quit)
+.\scripts\db.cmd pgadmin    # graphical tool: add server localhost:5432, user/pass postgres
+.\scripts\db.cmd stop       # stop Postgres
 ```
 
-If PowerShell blocks the script, run it as
-`powershell -ExecutionPolicy Bypass -File .\scripts\db.ps1 start`.
+`db.cmd` wraps `db.ps1` so it works even though this machine blocks
+PowerShell scripts (execution policy).
 
 ### 2. Backend → http://localhost:8000
 
