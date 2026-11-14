@@ -12,7 +12,7 @@ import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { confirmAction } from '../../lib/confirm';
 import { fetchAllPages } from '../../lib/exportTable';
-import { ANY_DATE, changeLabel, kg, type DateRange } from '../../lib/format';
+import { ANY_DATE, changeLabel, kg, kgWhole, type DateRange } from '../../lib/format';
 import { processingColor, processingLabel, qualityColor, qualityLabel } from '../../lib/stockLabels';
 import { toast } from '../../lib/toast';
 import type { CatalogSubProcess, CoffeeSource, HqStockReceipt, StockSummary, StockTotals } from '../../lib/types';
@@ -188,11 +188,16 @@ export function StockUpdatePage() {
       />
       <ErrorMessage>{summary.error}</ErrorMessage>
 
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
-        <KpiCard label={`Received ${s?.date ?? ''} (kg net)`} value={kg(s?.day.net_weight_kg)} icon={IconScale} delta={delta} loading={kpiLoading} />
-        <KpiCard label="Received in period (kg net)" value={kg(s?.season.net_weight_kg)} icon={IconBuildingWarehouse} loading={kpiLoading} />
-        <KpiCard label="In stock now (kg)" value={kg(s?.season.stock_balance_kg)} icon={IconPackage} loading={kpiLoading} />
-        <KpiCard label={`Waiting for quality (${s?.awaiting_quality.receipts ?? 0})`} value={`${kg(s?.awaiting_quality.net_weight_kg)} kg`} icon={IconAlertTriangle} accent="yellow" loading={kpiLoading} />
+      {/* Same three figures as the Power BI "Baho Dry Mill Stock Update" page, for the current filters. */}
+      <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <KpiCard label="Net weight (kg)" value={kgWhole(s?.season.net_weight_kg)} icon={IconScale} loading={kpiLoading} />
+        <KpiCard label="Pure weight (kg)" value={kgWhole(s?.season.pure_weight_kg)} icon={IconBuildingWarehouse} loading={kpiLoading} />
+        <KpiCard label="Weight of bags (kg)" value={kgWhole(s?.season.weight_of_bags_kg)} icon={IconPackage} loading={kpiLoading} />
+      </SimpleGrid>
+      <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <KpiCard label={`Received ${s?.date ?? ''} (kg net)`} value={kgWhole(s?.day.net_weight_kg)} icon={IconScale} delta={delta} accent="gray" loading={kpiLoading} />
+        <KpiCard label="In stock now (kg)" value={kgWhole(s?.season.stock_balance_kg)} icon={IconPackage} accent="teal" loading={kpiLoading} />
+        <KpiCard label={`Waiting for quality (${s?.awaiting_quality.receipts ?? 0})`} value={`${kgWhole(s?.awaiting_quality.net_weight_kg)} kg`} icon={IconAlertTriangle} accent="yellow" loading={kpiLoading} />
       </SimpleGrid>
 
       <Card withBorder radius="md" p="md">

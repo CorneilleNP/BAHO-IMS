@@ -47,3 +47,8 @@ export function calculateOutturnPct(actualQtyKg: number, inputKg: number): numbe
 /** [from, to] as "YYYY-MM-DD" strings; null = open-ended. Used by DateRangeFilter. */
 export type DateRange = [string | null, string | null];
 export const ANY_DATE: DateRange = [null, null];
+
+/** Whole kilograms for headline figures (KPI cards), e.g. 1,990,723. */
+export function kgWhole(value: string | number | null | undefined): string {
+  return Math.round(num(value)).toLocaleString();
+}
