@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Badge, Button, Card, SimpleGrid, Stack, Text, TextInput, Textarea } from '@mantine/core';
 import { IconBuildingWarehouse } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
-import { ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { ErrorMessage } from '../../components/Feedback';
 import { LocationPicker } from '../../components/LocationPicker';
 import { PageHeader } from '../../components/PageHeader';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
+import { toast } from '../../lib/toast';
 import type { CoffeeSource, Facility, Paginated, Supplier } from '../../lib/types';
 import { useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
@@ -23,7 +24,6 @@ export function SourceRegistryPage() {
   const stations = useApi<Paginated<Facility>>('/organization/facilities/?facility_type=CWS&page_size=200');
   const [form, setForm] = useState(blank);
   const [location, setLocation] = useState<string | null>(null);
-  const [saved, setSaved] = useState<string | null>(null);
   const submit = useSubmit();
 
   const set = (field: keyof typeof blank) => (event: { currentTarget: { value: string } }) => {
@@ -40,7 +40,7 @@ export function SourceRegistryPage() {
     if (!form.name.trim()) return submit.fail('Enter the supplier name.');
     const supplier = await submit.run(() => api<Supplier>('/drymill/suppliers/', { method: 'POST', body: { ...form, location } }));
     if (!supplier) return;
-    setSaved(`Registered supplier ${supplier.name}.`);
+    toast.success(supplier.name, 'Supplier registered');
     setForm(blank);
     setLocation(null);
     sources.reload();
@@ -50,8 +50,6 @@ export function SourceRegistryPage() {
   return (
     <Stack gap="lg" maw={1300}>
       <PageHeader eyebrow="Registry" title="Suppliers and sources" />
-
-      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
 
       <SimpleGrid cols={{ base: 1, lg: writable ? 2 : 1 }} spacing="lg">
         {writable && (
@@ -67,7 +65,7 @@ export function SourceRegistryPage() {
                 <TextInput label="Phone" value={form.phone} onChange={set('phone')} />
                 <TextInput label="TIN" value={form.tin} onChange={set('tin')} />
               </SimpleGrid>
-              <LocationPicker legend="Supplier location" depth="SECTOR" value={location} onChange={setLocation} searchable={false} />
+              <LocationPicker legend="Supplier location" value={location} onChange={setLocation} />
               <Textarea label="Notes" value={form.notes} onChange={set('notes')} autosize minRows={2} />
               <ErrorMessage>{submit.error}</ErrorMessage>
               <Button leftSection={<IconBuildingWarehouse size={16} />} onClick={save} loading={submit.saving}>Save supplier</Button>
@@ -84,11 +82,13 @@ export function SourceRegistryPage() {
             error={sources.error}
             minWidth={520}
             empty={{ title: 'No sources yet' }}
+            exportName="coffee-sources"
             columns={[
-              { key: 'name', header: 'Name', render: (s) => <Text fw={600} size="sm">{s.name}</Text> },
+              { key: 'name', header: 'Name', render: (s) => <Text fw={600} size="sm">{s.name}</Text>, exportValue: (s) => s.name },
               {
                 key: 'type',
                 header: 'Type',
+                exportValue: (s) => (s.origin_type === 'OWN_CWS' ? 'Baho CWS' : 'Partner supplier'),
                 render: (s) => (
                   <Badge variant="light" color={s.origin_type === 'OWN_CWS' ? 'coffee' : 'blue'}>
                     {s.origin_type === 'OWN_CWS' ? 'Baho CWS' : 'Partner supplier'}

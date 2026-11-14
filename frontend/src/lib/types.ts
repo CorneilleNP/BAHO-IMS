@@ -209,7 +209,7 @@ export interface ProcessingSummary {
   change_vs_previous_day_pct: Decimal | null;
   by_grade: Array<{ code: string; name: string; kg: Decimal }>;
   by_source: RankedKg[];
-  options: { sources: string[]; process_products: string[]; dates: string[] };
+  options: { sources: string[]; process_products: string[] };
 }
 
 export interface ExportSummary {

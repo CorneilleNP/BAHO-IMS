@@ -40,6 +40,8 @@ class StockSummaryView(DryMillReport):
     @extend_schema(
         parameters=[
             OpenApiParameter("date", OpenApiTypes.DATE),
+            OpenApiParameter("date_from", OpenApiTypes.DATE),
+            OpenApiParameter("date_to", OpenApiTypes.DATE),
             OpenApiParameter("process", str),
             OpenApiParameter("grade", str),
         ],
@@ -47,7 +49,15 @@ class StockSummaryView(DryMillReport):
     )
     def get(self, request):
         f = _filters(request)
-        return Response(stock_summary(day=f.get("date"), process=f["process"], grade=f["grade"]))
+        return Response(
+            stock_summary(
+                day=f.get("date"),
+                process=f["process"],
+                grade=f["grade"],
+                date_from=f.get("date_from"),
+                date_to=f.get("date_to"),
+            )
+        )
 
 
 class ProcessingSummaryView(DryMillReport):
@@ -55,7 +65,8 @@ class ProcessingSummaryView(DryMillReport):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("date", OpenApiTypes.DATE),
+            OpenApiParameter("date_from", OpenApiTypes.DATE),
+            OpenApiParameter("date_to", OpenApiTypes.DATE),
             OpenApiParameter("source", str),
             OpenApiParameter("process_product", str),
         ],
@@ -65,7 +76,10 @@ class ProcessingSummaryView(DryMillReport):
         f = _filters(request)
         return Response(
             processing_summary(
-                day=f.get("date"), source=f["source"], process_product=f["process_product"]
+                date_from=f.get("date_from"),
+                date_to=f.get("date_to"),
+                source=f["source"],
+                process_product=f["process_product"],
             )
         )
 

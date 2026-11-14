@@ -110,6 +110,14 @@ village, or just a district) and the API returns `location_path` +
 `location_label` for display. Use `LocationFieldsMixin` for any new model with
 a location; never add free-text province/district columns.
 
+## Voiding records
+
+GRNs, processing lots (unless closed), stock receipts, dry mill batches and
+planned shipments can be **voided** with a mandatory reason
+(`POST …/<id>/void/`). Voiding is a soft delete: the record leaves lists and
+dashboard totals, stays in the database with `void_reason` for audit, and its
+number is never reused. Nothing is ever hard-deleted from the app.
+
 ## Frontend shared components (`frontend/src/components`, `frontend/src/lib`)
 
 | Use | Instead of |
@@ -121,7 +129,11 @@ a location; never add free-text province/district columns.
 | `StationSelect` + `useMyStations()` | per-page station dropdowns |
 | `SourceSelect` + `sourceFields()` | per-page CWS/supplier dropdowns |
 | `ChartCard` | per-page bar charts |
-| `ErrorMessage`, `SuccessMessage`, `EmptyState` | ad-hoc alerts |
+| `toast.success / error` (bottom-right) | success banners |
+| `ErrorMessage` (form validation), `EmptyState` | ad-hoc alerts |
+| `DateRangeFilter` (Today, Last 7 days, This month, Last month, This season) | separate from/to inputs |
+| `DataTable exportName` + `fetchAll` → **Export ▸ Excel (.xlsx) / CSV** of every row matching the filters | copy-paste to Excel |
+| `confirmAction({ … requireReason })`, `VoidButton` | deleting without asking |
 | `useApi` / `useList` / `query()` | `fetch` in components |
 | `useSubmit` (`run`, `fail`, `saving`, `error`) | per-form saving/error state |
 

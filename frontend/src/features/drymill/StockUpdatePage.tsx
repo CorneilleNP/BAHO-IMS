@@ -3,14 +3,18 @@ import { Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberIn
 import { IconBuildingWarehouse, IconPackage, IconScale } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
-import { ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { DateRangeFilter } from '../../components/DateRangeFilter';
+import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
 import { SourceSelect } from '../../components/SourceSelect';
+import { VoidButton } from '../../components/VoidButton';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
-import { changeLabel, kg, num, today } from '../../lib/format';
+import { fetchAllPages } from '../../lib/exportTable';
+import { ANY_DATE, changeLabel, kg, num, today, type DateRange } from '../../lib/format';
+import { toast } from '../../lib/toast';
 import { sourceFields } from '../../lib/sources';
 import type { HqStockReceipt, StockSummary } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
@@ -30,10 +34,13 @@ export function StockUpdatePage() {
   const [process, setProcess] = useState('All');
   const [grade, setGrade] = useState('All');
   const [modalOpen, setModalOpen] = useState(false);
-  const [saved, setSaved] = useState<string | null>(null);
+  const [range, setRange] = useState<DateRange>(ANY_DATE);
 
-  const summary = useApi<StockSummary>(`/reporting/drymill/stock/${query({ date, process, grade })}`);
-  const receipts = useList<HqStockReceipt>(`/drymill/stock-receipts/${query({ process, grade, page_size: 25 })}`);
+  const summary = useApi<StockSummary>(
+    `/reporting/drymill/stock/${query({ date, process, grade, date_from: range[0], date_to: range[1] })}`,
+  );
+  const receiptsQuery = `/drymill/stock-receipts/${query({ process, grade, arrival_date__gte: range[0], arrival_date__lte: range[1] })}`;
+  const receipts = useList<HqStockReceipt>(`${receiptsQuery}${receiptsQuery.includes('?') ? '&' : '?'}page_size=25`);
   const s = summary.data;
   const kpiLoading = summary.loading && !s;
   const delta = changeLabel(s?.change_vs_previous_pct, s?.previous_date);
@@ -45,7 +52,7 @@ export function StockUpdatePage() {
         description="Parchment & green coffee received at HQ from Baho CWS and partner suppliers"
         actions={
           <>
-            <TextInput type="date" label="Arrival date" value={date || s?.date || ''} onChange={(e) => setDate(e.currentTarget.value)} />
+            <TextInput type="date" label="KPI day" value={date || s?.date || ''} onChange={(e) => setDate(e.currentTarget.value)} />
             {writable && (
               <Button leftSection={<IconPackage size={16} />} onClick={() => setModalOpen(true)}>Log new stock receipt</Button>
             )}
@@ -53,7 +60,6 @@ export function StockUpdatePage() {
         }
       />
 
-      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
       <ErrorMessage>{summary.error}</ErrorMessage>
 
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
@@ -62,10 +68,11 @@ export function StockUpdatePage() {
         <KpiCard label="Weight of bags (kg)" value={kg(s?.day.weight_of_bags_kg)} icon={IconPackage} loading={kpiLoading} />
       </SimpleGrid>
       <Text size="sm" c="dimmed">
-        Season to date: <strong>{kg(s?.season.net_weight_kg)} kg</strong> net from {s?.season.receipts ?? 0} receipts.
+        {range[0] || range[1] ? 'Selected dates' : 'Season to date'}: <strong>{kg(s?.season.net_weight_kg)} kg</strong> net from {s?.season.receipts ?? 0} receipts.
       </Text>
 
-      <Group justify="flex-end" gap="md">
+      <Group justify="flex-end" gap="md" align="flex-end">
+        <DateRangeFilter value={range} onChange={setRange} label="Arrival dates" />
         <NativeSelect label="Process" data={['All', ...(s?.options.processes ?? [])]} value={process} onChange={(e) => setProcess(e.currentTarget.value)} miw={180} />
         <NativeSelect label="Grade" data={['All', ...(s?.options.grades ?? [])]} value={grade} onChange={(e) => setGrade(e.currentTarget.value)} miw={180} />
       </Group>
@@ -85,19 +92,37 @@ export function StockUpdatePage() {
           error={receipts.error}
           minWidth={950}
           empty={{ title: 'No stock received yet', hint: 'Use “Log new stock receipt” when coffee arrives at HQ.' }}
+          exportName="hq-stock-receipts"
+          fetchAll={() => fetchAllPages<HqStockReceipt>(receiptsQuery)}
           columns={[
             { key: 'no', header: 'Receipt', mono: true, render: (r) => r.receipt_number },
             { key: 'date', header: 'Arrival', render: (r) => r.arrival_date },
             { key: 'source', header: 'Source', render: (r) => r.source_name },
             { key: 'process', header: 'Process', render: (r) => r.process },
             { key: 'grade', header: 'Grade', render: (r) => r.grade },
-            { key: 'net', header: 'Net (kg)', align: 'right', render: (r) => kg(r.net_weight_kg) },
-            { key: 'pure', header: 'Pure (kg)', align: 'right', render: (r) => kg(r.pure_weight_kg) },
-            { key: 'q', header: 'Quality', render: (r) => <Badge color={qualityColor[r.quality_status]} variant="light">{r.quality_status}</Badge> },
+            { key: 'net', header: 'Net (kg)', align: 'right', render: (r) => kg(r.net_weight_kg), exportValue: (r) => r.net_weight_kg },
+            { key: 'pure', header: 'Pure (kg)', align: 'right', render: (r) => kg(r.pure_weight_kg), exportValue: (r) => r.pure_weight_kg },
+            { key: 'q', header: 'Quality', exportValue: (r) => r.quality_status, render: (r) => <Badge color={qualityColor[r.quality_status]} variant="light">{r.quality_status}</Badge> },
             {
               key: 'p',
               header: 'Processing',
+              exportValue: (r) => r.processing_status,
               render: (r) => <Badge color={processingColor[r.processing_status]} variant="light">{r.processing_status.replace('_', ' ')}</Badge>,
+            },
+            writable && {
+              key: 'void',
+              header: '',
+              exportValue: false,
+              render: (r) => (
+                <VoidButton
+                  path={`/drymill/stock-receipts/${r.id}/`}
+                  label={`receipt ${r.receipt_number}`}
+                  onDone={() => {
+                    summary.reload();
+                    receipts.reload();
+                  }}
+                />
+              ),
             },
           ]}
         />
@@ -111,7 +136,7 @@ export function StockUpdatePage() {
           onSaved={(receipt) => {
             setModalOpen(false);
             setDate(receipt.arrival_date);
-            setSaved(`Saved ${receipt.receipt_number}: ${kg(receipt.net_weight_kg)} kg ${receipt.process} ${receipt.grade} from ${receipt.source_name}.`);
+            toast.success(`${receipt.receipt_number}: ${kg(receipt.net_weight_kg)} kg ${receipt.process} ${receipt.grade} from ${receipt.source_name}.`, 'Stock receipt saved');
             summary.reload();
             receipts.reload();
           }}

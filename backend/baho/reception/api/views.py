@@ -1,7 +1,7 @@
 from rest_framework import mixins, viewsets
 
 from baho.core.access import CWS_READ_ROLES, CWS_WRITE_ROLES
-from baho.core.mixins import FacilityScopedViewSetMixin
+from baho.core.mixins import FacilityScopedViewSetMixin, VoidActionMixin
 from baho.core.permissions import RoleAccess
 
 from ..models import CherryReceipt
@@ -11,6 +11,7 @@ from .serializers import CherryReceiptSerializer
 
 
 class CherryReceiptViewSet(
+    VoidActionMixin,
     FacilityScopedViewSetMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -24,7 +25,12 @@ class CherryReceiptViewSet(
     permission_classes = [RoleAccess]
     read_roles = CWS_READ_ROLES
     write_roles = CWS_WRITE_ROLES
-    filterset_fields = ["facility", "farmer", "payment_status", "received_on"]
+    filterset_fields = {
+        "facility": ["exact"],
+        "farmer": ["exact"],
+        "payment_status": ["exact"],
+        "received_on": ["exact", "gte", "lte"],
+    }
     search_fields = ["grn_number", "farmer__full_name", "farmer__farmer_code"]
     ordering_fields = ["received_on", "created_at"]
 

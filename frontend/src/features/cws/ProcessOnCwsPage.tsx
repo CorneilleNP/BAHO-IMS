@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActionIcon, Button, Card, Group, NumberInput, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { IconPackage, IconPlus, IconTrash } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
-import { EmptyState, ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { EmptyState, ErrorMessage } from '../../components/Feedback';
 import { PageHeader } from '../../components/PageHeader';
 import { PageSkeleton } from '../../components/Skeletons';
 import { StationSelect } from '../../components/StationSelect';
@@ -10,6 +10,7 @@ import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { num, pct } from '../../lib/format';
+import { toast } from '../../lib/toast';
 import { useMyStations } from '../../lib/stations';
 import type { ProcessType } from '../../lib/types';
 import { query, useApi } from '../../lib/useApi';
@@ -38,7 +39,6 @@ export function ProcessOnCwsPage() {
   const [name, setName] = useState('');
   const [subProcess, setSubProcess] = useState('');
   const [grades, setGrades] = useState<GradeRow[]>(() => rowsFor(WASHED_GRADES));
-  const [saved, setSaved] = useState<string | null>(null);
   const submit = useSubmit();
 
   const totalPercent = grades.reduce((sum, g) => sum + num(g.percent), 0);
@@ -66,7 +66,7 @@ export function ProcessOnCwsPage() {
       }),
     );
     if (!created) return;
-    setSaved(`Registered ${created.name}${created.sub_process ? ` / ${created.sub_process}` : ''} at ${station.name}.`);
+    toast.success(`${created.name}${created.sub_process ? ` / ${created.sub_process}` : ''} at ${station.name}.`, 'Process registered');
     setName('');
     setSubProcess('');
     setGrades(rowsFor(WASHED_GRADES));
@@ -79,8 +79,6 @@ export function ProcessOnCwsPage() {
   return (
     <Stack gap="lg" maw={1200}>
       <PageHeader eyebrow="CWS configuration" title="Register process on CWS" actions={<StationSelect stations={stations} />} />
-
-      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
 
       <SimpleGrid cols={{ base: 1, lg: writable ? 2 : 1 }} spacing="lg">
         {writable && (
@@ -147,10 +145,12 @@ export function ProcessOnCwsPage() {
             error={processes.error}
             minWidth={420}
             empty={{ title: 'No processes registered yet', hint: 'Register the processes this station runs, with their estimate ratios.' }}
+            exportName={`processes-${station.code}`}
             columns={[
               {
                 key: 'process',
                 header: 'Process',
+                exportValue: (p) => (p.sub_process ? `${p.name} / ${p.sub_process}` : p.name),
                 render: (p) => (
                   <>
                     <Text fw={600} size="sm">{p.name}</Text>

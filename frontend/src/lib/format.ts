@@ -43,3 +43,7 @@ export function calculateOutturnPct(actualQtyKg: number, inputKg: number): numbe
   if (inputKg <= 0) return 0;
   return Math.round((actualQtyKg / inputKg) * 100 * 1000) / 1000;
 }
+
+/** [from, to] as "YYYY-MM-DD" strings; null = open-ended. Used by DateRangeFilter. */
+export type DateRange = [string | null, string | null];
+export const ANY_DATE: DateRange = [null, null];

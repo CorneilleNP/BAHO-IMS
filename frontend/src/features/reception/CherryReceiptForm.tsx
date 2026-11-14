@@ -2,15 +2,19 @@ import { useMemo, useState } from 'react';
 import { Badge, Button, Card, Group, Modal, NumberInput, SegmentedControl, Select, SimpleGrid, Stack, Table, Text, TextInput } from '@mantine/core';
 import { IconCoffee, IconUserPlus } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
-import { EmptyState, ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { DateRangeFilter } from '../../components/DateRangeFilter';
+import { EmptyState, ErrorMessage } from '../../components/Feedback';
 import { LocationPicker } from '../../components/LocationPicker';
 import { PageHeader } from '../../components/PageHeader';
 import { PageSkeleton } from '../../components/Skeletons';
 import { StationSelect } from '../../components/StationSelect';
+import { VoidButton } from '../../components/VoidButton';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
-import { kg, num, rwf, today } from '../../lib/format';
+import { fetchAllPages } from '../../lib/exportTable';
+import { ANY_DATE, kg, num, rwf, today, type DateRange } from '../../lib/format';
+import { toast } from '../../lib/toast';
 import { useMyStations } from '../../lib/stations';
 import type { CherryGrade, CherryReceipt, Farmer, PaymentMethod } from '../../lib/types';
 import { query, useList } from '../../lib/useApi';
@@ -44,14 +48,17 @@ export function CherryReceiptForm() {
   const { station } = stations;
 
   const farmers = useList<Farmer>(station ? `/farmers/${query({ home_facility: station.id, is_active: 'true', page_size: 500 })}` : null);
-  const receipts = useList<CherryReceipt>(station ? `/reception/receipts/${query({ facility: station.id, page_size: 20 })}` : null);
+  const [range, setRange] = useState<DateRange>(ANY_DATE);
+  const receiptsQuery = station
+    ? `/reception/receipts/${query({ facility: station.id, received_on__gte: range[0], received_on__lte: range[1] })}`
+    : null;
+  const receipts = useList<CherryReceipt>(receiptsQuery && `${receiptsQuery}&page_size=20`);
 
   const [farmerId, setFarmerId] = useState<string | null>(null);
   const [receivedOn, setReceivedOn] = useState(today());
   const [paymentStatus, setPaymentStatus] = useState<'UNPAID' | 'PAID'>('UNPAID');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [lines, setLines] = useState(emptyLines);
-  const [saved, setSaved] = useState<string | null>(null);
   const [farmerModal, setFarmerModal] = useState(false);
   const submit = useSubmit();
 
@@ -99,7 +106,7 @@ export function CherryReceiptForm() {
       }),
     );
     if (!receipt) return;
-    setSaved(`Saved GRN ${receipt.grn_number} for ${receipt.farmer_name}: ${kg(receipt.total_kg)} kg, ${rwf(receipt.total_amount)}.`);
+    toast.success(`GRN ${receipt.grn_number} for ${receipt.farmer_name}: ${kg(receipt.total_kg)} kg, ${rwf(receipt.total_amount)}.`, 'GRN saved');
     setLines(emptyLines());
     setFarmerId(null);
     receipts.reload();
@@ -111,8 +118,6 @@ export function CherryReceiptForm() {
   return (
     <Stack gap="lg" maw={1100}>
       <PageHeader eyebrow="CWS operations" title="Cherry Reception (GRN)" actions={<StationSelect stations={stations} />} />
-
-      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
 
       {writable && (
         <Card withBorder radius="md" p="lg">
@@ -212,35 +217,48 @@ export function CherryReceiptForm() {
       )}
 
       <Card withBorder radius="md" p="lg">
-        <Text fw={600} mb="sm">Recent receipts at {station.name}</Text>
+        <Group justify="space-between" align="flex-end" mb="sm">
+          <Text fw={600}>Receipts at {station.name}</Text>
+          <DateRangeFilter value={range} onChange={setRange} label="Received" />
+        </Group>
         <DataTable
           rows={receipts.items}
           rowKey={(r) => r.id}
           loading={receipts.loading}
           error={receipts.error}
           empty={{ title: 'No cherry received yet', hint: 'Saved GRNs will appear here.' }}
+          exportName={`cherry-receipts-${station.code}`}
+          fetchAll={() => fetchAllPages<CherryReceipt>(receiptsQuery ?? '')}
           columns={[
             { key: 'grn', header: 'GRN', mono: true, render: (r) => r.grn_number },
             { key: 'date', header: 'Date', render: (r) => r.received_on },
             {
               key: 'farmer',
               header: 'Farmer',
+              exportValue: (r) => `${r.farmer_name} (${r.farmer_code})`,
               render: (r) => (
                 <>
                   {r.farmer_name} <Text span c="dimmed" size="xs">{r.farmer_code}</Text>
                 </>
               ),
             },
-            { key: 'kg', header: 'Qty (kg)', align: 'right', render: (r) => kg(r.total_kg) },
-            { key: 'amount', header: 'Amount', align: 'right', render: (r) => rwf(r.total_amount) },
+            { key: 'kg', header: 'Qty (kg)', align: 'right', render: (r) => kg(r.total_kg), exportValue: (r) => r.total_kg },
+            { key: 'amount', header: 'Amount (RWF)', align: 'right', render: (r) => rwf(r.total_amount), exportValue: (r) => r.total_amount },
             {
               key: 'payment',
               header: 'Payment',
+              exportValue: (r) => (r.payment_status === 'PAID' ? `Paid (${r.payment_method})` : 'Unpaid'),
               render: (r) => (
                 <Badge color={r.payment_status === 'PAID' ? 'teal' : 'yellow'} variant="light">
                   {r.payment_status === 'PAID' ? 'Paid' : 'Unpaid'}
                 </Badge>
               ),
+            },
+            writable && {
+              key: 'void',
+              header: '',
+              exportValue: false,
+              render: (r) => <VoidButton path={`/reception/receipts/${r.id}/`} label={`GRN ${r.grn_number}`} onDone={receipts.reload} />,
             },
           ]}
         />
@@ -255,7 +273,7 @@ export function CherryReceiptForm() {
           setFarmerModal(false);
           farmers.reload();
           setFarmerId(farmer.id);
-          setSaved(`Registered farmer ${farmer.full_name} (${farmer.farmer_code}).`);
+          toast.success(`${farmer.full_name} (${farmer.farmer_code})`, 'Farmer registered');
         }}
       />
     </Stack>

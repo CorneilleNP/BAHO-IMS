@@ -49,6 +49,7 @@ class AuditedModel(TimeStampedModel):
     device_id = models.CharField(max_length=100, blank=True)
     is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    void_reason = models.TextField(blank=True, help_text="Why the record was voided.")
 
     objects = ActiveManager()
     all_objects = models.Manager()  # noqa: DJ012 - second manager, not a field
@@ -56,11 +57,15 @@ class AuditedModel(TimeStampedModel):
     class Meta(TimeStampedModel.Meta):
         abstract = True
 
-    def soft_delete(self, user=None):
+    def soft_delete(self, user=None, reason: str = ""):
+        """Void the record: hidden from normal queries, kept for audit, number never reused."""
         self.is_deleted = True
         self.deleted_at = timezone.now()
+        self.void_reason = reason
         self.updated_by = user
-        self.save(update_fields=["is_deleted", "deleted_at", "updated_by", "updated_at"])
+        self.save(
+            update_fields=["is_deleted", "deleted_at", "void_reason", "updated_by", "updated_at"]
+        )
 
 
 class SequenceCounter(models.Model):

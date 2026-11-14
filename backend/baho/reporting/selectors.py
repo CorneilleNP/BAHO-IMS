@@ -12,6 +12,24 @@ from baho.sales.models import ExportShipmentLine
 ZERO = Decimal("0")
 
 
+def _live_outputs():
+    """Dry mill outputs of batches that are not voided."""
+    return DryMillOutput.objects.filter(batch__is_deleted=False)
+
+
+def _live_lines():
+    """Shipment lines of shipments that are not voided."""
+    return ExportShipmentLine.objects.filter(shipment__is_deleted=False)
+
+
+def _in_range(qs, field, date_from, date_to):
+    if date_from:
+        qs = qs.filter(**{f"{field}__gte": date_from})
+    if date_to:
+        qs = qs.filter(**{f"{field}__lte": date_to})
+    return qs
+
+
 def _pct(part, whole) -> Decimal:
     if not whole:
         return ZERO
@@ -33,8 +51,16 @@ def _source_label():
 # --- Stock update ----------------------------------------------------------------
 
 
-def stock_summary(*, day: date | None = None, process: str = "", grade: str = "") -> dict:
-    base = HqStockReceipt.objects.all()
+def stock_summary(
+    *,
+    day: date | None = None,
+    process: str = "",
+    grade: str = "",
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict:
+    all_receipts = HqStockReceipt.objects.all()
+    base = _in_range(all_receipts, "arrival_date", date_from, date_to)
     filtered = base
     if process:
         filtered = filtered.filter(process=process)
@@ -99,9 +125,11 @@ def stock_summary(*, day: date | None = None, process: str = "", grade: str = ""
             "source",
         ),
         "options": {
-            "processes": sorted(set(base.values_list("process", flat=True))),
-            "grades": sorted(set(base.values_list("grade", flat=True))),
-            "dates": sorted(set(base.values_list("arrival_date", flat=True)), reverse=True)[:60],
+            "processes": sorted(set(all_receipts.values_list("process", flat=True))),
+            "grades": sorted(set(all_receipts.values_list("grade", flat=True))),
+            "dates": sorted(set(all_receipts.values_list("arrival_date", flat=True)), reverse=True)[
+                :60
+            ],
         },
     }
 
@@ -110,17 +138,19 @@ def stock_summary(*, day: date | None = None, process: str = "", grade: str = ""
 
 
 def processing_summary(
-    *, day: date | None = None, source: str = "", process_product: str = ""
+    *,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    source: str = "",
+    process_product: str = "",
 ) -> dict:
-    batches = DryMillBatch.objects.all()
-    if day:
-        batches = batches.filter(processing_date=day)
+    batches = _in_range(DryMillBatch.objects.all(), "processing_date", date_from, date_to)
     if source:
         batches = batches.filter(Q(source_facility__code=source) | Q(source_supplier__name=source))
     if process_product:
         batches = batches.filter(process_product=process_product)
 
-    outputs = DryMillOutput.objects.filter(batch__in=batches)
+    outputs = _live_outputs().filter(batch__in=batches)
     input_kg = batches.aggregate(v=Coalesce(Sum("parch_input_kg"), ZERO))["v"]
     output_kg = outputs.aggregate(v=Coalesce(Sum("qty_kg"), ZERO))["v"]
     hg_kg = outputs.filter(export_grade__is_high_grade=True).aggregate(
@@ -138,8 +168,7 @@ def processing_summary(
 
     # Day-over-day change in green output (latest two processing days in the filter).
     per_day = list(
-        DryMillOutput.objects.filter(batch__in=batches)
-        .values("batch__processing_date")
+        outputs.values("batch__processing_date")
         .annotate(kg=Sum("qty_kg"))
         .order_by("-batch__processing_date")[:2]
     )
@@ -176,9 +205,6 @@ def processing_summary(
                 }
             ),
             "process_products": sorted(set(all_batches.values_list("process_product", flat=True))),
-            "dates": sorted(
-                set(all_batches.values_list("processing_date", flat=True)), reverse=True
-            )[:60],
         },
     }
 
@@ -194,7 +220,7 @@ def export_summary(
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> dict:
-    lines = ExportShipmentLine.objects.all()
+    lines = _live_lines()
     if client:
         lines = lines.filter(shipment__client_id=client)
     if export_grade:
@@ -212,11 +238,11 @@ def export_summary(
     }
     exported_all = {
         row["export_grade"]: row["kg"]
-        for row in ExportShipmentLine.objects.values("export_grade").annotate(kg=Sum("qty_kg"))
+        for row in _live_lines().values("export_grade").annotate(kg=Sum("qty_kg"))
     }
     produced = {
         row["export_grade"]: row["kg"]
-        for row in DryMillOutput.objects.values("export_grade").annotate(kg=Sum("qty_kg"))
+        for row in _live_outputs().values("export_grade").annotate(kg=Sum("qty_kg"))
     }
 
     by_grade = []
@@ -245,7 +271,7 @@ def export_summary(
         ),
         "options": {
             "process_products": sorted(
-                set(ExportShipmentLine.objects.values_list("process_product", flat=True))
+                set(_live_lines().values_list("process_product", flat=True))
             ),
         },
     }

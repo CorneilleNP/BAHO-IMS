@@ -1,12 +1,14 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from baho.core.access import DRYMILL_READ_ROLES, EXPORT_WRITE_ROLES
+from baho.core.mixins import VoidActionMixin
 from baho.core.permissions import RoleAccess
 
-from ..models import Client
+from ..models import Client, ExportShipment
 from ..selectors import shipments_with_totals
 from ..services import create_client, create_shipment, update_shipment_status
 from .serializers import ClientSerializer, ExportShipmentSerializer, ShipmentStatusSerializer
@@ -37,6 +39,7 @@ class ClientViewSet(
 
 
 class ExportShipmentViewSet(
+    VoidActionMixin,
     ExportAccess,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -58,6 +61,10 @@ class ExportShipmentViewSet(
 
     def get_queryset(self):
         return super().get_queryset().distinct()
+
+    def check_can_void(self, instance):
+        if instance.status != ExportShipment.Status.PLANNED:
+            raise ValidationError(["Only planned shipments can be voided."])
 
     def perform_create(self, serializer):
         shipment = create_shipment(user=self.request.user, **serializer.validated_data)

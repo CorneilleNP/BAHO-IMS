@@ -1,10 +1,11 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from baho.core.access import CWS_READ_ROLES, CWS_WRITE_ROLES
-from baho.core.mixins import FacilityScopedViewSetMixin
+from baho.core.mixins import FacilityScopedViewSetMixin, VoidActionMixin
 from baho.core.permissions import RoleAccess
 
 from ..models import ProcessingLot, ProcessType
@@ -49,6 +50,7 @@ class ProcessTypeViewSet(
 
 
 class ProcessingLotViewSet(
+    VoidActionMixin,
     FacilityScopedViewSetMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -61,12 +63,21 @@ class ProcessingLotViewSet(
     permission_classes = [RoleAccess]
     read_roles = CWS_READ_ROLES
     write_roles = CWS_WRITE_ROLES
-    filterset_fields = ["facility", "process_type", "status", "lot_date"]
+    filterset_fields = {
+        "facility": ["exact"],
+        "process_type": ["exact"],
+        "status": ["exact"],
+        "lot_date": ["exact", "gte", "lte"],
+    }
     search_fields = ["lot_number"]
 
     def get_queryset(self):
         self.queryset = lots_with_results()
         return super().get_queryset()
+
+    def check_can_void(self, instance):
+        if instance.status == ProcessingLot.Status.CLOSED:
+            raise ValidationError(["A closed lot cannot be voided."])
 
     @staticmethod
     def _actuals_map(rows):

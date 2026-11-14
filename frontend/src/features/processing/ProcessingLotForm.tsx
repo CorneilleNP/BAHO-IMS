@@ -2,14 +2,18 @@ import { useMemo, useState } from 'react';
 import { Badge, Button, Card, Group, Modal, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput } from '@mantine/core';
 import { IconClipboardCheck } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
-import { EmptyState, ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { DateRangeFilter } from '../../components/DateRangeFilter';
+import { EmptyState, ErrorMessage } from '../../components/Feedback';
 import { PageHeader } from '../../components/PageHeader';
 import { FormSkeleton, PageSkeleton } from '../../components/Skeletons';
 import { StationSelect } from '../../components/StationSelect';
+import { VoidButton } from '../../components/VoidButton';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
-import { calculateEstimate, calculateOutturnPct, kg, num, pct, today } from '../../lib/format';
+import { fetchAllPages } from '../../lib/exportTable';
+import { ANY_DATE, calculateEstimate, calculateOutturnPct, kg, num, pct, today, type DateRange } from '../../lib/format';
+import { toast } from '../../lib/toast';
 import { useMyStations } from '../../lib/stations';
 import type { ProcessingLot, ProcessType } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
@@ -25,14 +29,17 @@ export function ProcessingLotForm() {
   const stations = useMyStations();
   const { station } = stations;
   const processes = useApi<ProcessType[]>(station ? `/processing/process-types/${query({ facility: station.id, is_active: 'true' })}` : null);
-  const lots = useList<ProcessingLot>(station ? `/processing/lots/${query({ facility: station.id, page_size: 20 })}` : null);
+  const [range, setRange] = useState<DateRange>(ANY_DATE);
+  const lotsQuery = station
+    ? `/processing/lots/${query({ facility: station.id, lot_date__gte: range[0], lot_date__lte: range[1] })}`
+    : null;
+  const lots = useList<ProcessingLot>(lotsQuery && `${lotsQuery}&page_size=20`);
 
   const [processId, setProcessId] = useState<string | null>(null);
   const [lotNumber, setLotNumber] = useState('');
   const [lotDate, setLotDate] = useState(today());
   const [cherryInputKg, setCherryInputKg] = useState<number | ''>('');
   const [actuals, setActuals] = useState<Record<string, number | ''>>({});
-  const [saved, setSaved] = useState<string | null>(null);
   const [actualsLot, setActualsLot] = useState<ProcessingLot | null>(null);
   const submit = useSubmit();
 
@@ -71,7 +78,7 @@ export function ProcessingLotForm() {
       }),
     );
     if (!lot) return;
-    setSaved(`Saved lot ${lot.lot_number}: ${kg(lot.cherry_input_kg)} kg cherry, estimate ${kg(lot.total_estimated_kg, 2)} kg.`);
+    toast.success(`${lot.lot_number}: ${kg(lot.cherry_input_kg)} kg cherry, estimate ${kg(lot.total_estimated_kg, 2)} kg.`, 'Lot saved');
     setLotNumber('');
     setCherryInputKg('');
     setActuals({});
@@ -84,8 +91,6 @@ export function ProcessingLotForm() {
   return (
     <Stack gap="lg" maw={1200}>
       <PageHeader eyebrow="CWS operations" title="Processing lots" actions={<StationSelect stations={stations} />} />
-
-      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
 
       {writable && (
         <Card withBorder radius="md" p="lg">
@@ -164,7 +169,10 @@ export function ProcessingLotForm() {
       )}
 
       <Card withBorder radius="md" p="lg">
-        <Text fw={600} mb="sm">Recent lots at {station.name}</Text>
+        <Group justify="space-between" align="flex-end" mb="sm">
+          <Text fw={600}>Lots at {station.name}</Text>
+          <DateRangeFilter value={range} onChange={setRange} label="Lot date" />
+        </Group>
         <DataTable
           rows={lots.items}
           rowKey={(lot) => lot.id}
@@ -172,27 +180,34 @@ export function ProcessingLotForm() {
           error={lots.error}
           minWidth={820}
           empty={{ title: 'No lots yet', hint: 'Saved processing lots appear here.' }}
+          exportName={`processing-lots-${station.code}`}
+          fetchAll={() => fetchAllPages<ProcessingLot>(lotsQuery ?? '')}
           columns={[
             { key: 'lot', header: 'Lot', mono: true, render: (lot) => lot.lot_number },
             { key: 'date', header: 'Date', render: (lot) => lot.lot_date },
             { key: 'process', header: 'Process', render: (lot) => lot.process_label },
-            { key: 'cherry', header: 'Cherry (kg)', align: 'right', render: (lot) => kg(lot.cherry_input_kg) },
-            { key: 'est', header: 'Estimated (kg)', align: 'right', render: (lot) => kg(lot.total_estimated_kg, 2) },
-            { key: 'act', header: 'Actual (kg)', align: 'right', render: (lot) => (lot.total_actual_kg === null ? '—' : kg(lot.total_actual_kg, 2)) },
-            { key: 'out', header: 'Out-turn', align: 'right', render: (lot) => (lot.total_outturn_pct === null ? '—' : pct(lot.total_outturn_pct, 2)) },
+            { key: 'cherry', header: 'Cherry (kg)', align: 'right', render: (lot) => kg(lot.cherry_input_kg), exportValue: (lot) => lot.cherry_input_kg },
+            { key: 'est', header: 'Estimated (kg)', align: 'right', render: (lot) => kg(lot.total_estimated_kg, 2), exportValue: (lot) => lot.total_estimated_kg },
+            { key: 'act', header: 'Actual (kg)', align: 'right', render: (lot) => (lot.total_actual_kg === null ? '—' : kg(lot.total_actual_kg, 2)), exportValue: (lot) => lot.total_actual_kg },
+            { key: 'out', header: 'Out-turn %', align: 'right', render: (lot) => (lot.total_outturn_pct === null ? '—' : pct(lot.total_outturn_pct, 2)), exportValue: (lot) => lot.total_outturn_pct },
             {
               key: 'status',
               header: 'Status',
+              exportValue: (lot) => statusLabel[lot.status],
               render: (lot) => <Badge color={statusColor[lot.status]} variant="light">{statusLabel[lot.status]}</Badge>,
             },
             writable && {
               key: 'actions',
               header: '',
+              exportValue: false,
               render: (lot) =>
                 lot.status !== 'CLOSED' && (
-                  <Button size="compact-xs" variant="light" leftSection={<IconClipboardCheck size={14} />} onClick={() => setActualsLot(lot)}>
-                    Actuals
-                  </Button>
+                  <Group gap={4} wrap="nowrap">
+                    <Button size="compact-xs" variant="light" leftSection={<IconClipboardCheck size={14} />} onClick={() => setActualsLot(lot)}>
+                      Actuals
+                    </Button>
+                    <VoidButton path={`/processing/lots/${lot.id}/`} label={`lot ${lot.lot_number}`} onDone={lots.reload} />
+                  </Group>
                 ),
             },
           ]}
@@ -205,7 +220,7 @@ export function ProcessingLotForm() {
           onClose={() => setActualsLot(null)}
           onSaved={(lot) => {
             setActualsLot(null);
-            setSaved(`Updated actuals for lot ${lot.lot_number}.`);
+            toast.success(`Actuals updated for lot ${lot.lot_number}.`);
             lots.reload();
           }}
         />

@@ -3,13 +3,18 @@ import { ActionIcon, Autocomplete, Badge, Button, Card, Group, Modal, NativeSele
 import { IconPlus, IconScale, IconShip, IconTrash, IconUserPlus } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
-import { ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { DateRangeFilter } from '../../components/DateRangeFilter';
+import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
+import { VoidButton } from '../../components/VoidButton';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
-import { kg, num, today } from '../../lib/format';
+import { confirmAction } from '../../lib/confirm';
+import { fetchAllPages } from '../../lib/exportTable';
+import { ANY_DATE, kg, num, today, type DateRange } from '../../lib/format';
+import { toast } from '../../lib/toast';
 import type { Client, ExportGrade, ExportShipment, ExportSummary } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
@@ -23,24 +28,29 @@ export function ExportUpdatesPage() {
   const [client, setClient] = useState('All');
   const [grade, setGrade] = useState('All');
   const [product, setProduct] = useState('All');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [range, setRange] = useState<DateRange>(ANY_DATE);
   const [modalOpen, setModalOpen] = useState(false);
-  const [saved, setSaved] = useState<string | null>(null);
   const statusSubmit = useSubmit();
 
   const clients = useList<Client>('/sales/clients/?page_size=500');
   const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
   const summary = useApi<ExportSummary>(
-    `/reporting/drymill/export/${query({ client, export_grade: grade, process_product: product, date_from: dateFrom, date_to: dateTo })}`,
+    `/reporting/drymill/export/${query({ client, export_grade: grade, process_product: product, date_from: range[0], date_to: range[1] })}`,
   );
+  const shipmentsQuery = `/sales/shipments/${query({
+    client,
+    lines__export_grade: grade,
+    lines__process_product: product,
+    delivery_to_naeb_date__gte: range[0],
+    delivery_to_naeb_date__lte: range[1],
+  })}`;
   const shipments = useList<ExportShipment>(
     `/sales/shipments/${query({
       client,
       lines__export_grade: grade,
       lines__process_product: product,
-      delivery_to_naeb_date__gte: dateFrom,
-      delivery_to_naeb_date__lte: dateTo,
+      delivery_to_naeb_date__gte: range[0],
+      delivery_to_naeb_date__lte: range[1],
       page_size: 25,
     })}`,
   );
@@ -48,9 +58,15 @@ export function ExportUpdatesPage() {
   const kpiLoading = summary.loading && !s;
 
   async function setStatus(shipment: ExportShipment, status: ExportShipment['status']) {
+    const confirmed = await confirmAction({
+      title: `Mark ${shipment.shipment_no} as ${status.toLowerCase()}?`,
+      message: `${shipment.client_name} · ${kg(shipment.total_qty_kg)} kg. Only planned shipments can be voided afterwards.`,
+      confirmLabel: `Mark ${status.toLowerCase()}`,
+    });
+    if (confirmed === null) return;
     const done = await statusSubmit.run(() => api(`/sales/shipments/${shipment.id}/status/`, { method: 'POST', body: { status } }));
     if (done === undefined) return;
-    setSaved(`${shipment.shipment_no} marked ${status.toLowerCase()}.`);
+    toast.success(`${shipment.shipment_no} marked ${status.toLowerCase()}.`, 'Status updated');
     shipments.reload();
   }
 
@@ -62,15 +78,13 @@ export function ExportUpdatesPage() {
         actions={writable && <Button leftSection={<IconShip size={16} />} onClick={() => setModalOpen(true)}>Record export shipment</Button>}
       />
 
-      <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
       <ErrorMessage>{summary.error ?? statusSubmit.error}</ErrorMessage>
 
       <Group justify="flex-end" gap="md" align="flex-end">
         <NativeSelect label="Client" data={[{ value: 'All', label: 'All' }, ...clients.items.map((c) => ({ value: c.id, label: c.name }))]} value={client} onChange={(e) => setClient(e.currentTarget.value)} miw={170} />
         <NativeSelect label="Process / product" data={['All', ...(s?.options.process_products ?? [])]} value={product} onChange={(e) => setProduct(e.currentTarget.value)} miw={180} />
         <NativeSelect label="Grade" data={[{ value: 'All', label: 'All' }, ...(grades.data ?? []).map((g) => ({ value: g.id, label: g.name }))]} value={grade} onChange={(e) => setGrade(e.currentTarget.value)} miw={150} />
-        <TextInput type="date" label="From" value={dateFrom} onChange={(e) => setDateFrom(e.currentTarget.value)} />
-        <TextInput type="date" label="To" value={dateTo} onChange={(e) => setDateTo(e.currentTarget.value)} />
+        <DateRangeFilter value={range} onChange={setRange} label="Delivery to NAEB" />
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
@@ -87,13 +101,15 @@ export function ExportUpdatesPage() {
           loading={summary.loading}
           minWidth={560}
           empty={{ title: 'No grades configured' }}
+          exportName="export-balance-by-grade"
           columns={[
-            { key: 'grade', header: 'Grade', render: (g) => <Text fw={600} size="sm">{g.name}</Text> },
-            { key: 'made', header: 'Produced (kg)', align: 'right', render: (g) => kg(g.produced_kg) },
-            { key: 'shipped', header: 'Exported (kg)', align: 'right', render: (g) => kg(g.exported_kg) },
+            { key: 'grade', header: 'Grade', render: (g) => <Text fw={600} size="sm">{g.name}</Text>, exportValue: (g) => g.name },
+            { key: 'made', header: 'Produced (kg)', align: 'right', render: (g) => kg(g.produced_kg), exportValue: (g) => g.produced_kg },
+            { key: 'shipped', header: 'Exported (kg)', align: 'right', render: (g) => kg(g.exported_kg), exportValue: (g) => g.exported_kg },
             {
               key: 'balance',
               header: 'Balance (kg)',
+              exportValue: (g) => g.balance_kg,
               align: 'right',
               render: (g) => <Text size="sm" c={num(g.balance_kg) < 0 ? 'red' : undefined}>{kg(g.balance_kg)}</Text>,
             },
@@ -112,6 +128,8 @@ export function ExportUpdatesPage() {
           error={shipments.error}
           minWidth={900}
           empty={{ title: 'No shipments recorded yet', hint: 'Use “Record export shipment” to add one.' }}
+          exportName="export-shipments"
+          fetchAll={() => fetchAllPages<ExportShipment>(shipmentsQuery)}
           columns={[
             { key: 'no', header: 'Shipment', mono: true, render: (sh) => sh.shipment_no },
             { key: 'date', header: 'Delivery to NAEB', render: (sh) => sh.delivery_to_naeb_date },
@@ -119,12 +137,14 @@ export function ExportUpdatesPage() {
             {
               key: 'products',
               header: 'Products',
+              exportValue: (sh) => sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${l.qty_kg}`).join('; '),
               render: (sh) => <Text size="xs">{sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${kg(l.qty_kg)} kg`).join(' • ')}</Text>,
             },
-            { key: 'qty', header: 'Qty (kg)', align: 'right', render: (sh) => kg(sh.total_qty_kg) },
+            { key: 'qty', header: 'Qty (kg)', align: 'right', render: (sh) => kg(sh.total_qty_kg), exportValue: (sh) => sh.total_qty_kg },
             {
               key: 'status',
               header: 'Status',
+              exportValue: (sh) => sh.status,
               render: (sh) =>
                 writable ? (
                   <NativeSelect
@@ -136,6 +156,22 @@ export function ExportUpdatesPage() {
                   />
                 ) : (
                   <Badge color={statusColor[sh.status]} variant="light">{sh.status}</Badge>
+                ),
+            },
+            writable && {
+              key: 'void',
+              header: '',
+              exportValue: false,
+              render: (sh) =>
+                sh.status === 'PLANNED' && (
+                  <VoidButton
+                    path={`/sales/shipments/${sh.id}/`}
+                    label={`shipment ${sh.shipment_no}`}
+                    onDone={() => {
+                      summary.reload();
+                      shipments.reload();
+                    }}
+                  />
                 ),
             },
           ]}
@@ -151,7 +187,7 @@ export function ExportUpdatesPage() {
           onClose={() => setModalOpen(false)}
           onSaved={(sh) => {
             setModalOpen(false);
-            setSaved(`Saved shipment ${sh.shipment_no} to ${sh.client_name}: ${kg(sh.total_qty_kg)} kg.`);
+            toast.success(`${sh.shipment_no} to ${sh.client_name}: ${kg(sh.total_qty_kg)} kg.`, 'Shipment saved');
             summary.reload();
             shipments.reload();
           }}

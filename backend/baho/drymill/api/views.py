@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from baho.core.access import DRYMILL_READ_ROLES, DRYMILL_WRITE_ROLES
+from baho.core.mixins import VoidActionMixin
 from baho.core.permissions import RoleAccess
 from baho.organization.locations import ANCESTORS
 
@@ -70,6 +71,7 @@ class CoffeeSourcesView(DryMillAccess, APIView):
 
 
 class HqStockReceiptViewSet(
+    VoidActionMixin,
     DryMillAccess,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -108,6 +110,7 @@ class HqStockReceiptViewSet(
 
 
 class DryMillBatchViewSet(
+    VoidActionMixin,
     DryMillAccess,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,

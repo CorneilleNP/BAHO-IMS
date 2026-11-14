@@ -1,5 +1,5 @@
 import { Alert, Stack, Text } from '@mantine/core';
-import { IconAlertCircle, IconCircleCheck } from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 
 export function ErrorMessage({ children }: { children: ReactNode }) {
@@ -11,14 +11,6 @@ export function ErrorMessage({ children }: { children: ReactNode }) {
   );
 }
 
-export function SuccessMessage({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
-  if (!children) return null;
-  return (
-    <Alert color="teal" variant="light" icon={<IconCircleCheck size={18} />} withCloseButton={Boolean(onClose)} onClose={onClose} role="status">
-      {children}
-    </Alert>
-  );
-}
 
 /** Shown in place of a table/chart when the database has no records yet. */
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
