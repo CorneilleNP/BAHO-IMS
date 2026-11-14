@@ -147,7 +147,7 @@ function App() {
       <AppShell.Header style={{ background: '#f5f4f1', color: '#1a1a1a', border: 'none', boxShadow: 'none' }}>
         <Group h="100%" px="md" justify="space-between">
           <Group gap={8} align="center">
-            <img src="/baho-logo.svg" alt="BAHO coffee company" style={{ height: 52, width: 'auto', display: 'block' }} />
+            <img src="/baho-image.jpg" alt="BAHO coffee company" style={{ height: 52, width: 'auto', display: 'block', objectFit: 'contain' }} />
           </Group>
           <Group gap="sm">
             {currentSection && (

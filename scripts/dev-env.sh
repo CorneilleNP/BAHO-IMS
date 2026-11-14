@@ -17,3 +17,10 @@
 
 export PATH="$HOME/tools/node:$PATH"
 export NODE_EXTRA_CA_CERTS="$HOME/tools/ca-bundle.pem"
+
+# Portable PostgreSQL 17 (no admin needed), extracted to ~/tools/pgsql,
+# data in ~/tools/pgdata, localhost:5432, user postgres / password postgres (dev only).
+#   start: pg_ctl -D ~/tools/pgdata -l ~/tools/pgdata.log -o "-c listen_addresses=localhost" start
+#   stop:  pg_ctl -D ~/tools/pgdata stop
+export PATH="$HOME/tools/pgsql/bin:$PATH"
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/baho_ims"

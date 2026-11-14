@@ -102,7 +102,7 @@ export function LoginPage() {
       <div style={{ flex: '1 1 52%', position: 'relative', overflow: 'hidden', background: '#0b5b40', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px 0' }}>
         <div style={{ width: '78%', height: '82%', background: '#0b5b40', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: 'none', border: 'none', borderRadius: 0 }}>
           <img
-            src="/baho-login-page.jpg"
+            src="/baho-login-page.jpeg"
             alt="BAHO coffee"
             style={{
               width: '100%',
