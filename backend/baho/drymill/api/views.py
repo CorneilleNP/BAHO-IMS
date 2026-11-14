@@ -15,7 +15,7 @@ from baho.core.mixins import VoidActionMixin
 from baho.core.permissions import RoleAccess
 from baho.organization.locations import ANCESTORS
 
-from ..models import ExportGrade, HqStockReceipt, Supplier
+from ..models import DryMillBatch, ExportGrade, HqStockReceipt, Supplier
 from ..selectors import batches_with_totals, coffee_sources, receipt_history, stock_receipts
 from ..services import (
     adjust_stock,
@@ -245,12 +245,22 @@ class DryMillBatchViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        source = self.request.query_params.get("source")  # station code or supplier name
-        if source:
-            queryset = queryset.filter(
-                Q(inputs__receipt__source_facility__code=source)
-                | Q(inputs__receipt__source_supplier__name=source)
-            ).distinct()
+        params = self.request.query_params
+        q = Q()
+        if params.get("source"):  # station code or supplier name
+            q &= Q(inputs__receipt__source_facility__code=params["source"]) | Q(
+                inputs__receipt__source_supplier__name=params["source"]
+            )
+        if params.get("process") == "none":
+            q &= Q(inputs__receipt__process__isnull=True)
+        elif params.get("process"):
+            q &= Q(inputs__receipt__process_id=params["process"])
+        if params.get("sub_process"):
+            q &= Q(inputs__receipt__sub_process_id=params["sub_process"])
+        if params.get("grade"):
+            q &= Q(inputs__receipt__grade=params["grade"])
+        if q:
+            queryset = queryset.filter(pk__in=DryMillBatch.objects.filter(q).values("pk"))
         return queryset
 
     def perform_create(self, serializer):

@@ -29,6 +29,8 @@ def batches_with_totals():
             "outputs__export_grade",
             "inputs__receipt__source_facility",
             "inputs__receipt__source_supplier",
+            "inputs__receipt__process",
+            "inputs__receipt__sub_process",
         )
         .annotate(
             green_output_kg=Coalesce(Subquery(green, output_field=KG), Value(0, output_field=KG))

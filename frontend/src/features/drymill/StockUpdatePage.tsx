@@ -7,6 +7,7 @@ import { DateRangeFilter } from '../../components/DateRangeFilter';
 import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
+import { StockBalanceCard } from '../../components/StockBalanceCard';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
@@ -96,7 +97,7 @@ export function StockUpdatePage() {
 
   const s = summary.data;
   const kpiLoading = summary.loading && !s;
-  const delta = changeLabel(s?.change_vs_previous_pct, s?.previous_date);
+  const delta = changeLabel(s?.change_vs_previous_pct);
   const reloadAll = () => {
     summary.reload();
     receipts.reload();
@@ -194,9 +195,15 @@ export function StockUpdatePage() {
         <KpiCard label="Pure weight (kg)" value={kgWhole(s?.season.pure_weight_kg)} icon={IconBuildingWarehouse} loading={kpiLoading} />
         <KpiCard label="Weight of bags (kg)" value={kgWhole(s?.season.weight_of_bags_kg)} icon={IconPackage} loading={kpiLoading} />
       </SimpleGrid>
-      <SimpleGrid cols={{ base: 1, sm: 3 }}>
-        <KpiCard label={`Received ${s?.date ?? ''} (kg net)`} value={kgWhole(s?.day.net_weight_kg)} icon={IconScale} delta={delta} accent="gray" loading={kpiLoading} />
-        <KpiCard label="In stock now (kg)" value={kgWhole(s?.season.stock_balance_kg)} icon={IconPackage} accent="teal" loading={kpiLoading} />
+      <StockBalanceCard
+        received={s?.season.pure_weight_kg}
+        milled={s?.season.processed_kg}
+        adjusted={s?.season.adjusted_kg}
+        balance={s?.season.stock_balance_kg}
+        loading={kpiLoading}
+      />
+      <SimpleGrid cols={{ base: 1, sm: 2 }}>
+        <KpiCard label={`Received on ${s?.date ?? ''} (kg net)`} value={kgWhole(s?.day.net_weight_kg)} icon={IconScale} delta={delta} accent="gray" loading={kpiLoading} />
         <KpiCard label={`Waiting for quality (${s?.awaiting_quality.receipts ?? 0})`} value={`${kgWhole(s?.awaiting_quality.net_weight_kg)} kg`} icon={IconAlertTriangle} accent="yellow" loading={kpiLoading} />
       </SimpleGrid>
 

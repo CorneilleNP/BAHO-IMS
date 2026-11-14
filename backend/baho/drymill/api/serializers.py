@@ -254,11 +254,24 @@ class DryMillInputSerializer(serializers.ModelSerializer):
     receipt = serializers.PrimaryKeyRelatedField(queryset=HqStockReceipt.objects.all())
     receipt_number = serializers.CharField(source="receipt.receipt_number", read_only=True)
     source_name = serializers.CharField(source="receipt.source_name", read_only=True)
+    process_name = serializers.CharField(source="receipt.process.name", read_only=True, default="")
+    sub_process_name = serializers.CharField(
+        source="receipt.sub_process.name", read_only=True, default=""
+    )
+    grade = serializers.CharField(source="receipt.grade", read_only=True)
     qty_kg = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=ZERO)
 
     class Meta:
         model = DryMillBatchInput
-        fields = ["receipt", "receipt_number", "source_name", "qty_kg"]
+        fields = [
+            "receipt",
+            "receipt_number",
+            "source_name",
+            "process_name",
+            "sub_process_name",
+            "grade",
+            "qty_kg",
+        ]
 
 
 class DryMillBatchSerializer(serializers.ModelSerializer):

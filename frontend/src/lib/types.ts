@@ -242,7 +242,15 @@ export interface DryMillBatch {
   source_code: string;
   process_product: string;
   parch_input_kg: Decimal;
-  inputs: Array<{ receipt: string; receipt_number: string; source_name: string; qty_kg: Decimal }>;
+  inputs: Array<{
+    receipt: string;
+    receipt_number: string;
+    source_name: string;
+    process_name: string;
+    sub_process_name: string;
+    grade: string;
+    qty_kg: Decimal;
+  }>;
   outputs: Array<{ export_grade: string; grade_name: string; qty_kg: Decimal }>;
   green_output_kg: Decimal;
   outturn_pct: Decimal;
@@ -278,6 +286,7 @@ interface StockFigures {
   pure_weight_kg: Decimal;
   weight_of_bags_kg: Decimal;
   processed_kg: Decimal;
+  adjusted_kg: Decimal;
   stock_balance_kg: Decimal;
   receipts: number;
 }
@@ -307,9 +316,21 @@ export interface ProcessingSummary {
     hg_outturn_pct: Decimal;
   };
   change_vs_previous_day_pct: Decimal | null;
+  last_day: string | null;
+  /** HQ parchment received vs milled vs in stock (all dates), same process/sub-process/grade/source filters. */
+  stock: {
+    receipts: number;
+    received_kg: Decimal;
+    milled_kg: Decimal;
+    adjusted_kg: Decimal;
+    balance_kg: Decimal;
+    available_to_mill_kg: Decimal;
+    balance_pct: Decimal;
+  };
   by_grade: Array<{ code: string; name: string; kg: Decimal }>;
   by_source: RankedKg[];
-  options: { sources: string[]; process_products: string[] };
+  by_process: RankedKg[];
+  options: { sources: string[]; processes: Array<{ id: string; name: string }>; grades: string[]; process_products: string[] };
 }
 
 export interface ExportSummary {

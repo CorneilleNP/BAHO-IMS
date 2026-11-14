@@ -6,7 +6,13 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db.models import Count, Q, Sum, Value
 from django.db.models.functions import Coalesce, NullIf
 
-from baho.drymill.models import DryMillBatch, DryMillOutput, ExportGrade, HqStockReceipt
+from baho.drymill.models import (
+    DryMillBatch,
+    DryMillBatchInput,
+    DryMillOutput,
+    ExportGrade,
+    HqStockReceipt,
+)
 from baho.processing.models import Process
 from baho.sales.models import ExportShipmentLine
 
@@ -84,6 +90,7 @@ def stock_summary(
             pure=Coalesce(Sum("pure_weight_kg"), ZERO),
             bags=Coalesce(Sum("weight_of_bags_kg"), ZERO),
             processed=Coalesce(Sum("processed_kg"), ZERO),
+            adjusted=Coalesce(Sum("adjusted_kg"), ZERO),
             balance=Coalesce(Sum("stock_balance_kg"), ZERO),
             count=Count("id"),
         )
@@ -92,6 +99,7 @@ def stock_summary(
             "pure_weight_kg": agg["pure"],
             "weight_of_bags_kg": agg["bags"],
             "processed_kg": agg["processed"],
+            "adjusted_kg": agg["adjusted"],
             "stock_balance_kg": agg["balance"],
             "receipts": agg["count"],
         }
@@ -167,21 +175,79 @@ def stock_summary(
 # --- Parchment processing -----------------------------------------------------------
 
 
+def _receipt_filter(prefix: str, *, source="", process="", sub_process="", grade="") -> Q:
+    """Filter on the stock receipts behind parchment (process "none" = unassigned)."""
+    q = Q()
+    if source:
+        q &= Q(**{f"{prefix}source_facility__code": source}) | Q(
+            **{f"{prefix}source_supplier__name": source}
+        )
+    if process == "none":
+        q &= Q(**{f"{prefix}process__isnull": True})
+    elif process:
+        q &= Q(**{f"{prefix}process_id": process})
+    if sub_process:
+        q &= Q(**{f"{prefix}sub_process_id": sub_process})
+    if grade:
+        q &= Q(**{f"{prefix}grade": grade})
+    return q
+
+
+def parchment_stock(*, source="", process="", sub_process="", grade="") -> dict:
+    """Received vs milled vs in stock for HQ parchment (all dates), for the same filters."""
+    receipts = HqStockReceipt.objects.filter(item_type="PARCH").filter(
+        _receipt_filter("", source=source, process=process, sub_process=sub_process, grade=grade)
+    )
+    agg = receipts.aggregate(
+        received=Coalesce(Sum("pure_weight_kg"), ZERO),
+        milled=Coalesce(Sum("processed_kg"), ZERO),
+        adjusted=Coalesce(Sum("adjusted_kg"), ZERO),
+        balance=Coalesce(Sum("stock_balance_kg"), ZERO),
+        receipts=Count("id"),
+    )
+    available = receipts.filter(quality_status="ACCEPTED", stock_balance_kg__gt=0).aggregate(
+        v=Coalesce(Sum("stock_balance_kg"), ZERO)
+    )["v"]
+    return {
+        "receipts": agg["receipts"],
+        "received_kg": agg["received"],
+        "milled_kg": agg["milled"],
+        "adjusted_kg": agg["adjusted"],
+        "balance_kg": agg["balance"],
+        "available_to_mill_kg": available,
+        "balance_pct": _pct(agg["balance"], agg["received"]),
+    }
+
+
 def processing_summary(
     *,
     date_from: date | None = None,
     date_to: date | None = None,
     source: str = "",
+    process: str = "",
+    sub_process: str = "",
+    grade: str = "",
     process_product: str = "",
 ) -> dict:
+    """Dry mill batches in the period. Process / sub-process / grade / source come from the
+    stock receipts each batch milled; parchment input then counts only the matching receipts."""
+    filters = {"source": source, "process": process, "sub_process": sub_process, "grade": grade}
+    by_receipt = any(filters.values())
+
     batches = _in_range(DryMillBatch.objects.all(), "processing_date", date_from, date_to)
-    if source:
-        batches = batches.filter(Q(source_facility__code=source) | Q(source_supplier__name=source))
     if process_product:
         batches = batches.filter(process_product=process_product)
+    inputs = DryMillBatchInput.objects.filter(batch__in=batches, batch__is_deleted=False)
+    if by_receipt:
+        inputs = inputs.filter(_receipt_filter("receipt__", **filters))
+        batches = batches.filter(pk__in=inputs.values("batch"))
 
     outputs = _live_outputs().filter(batch__in=batches)
-    input_kg = batches.aggregate(v=Coalesce(Sum("parch_input_kg"), ZERO))["v"]
+    input_kg = (
+        inputs.aggregate(v=Coalesce(Sum("qty_kg"), ZERO))["v"]
+        if by_receipt
+        else batches.aggregate(v=Coalesce(Sum("parch_input_kg"), ZERO))["v"]
+    )
     output_kg = outputs.aggregate(v=Coalesce(Sum("qty_kg"), ZERO))["v"]
     hg_kg = outputs.filter(export_grade__is_high_grade=True).aggregate(
         v=Coalesce(Sum("qty_kg"), ZERO)
@@ -196,7 +262,7 @@ def processing_summary(
         for g in ExportGrade.objects.filter(is_active=True)
     ]
 
-    # Day-over-day change in green output (latest two processing days in the filter).
+    # Green output on the last processing day vs the processing day before it.
     per_day = list(
         outputs.values("batch__processing_date")
         .annotate(kg=Sum("qty_kg"))
@@ -206,7 +272,7 @@ def processing_summary(
     if len(per_day) == 2 and per_day[1]["kg"]:
         change = _pct(per_day[0]["kg"] - per_day[1]["kg"], per_day[1]["kg"])
 
-    all_batches = DryMillBatch.objects.all()
+    all_receipts = HqStockReceipt.objects.filter(item_type="PARCH")
     return {
         "totals": {
             "batches": batches.count(),
@@ -217,24 +283,38 @@ def processing_summary(
             "hg_outturn_pct": _pct(hg_kg, input_kg),
         },
         "change_vs_previous_day_pct": change,
+        "last_day": per_day[0]["batch__processing_date"] if per_day else None,
+        "stock": parchment_stock(**filters),
         "by_grade": by_grade,
         "by_source": _ranked(
-            outputs.annotate(
-                source=Coalesce("batch__source_facility__code", "batch__source_supplier__name")
+            inputs.annotate(
+                source=Coalesce("receipt__source_facility__code", "receipt__source_supplier__name")
             )
             .values("source")
             .annotate(kg=Sum("qty_kg")),
             "source",
         ),
+        "by_process": _ranked(
+            inputs.annotate(label=Coalesce("receipt__process__name", Value("Not assigned yet")))
+            .values("label")
+            .annotate(kg=Sum("qty_kg")),
+            "label",
+        ),
         "options": {
             "sources": sorted(
                 {
                     s
-                    for s in all_batches.annotate(s=_source_label()).values_list("s", flat=True)
+                    for s in all_receipts.annotate(s=_source_label()).values_list("s", flat=True)
                     if s
                 }
             ),
-            "process_products": sorted(set(all_batches.values_list("process_product", flat=True))),
+            "processes": [
+                {"id": str(p.id), "name": p.name} for p in Process.objects.filter(is_active=True)
+            ],
+            "grades": sorted({g for g in all_receipts.values_list("grade", flat=True) if g}),
+            "process_products": sorted(
+                set(DryMillBatch.objects.values_list("process_product", flat=True))
+            ),
         },
     }
 

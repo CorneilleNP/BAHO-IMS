@@ -16,11 +16,11 @@ export function pct(value: string | number | null | undefined, digits = 1): stri
   return `${num(value).toFixed(digits)}%`;
 }
 
-/** "+12.5% vs 2026-09-16" style delta label, or undefined when there's nothing to compare. */
-export function changeLabel(change: string | number | null | undefined, against: string | null | undefined): string | undefined {
-  if (change === null || change === undefined || !against) return undefined;
+/** "+12.5% vs last day" delta label, or undefined when there is no earlier day to compare with. */
+export function changeLabel(change: string | number | null | undefined): string | undefined {
+  if (change === null || change === undefined) return undefined;
   const value = num(change);
-  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}% vs ${against}`;
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}% vs last day`;
 }
 
 export function today(): string {

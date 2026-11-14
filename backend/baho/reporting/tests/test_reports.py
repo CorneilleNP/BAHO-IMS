@@ -85,3 +85,48 @@ def test_export_balance_is_produced_minus_exported(api, export_manager, gitoki, 
 def test_cws_clerk_cannot_open_dry_mill_reports(api, gitoki_clerk):
     login(api, gitoki_clerk)
     assert api.get("/api/v1/reporting/drymill/stock/").status_code == 403
+
+
+def test_processing_filters_by_process_sub_process_grade_and_shows_stock(
+    api, drymill_operator, gitoki, hq
+):
+    from baho.drymill.services import create_dry_mill_batch
+    from baho.processing.models import SubProcess
+    from tests.factories import stock_receipt
+
+    fw = Process.objects.get(code="FW")
+    nn = Process.objects.get(code="NN")
+    sub = SubProcess.objects.create(name="WASHED NO 1", process=fw)
+    a1 = stock_receipt(gitoki, net="1000", process=fw, sub_process=sub, grade="A1")
+    hg = stock_receipt(gitoki, net="500", process=nn, grade="HG")
+    g15 = ExportGrade.objects.get(code="15PLUS")
+    create_dry_mill_batch(
+        user=None,
+        processing_date=a1.arrival_date,
+        process_product="MIX",
+        inputs=[
+            {"receipt": a1, "qty_kg": Decimal("600")},
+            {"receipt": hg, "qty_kg": Decimal("200")},
+        ],
+        outputs=[{"export_grade": g15, "qty_kg": Decimal("560")}],
+    )
+    login(api, drymill_operator)
+    url = "/api/v1/reporting/drymill/processing/"
+
+    everything = api.get(url).data
+    assert Decimal(everything["totals"]["parch_input_kg"]) == Decimal("800")
+    assert Decimal(everything["stock"]["received_kg"]) == Decimal("1500")
+    assert Decimal(everything["stock"]["milled_kg"]) == Decimal("800")
+    assert Decimal(everything["stock"]["balance_kg"]) == Decimal("700")
+
+    fw_only = api.get(f"{url}?process={fw.id}").data
+    assert Decimal(fw_only["totals"]["parch_input_kg"]) == Decimal("600")  # only the FW receipt
+    assert Decimal(fw_only["stock"]["balance_kg"]) == Decimal("400")
+    assert api.get(f"{url}?sub_process={sub.id}").data["stock"]["receipts"] == 1
+    hg_only = api.get(f"{url}?grade=HG").data
+    assert Decimal(hg_only["stock"]["milled_kg"]) == Decimal("200")
+    assert {r["label"] for r in everything["by_process"]} == {"Fully Washed", "Normal Natural"}
+
+    batches = api.get("/api/v1/drymill/batches/?grade=HG").data
+    assert batches["count"] == 1
+    assert {i["grade"] for i in batches["results"][0]["inputs"]} == {"A1", "HG"}

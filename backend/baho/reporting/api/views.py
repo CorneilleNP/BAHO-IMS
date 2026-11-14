@@ -71,6 +71,9 @@ class ProcessingSummaryView(DryMillReport):
             OpenApiParameter("date_from", OpenApiTypes.DATE),
             OpenApiParameter("date_to", OpenApiTypes.DATE),
             OpenApiParameter("source", str),
+            OpenApiParameter("process", str, description="Process id, or 'none'"),
+            OpenApiParameter("sub_process", str),
+            OpenApiParameter("grade", str),
             OpenApiParameter("process_product", str),
         ],
         responses=OpenApiTypes.OBJECT,
@@ -82,6 +85,9 @@ class ProcessingSummaryView(DryMillReport):
                 date_from=f.get("date_from"),
                 date_to=f.get("date_to"),
                 source=f["source"],
+                process=f["process"],
+                sub_process=f["sub_process"],
+                grade=f["grade"],
                 process_product=f["process_product"],
             )
         )
