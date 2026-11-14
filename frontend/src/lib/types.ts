@@ -10,17 +10,15 @@ export interface Paginated<T> {
   results: T[];
 }
 
-export interface Facility {
+export interface Facility extends Located {
   id: string;
   facility_type: 'CWS' | 'HQ_DRY_MILL';
   code: string;
   name: string;
-  district: string;
-  sector: string;
   is_active: boolean;
 }
 
-export interface Farmer {
+export interface Farmer extends Located {
   id: string;
   farmer_code: string;
   full_name: string;
@@ -29,9 +27,6 @@ export interface Farmer {
   phone: string;
   home_facility: string;
   home_facility_name: string;
-  sector: string;
-  cell: string;
-  village: string;
   is_active: boolean;
 }
 
@@ -114,15 +109,12 @@ export interface CoffeeSource {
   name: string;
 }
 
-export interface Supplier {
+export interface Supplier extends Located {
   id: string;
   name: string;
   tin: string;
   contact_name: string;
   phone: string;
-  province: string;
-  district: string;
-  sector: string;
   notes: string;
   is_active: boolean;
 }
@@ -234,4 +226,34 @@ export interface ExportSummary {
   }>;
   by_client: RankedKg[];
   options: { process_products: string[] };
+}
+
+// --- Rwanda locations (one shared hierarchy) -----------------------------------
+
+export const LOCATION_LEVELS = ['PROVINCE', 'DISTRICT', 'SECTOR', 'CELL', 'VILLAGE'] as const;
+export type LocationLevel = (typeof LOCATION_LEVELS)[number];
+
+export interface LocationUnit {
+  id: string;
+  parent: string | null;
+  level: LocationLevel;
+  name: string;
+  has_children: boolean;
+}
+
+type LocationRef = { id: string; name: string } | null;
+
+export interface LocationPath {
+  province: LocationRef;
+  district: LocationRef;
+  sector: LocationRef;
+  cell: LocationRef;
+  village: LocationRef;
+}
+
+/** Fields every located record (farmer, supplier, station) returns. */
+export interface Located {
+  location: string | null;
+  location_path: LocationPath;
+  location_label: string;
 }

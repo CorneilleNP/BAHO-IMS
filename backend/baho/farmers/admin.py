@@ -9,3 +9,4 @@ class FarmerAdmin(admin.ModelAdmin):
     list_filter = ["home_facility", "gender", "is_active"]
     search_fields = ["farmer_code", "full_name", "phone", "national_id"]
     readonly_fields = ["farmer_code"]
+    autocomplete_fields = ["location"]

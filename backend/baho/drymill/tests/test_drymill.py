@@ -27,7 +27,7 @@ def stock_receipt(gitoki, **extra):
 
 def test_supplier_registration_and_sources_list(api, drymill_operator, gitoki):
     login(api, drymill_operator)
-    res = api.post(SUPPLIERS, {"name": "Mukamira Cooperative", "district": "Nyabihu"})
+    res = api.post(SUPPLIERS, {"name": "Mukamira Cooperative", "contact_name": "Isaac"})
     assert res.status_code == 201, res.data
     assert api.post(SUPPLIERS, {"name": "mukamira cooperative"}).status_code == 400
     sources = api.get("/api/v1/drymill/sources/").data

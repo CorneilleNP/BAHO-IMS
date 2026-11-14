@@ -3,6 +3,7 @@ from rest_framework import mixins, viewsets
 from baho.core.access import CWS_READ_ROLES, CWS_WRITE_ROLES
 from baho.core.mixins import FacilityScopedViewSetMixin
 from baho.core.permissions import RoleAccess
+from baho.organization.locations import ANCESTORS
 
 from ..models import Farmer
 from ..services import register_farmer
@@ -18,14 +19,14 @@ class FarmerViewSet(
 ):
     """Farmers of the stations you are assigned to. `?search=` matches name, code, phone, ID."""
 
-    queryset = Farmer.objects.select_related("home_facility")
+    queryset = Farmer.objects.select_related("home_facility", f"location__{ANCESTORS}")
     serializer_class = FarmerSerializer
     permission_classes = [RoleAccess]
     read_roles = CWS_READ_ROLES
     write_roles = CWS_WRITE_ROLES
     facility_field = "home_facility"
     filterset_fields = ["home_facility", "is_active"]
-    search_fields = ["full_name", "farmer_code", "phone", "national_id"]
+    search_fields = ["full_name", "farmer_code", "phone", "national_id", "location__name"]
 
     def perform_create(self, serializer):
         data = dict(serializer.validated_data)

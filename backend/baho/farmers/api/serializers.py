@@ -1,11 +1,12 @@
 from rest_framework import serializers
 
 from baho.core.fields import ActiveFlagField
+from baho.organization.api.serializers import LocationFieldsMixin
 
 from ..models import Farmer
 
 
-class FarmerSerializer(serializers.ModelSerializer):
+class FarmerSerializer(LocationFieldsMixin, serializers.ModelSerializer):
     is_active = ActiveFlagField()
 
     home_facility_name = serializers.CharField(source="home_facility.name", read_only=True)
@@ -21,11 +22,7 @@ class FarmerSerializer(serializers.ModelSerializer):
             "phone",
             "home_facility",
             "home_facility_name",
-            "province",
-            "district",
-            "sector",
-            "cell",
-            "village",
+            *LocationFieldsMixin.LOCATION_FIELDS,
             "is_active",
             "created_at",
         ]

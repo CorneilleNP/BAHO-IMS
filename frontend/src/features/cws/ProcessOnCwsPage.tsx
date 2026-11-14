@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { ActionIcon, Button, Card, Group, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { ActionIcon, Button, Card, Group, NumberInput, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { IconPackage, IconPlus, IconTrash } from '@tabler/icons-react';
-import { EmptyState, ErrorMessage, Loading, SuccessMessage } from '../../components/Feedback';
+import { DataTable } from '../../components/DataTable';
+import { EmptyState, ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { PageHeader } from '../../components/PageHeader';
+import { PageSkeleton } from '../../components/Skeletons';
+import { StationSelect } from '../../components/StationSelect';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { num, pct } from '../../lib/format';
 import { useMyStations } from '../../lib/stations';
 import type { ProcessType } from '../../lib/types';
-import { errorText, query, useApi } from '../../lib/useApi';
+import { query, useApi } from '../../lib/useApi';
+import { useSubmit } from '../../lib/useSubmit';
 
 interface GradeRow {
   key: number;
@@ -26,15 +31,15 @@ const rowsFor = (codes: string[]): GradeRow[] => codes.map((code) => ({ key: nex
 export function ProcessOnCwsPage() {
   const { user } = useAuth();
   const writable = canWrite(user, 'cws');
-  const { station, setStationId, options, loading: stationsLoading } = useMyStations();
+  const stations = useMyStations();
+  const { station } = stations;
   const processes = useApi<ProcessType[]>(station ? `/processing/process-types/${query({ facility: station.id })}` : null);
 
   const [name, setName] = useState('');
   const [subProcess, setSubProcess] = useState('');
   const [grades, setGrades] = useState<GradeRow[]>(() => rowsFor(WASHED_GRADES));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const submit = useSubmit();
 
   const totalPercent = grades.reduce((sum, g) => sum + num(g.percent), 0);
   const updateGrade = (key: number, patch: Partial<GradeRow>) =>
@@ -42,51 +47,38 @@ export function ProcessOnCwsPage() {
 
   async function save() {
     if (!station) return;
-    if (!name.trim()) {
-      setError('Enter the process name, e.g. Fully Washed.');
-      return;
-    }
-    const filled = grades.filter((g) => g.code.trim());
-    setSaving(true);
-    setError(null);
-    try {
-      const created = await api<ProcessType>('/processing/process-types/', {
+    if (!name.trim()) return submit.fail('Enter the process name, e.g. Fully Washed.');
+    const created = await submit.run(() =>
+      api<ProcessType>('/processing/process-types/', {
         method: 'POST',
         body: {
           facility: station.id,
           name: name.trim(),
           sub_process: subProcess.trim(),
-          grades: filled.map((g) => ({
-            code: g.code.trim().toUpperCase(),
-            name: g.name.trim() || g.code.trim().toUpperCase(),
-            ratio: (num(g.percent) / 100).toFixed(5),
-          })),
+          grades: grades
+            .filter((g) => g.code.trim())
+            .map((g) => ({
+              code: g.code.trim().toUpperCase(),
+              name: g.name.trim() || g.code.trim().toUpperCase(),
+              ratio: (num(g.percent) / 100).toFixed(5),
+            })),
         },
-      });
-      setSaved(`Registered ${created.name}${created.sub_process ? ` / ${created.sub_process}` : ''} at ${station.name}.`);
-      setName('');
-      setSubProcess('');
-      setGrades(rowsFor(WASHED_GRADES));
-      processes.reload();
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setSaving(false);
-    }
+      }),
+    );
+    if (!created) return;
+    setSaved(`Registered ${created.name}${created.sub_process ? ` / ${created.sub_process}` : ''} at ${station.name}.`);
+    setName('');
+    setSubProcess('');
+    setGrades(rowsFor(WASHED_GRADES));
+    processes.reload();
   }
 
-  if (stationsLoading) return <Loading />;
+  if (stations.loading && !station) return <PageSkeleton />;
   if (!station) return <EmptyState title="No station assigned">Ask an administrator to assign you to a CWS.</EmptyState>;
 
   return (
     <Stack gap="lg" maw={1200}>
-      <Group justify="space-between" align="flex-end">
-        <div>
-          <Text c="gray.6" fw={700} tt="uppercase" size="xs">CWS configuration</Text>
-          <Title order={2}>Register process on CWS</Title>
-        </div>
-        <Select label="Station" data={options} value={station.id} onChange={(v) => v && setStationId(v)} allowDeselect={false} w={240} />
-      </Group>
+      <PageHeader eyebrow="CWS configuration" title="Register process on CWS" actions={<StationSelect stations={stations} />} />
 
       <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
 
@@ -140,43 +132,36 @@ export function ProcessOnCwsPage() {
                 </Text>
               </Group>
 
-              <ErrorMessage>{error}</ErrorMessage>
-              <Button leftSection={<IconPackage size={16} />} onClick={save} loading={saving}>Save process</Button>
+              <ErrorMessage>{submit.error}</ErrorMessage>
+              <Button leftSection={<IconPackage size={16} />} onClick={save} loading={submit.saving}>Save process</Button>
             </Stack>
           </Card>
         )}
 
         <Card withBorder radius="md" p="lg">
           <Text fw={700} size="lg" mb="sm">Processes at {station.name}</Text>
-          {processes.loading && !processes.data ? (
-            <Loading />
-          ) : processes.error ? (
-            <ErrorMessage>{processes.error}</ErrorMessage>
-          ) : !processes.data?.length ? (
-            <EmptyState title="No processes registered yet">Register the processes this station runs, with their estimate ratios.</EmptyState>
-          ) : (
-            <Table striped>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Process</Table.Th>
-                  <Table.Th>Estimate ratios</Table.Th>
-                  <Table.Th ta="right">Total</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {processes.data.map((p) => (
-                  <Table.Tr key={p.id}>
-                    <Table.Td>
-                      <Text fw={600} size="sm">{p.name}</Text>
-                      {p.sub_process && <Text size="xs" c="dimmed">{p.sub_process}</Text>}
-                    </Table.Td>
-                    <Table.Td>{p.grades.map((g) => `${g.name} ${pct(num(g.ratio) * 100, 2)}`).join(' · ')}</Table.Td>
-                    <Table.Td ta="right">{pct(num(p.total_ratio) * 100, 2)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          )}
+          <DataTable
+            rows={processes.data ?? []}
+            rowKey={(p) => p.id}
+            loading={processes.loading}
+            error={processes.error}
+            minWidth={420}
+            empty={{ title: 'No processes registered yet', hint: 'Register the processes this station runs, with their estimate ratios.' }}
+            columns={[
+              {
+                key: 'process',
+                header: 'Process',
+                render: (p) => (
+                  <>
+                    <Text fw={600} size="sm">{p.name}</Text>
+                    {p.sub_process && <Text size="xs" c="dimmed">{p.sub_process}</Text>}
+                  </>
+                ),
+              },
+              { key: 'ratios', header: 'Estimate ratios', render: (p) => p.grades.map((g) => `${g.name} ${pct(num(g.ratio) * 100, 2)}`).join(' · ') },
+              { key: 'total', header: 'Total', align: 'right', render: (p) => pct(num(p.total_ratio) * 100, 2) },
+            ]}
+          />
         </Card>
       </SimpleGrid>
     </Stack>

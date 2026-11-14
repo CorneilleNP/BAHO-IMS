@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { BarChart } from '@mantine/charts';
-import { ActionIcon, Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { ActionIcon, Autocomplete, Badge, Button, Card, Group, Modal, NativeSelect, NumberInput, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { IconPlus, IconScale, IconShip, IconTrash, IconUserPlus } from '@tabler/icons-react';
-import { EmptyState, ErrorMessage, Loading, SuccessMessage } from '../../components/Feedback';
+import { ChartCard } from '../../components/ChartCard';
+import { DataTable } from '../../components/DataTable';
+import { ErrorMessage, SuccessMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
+import { PageHeader } from '../../components/PageHeader';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
-import { chartRows, kg, num, today } from '../../lib/format';
+import { kg, num, today } from '../../lib/format';
 import type { Client, ExportGrade, ExportShipment, ExportSummary } from '../../lib/types';
-import { errorText, query, useApi, useList } from '../../lib/useApi';
+import { query, useApi, useList } from '../../lib/useApi';
+import { useSubmit } from '../../lib/useSubmit';
 
 const statusColor: Record<ExportShipment['status'], string> = { PLANNED: 'gray', SHIPPED: 'blue', DELIVERED: 'teal' };
 const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
@@ -24,7 +27,7 @@ export function ExportUpdatesPage() {
   const [dateTo, setDateTo] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  const statusSubmit = useSubmit();
 
   const clients = useList<Client>('/sales/clients/?page_size=500');
   const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
@@ -42,32 +45,25 @@ export function ExportUpdatesPage() {
     })}`,
   );
   const s = summary.data;
+  const kpiLoading = summary.loading && !s;
 
   async function setStatus(shipment: ExportShipment, status: ExportShipment['status']) {
-    setStatusError(null);
-    try {
-      await api(`/sales/shipments/${shipment.id}/status/`, { method: 'POST', body: { status } });
-      setSaved(`${shipment.shipment_no} marked ${status.toLowerCase()}.`);
-      shipments.reload();
-    } catch (err) {
-      setStatusError(errorText(err));
-    }
+    const done = await statusSubmit.run(() => api(`/sales/shipments/${shipment.id}/status/`, { method: 'POST', body: { status } }));
+    if (done === undefined) return;
+    setSaved(`${shipment.shipment_no} marked ${status.toLowerCase()}.`);
+    shipments.reload();
   }
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="flex-end">
-        <div>
-          <Title order={2}>Export Updates</Title>
-          <Text c="dimmed" size="sm">Green coffee shipped to clients, and remaining stock balance by grade</Text>
-        </div>
-        {writable && (
-          <Button leftSection={<IconShip size={16} />} onClick={() => setModalOpen(true)}>Record export shipment</Button>
-        )}
-      </Group>
+      <PageHeader
+        title="Export Updates"
+        description="Green coffee shipped to clients, and remaining stock balance by grade"
+        actions={writable && <Button leftSection={<IconShip size={16} />} onClick={() => setModalOpen(true)}>Record export shipment</Button>}
+      />
 
       <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
-      <ErrorMessage>{summary.error ?? statusError}</ErrorMessage>
+      <ErrorMessage>{summary.error ?? statusSubmit.error}</ErrorMessage>
 
       <Group justify="flex-end" gap="md" align="flex-end">
         <NativeSelect label="Client" data={[{ value: 'All', label: 'All' }, ...clients.items.map((c) => ({ value: c.id, label: c.name }))]} value={client} onChange={(e) => setClient(e.currentTarget.value)} miw={170} />
@@ -78,107 +74,72 @@ export function ExportUpdatesPage() {
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
-        <KpiCard label="Exported quantity (kg)" value={kg(s?.exported_kg)} icon={IconShip} />
-        <KpiCard label="Green produced (kg)" value={kg(s?.produced_kg)} icon={IconScale} />
-        <KpiCard label="Stock balance (kg)" value={kg(s?.stock_balance_kg)} icon={IconScale} accent="gray" />
+        <KpiCard label="Exported quantity (kg)" value={kg(s?.exported_kg)} icon={IconShip} loading={kpiLoading} />
+        <KpiCard label="Green produced (kg)" value={kg(s?.produced_kg)} icon={IconScale} loading={kpiLoading} />
+        <KpiCard label="Stock balance (kg)" value={kg(s?.stock_balance_kg)} icon={IconScale} accent="gray" loading={kpiLoading} />
       </SimpleGrid>
 
       <Card withBorder radius="md" p="md">
         <Text fw={600} mb="sm">By grade: produced, exported, balance</Text>
-        {summary.loading && !s ? (
-          <Loading />
-        ) : (
-          <Table.ScrollContainer minWidth={560}>
-            <Table striped>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Grade</Table.Th>
-                  <Table.Th ta="right">Produced (kg)</Table.Th>
-                  <Table.Th ta="right">Exported (kg)</Table.Th>
-                  <Table.Th ta="right">Balance (kg)</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {(s?.by_grade ?? []).map((g) => (
-                  <Table.Tr key={g.id}>
-                    <Table.Td fw={600}>{g.name}</Table.Td>
-                    <Table.Td ta="right">{kg(g.produced_kg)}</Table.Td>
-                    <Table.Td ta="right">{kg(g.exported_kg)}</Table.Td>
-                    <Table.Td ta="right" c={num(g.balance_kg) < 0 ? 'red' : undefined}>{kg(g.balance_kg)}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+        <DataTable
+          rows={s?.by_grade ?? []}
+          rowKey={(g) => g.id}
+          loading={summary.loading}
+          minWidth={560}
+          empty={{ title: 'No grades configured' }}
+          columns={[
+            { key: 'grade', header: 'Grade', render: (g) => <Text fw={600} size="sm">{g.name}</Text> },
+            { key: 'made', header: 'Produced (kg)', align: 'right', render: (g) => kg(g.produced_kg) },
+            { key: 'shipped', header: 'Exported (kg)', align: 'right', render: (g) => kg(g.exported_kg) },
+            {
+              key: 'balance',
+              header: 'Balance (kg)',
+              align: 'right',
+              render: (g) => <Text size="sm" c={num(g.balance_kg) < 0 ? 'red' : undefined}>{kg(g.balance_kg)}</Text>,
+            },
+          ]}
+        />
       </Card>
 
-      <Card withBorder radius="md" p="md">
-        <Text fw={600} mb="sm">Exported quantity by client</Text>
-        {!s?.by_client.length ? (
-          <EmptyState title="No shipments yet" />
-        ) : (
-          <BarChart
-            h={Math.max(160, s.by_client.length * 34)}
-            data={chartRows(s.by_client)}
-            dataKey="label"
-            series={[{ name: 'kg', color: 'coffee.6' }]}
-            orientation="vertical"
-            yAxisProps={{ width: 120 }}
-            valueFormatter={(v) => `${v.toLocaleString()} kg`}
-            withTooltip
-          />
-        )}
-      </Card>
+      <ChartCard title="Exported quantity by client" rows={s?.by_client ?? []} loading={kpiLoading} labelWidth={120} />
 
       <Card withBorder radius="md" p="md">
         <Text fw={600} mb="sm">Recent export shipments</Text>
-        {shipments.loading && !shipments.data ? (
-          <Loading />
-        ) : shipments.items.length === 0 ? (
-          <EmptyState title="No shipments recorded yet">Use “Record export shipment” to add one.</EmptyState>
-        ) : (
-          <Table.ScrollContainer minWidth={850}>
-            <Table striped highlightOnHover verticalSpacing="sm">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Shipment</Table.Th>
-                  <Table.Th>Delivery to NAEB</Table.Th>
-                  <Table.Th>Client</Table.Th>
-                  <Table.Th>Products</Table.Th>
-                  <Table.Th ta="right">Qty (kg)</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {shipments.items.map((sh) => (
-                  <Table.Tr key={sh.id}>
-                    <Table.Td ff="monospace">{sh.shipment_no}</Table.Td>
-                    <Table.Td>{sh.delivery_to_naeb_date}</Table.Td>
-                    <Table.Td>{sh.client_name}</Table.Td>
-                    <Table.Td>
-                      <Text size="xs">{sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${kg(l.qty_kg)} kg`).join(' • ')}</Text>
-                    </Table.Td>
-                    <Table.Td ta="right">{kg(sh.total_qty_kg)}</Table.Td>
-                    <Table.Td>
-                      {writable ? (
-                        <NativeSelect
-                          aria-label={`Status of ${sh.shipment_no}`}
-                          size="xs"
-                          data={['PLANNED', 'SHIPPED', 'DELIVERED']}
-                          value={sh.status}
-                          onChange={(e) => setStatus(sh, e.currentTarget.value as ExportShipment['status'])}
-                        />
-                      ) : (
-                        <Badge color={statusColor[sh.status]} variant="light">{sh.status}</Badge>
-                      )}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+        <DataTable
+          rows={shipments.items}
+          rowKey={(sh) => sh.id}
+          loading={shipments.loading}
+          error={shipments.error}
+          minWidth={900}
+          empty={{ title: 'No shipments recorded yet', hint: 'Use “Record export shipment” to add one.' }}
+          columns={[
+            { key: 'no', header: 'Shipment', mono: true, render: (sh) => sh.shipment_no },
+            { key: 'date', header: 'Delivery to NAEB', render: (sh) => sh.delivery_to_naeb_date },
+            { key: 'client', header: 'Client', render: (sh) => sh.client_name },
+            {
+              key: 'products',
+              header: 'Products',
+              render: (sh) => <Text size="xs">{sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${kg(l.qty_kg)} kg`).join(' • ')}</Text>,
+            },
+            { key: 'qty', header: 'Qty (kg)', align: 'right', render: (sh) => kg(sh.total_qty_kg) },
+            {
+              key: 'status',
+              header: 'Status',
+              render: (sh) =>
+                writable ? (
+                  <NativeSelect
+                    aria-label={`Status of ${sh.shipment_no}`}
+                    size="xs"
+                    data={['PLANNED', 'SHIPPED', 'DELIVERED']}
+                    value={sh.status}
+                    onChange={(e) => setStatus(sh, e.currentTarget.value as ExportShipment['status'])}
+                  />
+                ) : (
+                  <Badge color={statusColor[sh.status]} variant="light">{sh.status}</Badge>
+                ),
+            },
+          ]}
+        />
       </Card>
 
       {modalOpen && (
@@ -207,6 +168,7 @@ interface LineDraft {
   qty: number | '';
 }
 let lineKey = 1;
+const newLine = (): LineDraft => ({ key: lineKey++, product: '', gradeId: null, qty: '' });
 
 function ShipmentModal({
   clients,
@@ -227,10 +189,9 @@ function ShipmentModal({
   const [extraClients, setExtraClients] = useState<Client[]>([]);
   const [deliveryDate, setDeliveryDate] = useState(today());
   const [status, setStatus] = useState<ExportShipment['status']>('PLANNED');
-  const [lines, setLines] = useState<LineDraft[]>(() => [{ key: lineKey++, product: '', gradeId: null, qty: '' }]);
+  const [lines, setLines] = useState<LineDraft[]>(() => [newLine()]);
   const [newClient, setNewClient] = useState<{ name: string; country: string } | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const submit = useSubmit();
 
   const allClients = [...clients, ...extraClients.filter((c) => !clients.some((x) => x.id === c.id))];
   const total = lines.reduce((sum, l) => sum + num(l.qty), 0);
@@ -238,26 +199,21 @@ function ShipmentModal({
   const products = Array.from(new Set([...knownProducts, ...COMMON_PRODUCTS]));
 
   async function addClient() {
-    if (!newClient?.name.trim()) return;
-    try {
-      const created = await api<Client>('/sales/clients/', { method: 'POST', body: newClient });
-      setExtraClients((prev) => [...prev, created]);
-      setClientId(created.id);
-      setNewClient(null);
-      onClientAdded();
-    } catch (err) {
-      setError(errorText(err));
-    }
+    if (!newClient?.name.trim()) return submit.fail('Enter the client name.');
+    const created = await submit.run(() => api<Client>('/sales/clients/', { method: 'POST', body: newClient }));
+    if (!created) return;
+    setExtraClients((prev) => [...prev, created]);
+    setClientId(created.id);
+    setNewClient(null);
+    onClientAdded();
   }
 
   async function save() {
-    if (!clientId) return setError('Choose the client.');
+    if (!clientId) return submit.fail('Choose the client.');
     const ready = lines.filter((l) => l.product.trim() && l.gradeId && num(l.qty) > 0);
-    if (!ready.length) return setError('Add at least one product line with grade and quantity.');
-    setSaving(true);
-    setError(null);
-    try {
-      const shipment = await api<ExportShipment>('/sales/shipments/', {
+    if (!ready.length) return submit.fail('Add at least one product line with grade and quantity.');
+    const shipment = await submit.run(() =>
+      api<ExportShipment>('/sales/shipments/', {
         method: 'POST',
         body: {
           client: clientId,
@@ -265,13 +221,9 @@ function ShipmentModal({
           status,
           lines: ready.map((l) => ({ process_product: l.product.trim().toUpperCase(), export_grade: l.gradeId, qty_kg: num(l.qty) })),
         },
-      });
-      onSaved(shipment);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setSaving(false);
-    }
+      }),
+    );
+    if (shipment) onSaved(shipment);
   }
 
   return (
@@ -305,7 +257,7 @@ function ShipmentModal({
           <Group align="flex-end" gap="xs">
             <TextInput label="New client name" value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.currentTarget.value })} style={{ flex: 1 }} data-autofocus />
             <TextInput label="Country" value={newClient.country} onChange={(e) => setNewClient({ ...newClient, country: e.currentTarget.value })} />
-            <Button onClick={addClient}>Add</Button>
+            <Button onClick={addClient} loading={submit.saving}>Add</Button>
             <Button variant="subtle" onClick={() => setNewClient(null)}>Cancel</Button>
           </Group>
         ) : (
@@ -329,15 +281,15 @@ function ShipmentModal({
             ))}
           </Stack>
           <Group justify="space-between" mt="xs">
-            <Button size="compact-sm" variant="subtle" leftSection={<IconPlus size={14} />} onClick={() => setLines((rows) => [...rows, { key: lineKey++, product: '', gradeId: null, qty: '' }])}>
+            <Button size="compact-sm" variant="subtle" leftSection={<IconPlus size={14} />} onClick={() => setLines((rows) => [...rows, newLine()])}>
               Add line
             </Button>
             <Text size="sm">Total: <strong>{kg(total)} kg</strong></Text>
           </Group>
         </Card>
 
-        <ErrorMessage>{error}</ErrorMessage>
-        <Button onClick={save} loading={saving}>Save shipment</Button>
+        <ErrorMessage>{submit.error}</ErrorMessage>
+        <Button onClick={save} loading={submit.saving}>Save shipment</Button>
       </Stack>
     </Modal>
   );

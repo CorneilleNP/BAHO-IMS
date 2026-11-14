@@ -9,6 +9,7 @@ from django.db import models
 from django.db.models import F, Q
 
 from baho.core.models import AuditedModel, TimeStampedModel
+from baho.organization.models import location_field
 
 
 class Supplier(TimeStampedModel):
@@ -18,9 +19,7 @@ class Supplier(TimeStampedModel):
     tin = models.CharField(max_length=30, blank=True)
     contact_name = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=30, blank=True)
-    province = models.CharField(max_length=80, blank=True)
-    district = models.CharField(max_length=80, blank=True)
-    sector = models.CharField(max_length=80, blank=True)
+    location = location_field()
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 

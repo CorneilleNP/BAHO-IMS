@@ -57,6 +57,18 @@ class AdminUnit(TimeStampedModel):
         return f"{self.name} ({self.get_level_display()})"
 
 
+def location_field():
+    """The one way every model stores where it is: the most precise Rwanda admin unit known."""
+    return models.ForeignKey(
+        "organization.AdminUnit",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        help_text="Most precise known level (usually the village).",
+    )
+
+
 class Facility(TimeStampedModel):
     """A CWS washing station or the HQ dry mill: one concept so stock logic is generic."""
 
@@ -68,22 +80,7 @@ class Facility(TimeStampedModel):
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=120)
 
-    # Free-text location for now; `village` links to the address tree once
-    # admin units are loaded.
-    province = models.CharField(max_length=80, blank=True)
-    district = models.CharField(max_length=80, blank=True)
-    sector = models.CharField(max_length=80, blank=True)
-    cell = models.CharField(max_length=80, blank=True)
-    village_name = models.CharField(max_length=80, blank=True)
-    village = models.ForeignKey(
-        AdminUnit,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="facilities",
-        limit_choices_to={"level": AdminUnit.Level.VILLAGE},
-    )
-
+    location = location_field()
     contact_name = models.CharField(max_length=120, blank=True)
     contact_phone = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)

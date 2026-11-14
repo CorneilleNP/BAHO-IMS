@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import Q
 
 from baho.core.models import AuditedModel
+from baho.organization.models import location_field
 
 
 class Farmer(AuditedModel):
@@ -20,11 +21,7 @@ class Farmer(AuditedModel):
     home_facility = models.ForeignKey(
         "organization.Facility", on_delete=models.PROTECT, related_name="farmers"
     )
-    province = models.CharField(max_length=80, blank=True)
-    district = models.CharField(max_length=80, blank=True)
-    sector = models.CharField(max_length=80, blank=True)
-    cell = models.CharField(max_length=80, blank=True)
-    village = models.CharField(max_length=80, blank=True)
+    location = location_field()
     is_active = models.BooleanField(default=True)
 
     class Meta(AuditedModel.Meta):

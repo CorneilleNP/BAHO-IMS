@@ -100,6 +100,31 @@ Access control lives in `baho/core/access.py` (roles + facility scoping) and
 sees their own station; ADMIN and HQ roles see everything. JWT claims are
 for the UI only: the server always re-checks roles from the database.
 
+## Rwanda locations (one shared hierarchy)
+
+All 5 provinces, 30 districts, 416 sectors, 2,149 cells and 14,837 villages
+are loaded by migration into `organization.AdminUnit` (data:
+`backend/baho/organization/data/`, MIT, see `NOTICE.txt`). Farmers, suppliers
+and stations each store **one** `location` (the most precise unit known: a
+village, or just a district) and the API returns `location_path` +
+`location_label` for display. Use `LocationFieldsMixin` for any new model with
+a location; never add free-text province/district columns.
+
+## Frontend shared components (`frontend/src/components`, `frontend/src/lib`)
+
+| Use | Instead of |
+|---|---|
+| `PageHeader` | hand-made title rows |
+| `DataTable` (skeleton, error and empty state built in) | raw `<Table>` lists |
+| `TableSkeleton`, `ChartSkeleton`, `FormSkeleton`, `PageSkeleton`, `KpiCard loading` | spinners |
+| `LocationPicker` (Province → … → Village, with village search) | location text inputs |
+| `StationSelect` + `useMyStations()` | per-page station dropdowns |
+| `SourceSelect` + `sourceFields()` | per-page CWS/supplier dropdowns |
+| `ChartCard` | per-page bar charts |
+| `ErrorMessage`, `SuccessMessage`, `EmptyState` | ad-hoc alerts |
+| `useApi` / `useList` / `query()` | `fetch` in components |
+| `useSubmit` (`run`, `fail`, `saving`, `error`) | per-form saving/error state |
+
 ## Reference material
 
 - `backend/legacy/sql/`: original Postgres schema design (all modules). It ran

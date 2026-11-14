@@ -1,4 +1,4 @@
-import { Alert, Center, Loader, Stack, Text } from '@mantine/core';
+import { Alert, Stack, Text } from '@mantine/core';
 import { IconAlertCircle, IconCircleCheck } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 
@@ -17,14 +17,6 @@ export function SuccessMessage({ children, onClose }: { children: ReactNode; onC
     <Alert color="teal" variant="light" icon={<IconCircleCheck size={18} />} withCloseButton={Boolean(onClose)} onClose={onClose} role="status">
       {children}
     </Alert>
-  );
-}
-
-export function Loading() {
-  return (
-    <Center py="xl">
-      <Loader color="coffee" size="sm" />
-    </Center>
   );
 }
 

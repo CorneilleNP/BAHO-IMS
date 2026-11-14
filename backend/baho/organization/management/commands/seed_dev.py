@@ -12,17 +12,18 @@ from django.db import transaction
 
 from baho.accounts.models import Role, User, UserRole
 from baho.core.access import RoleCode
-from baho.organization.models import CropYear, Facility
+from baho.organization.models import AdminUnit, CropYear, Facility
 
 # From legacy/sql/seed/0001_dev_seed.sql.
 # NOTE: the old frontend mock put Gitoki in Rubavu/Nyamyumba and Bugoyi in
 # Nyabihu/Jenda; the SQL seed says Rutsiro. Confirm with operations.
+# (code, name, type, location: a district name, or a province name when only that is known)
 FACILITIES = [
-    ("HQ", "Baho Coffee HQ Dry Mill", Facility.FacilityType.HQ_DRY_MILL, "Kigali City", "Kigali"),
-    ("BUGOYI", "Bugoyi CWS", Facility.FacilityType.CWS, "Western", "Rutsiro"),
-    ("GITOKI", "Gitoki CWS", Facility.FacilityType.CWS, "Western", "Rutsiro"),
-    ("KINAZI", "Kinazi CWS", Facility.FacilityType.CWS, "Southern", "Huye"),
-    ("HUMURE", "Humure CWS", Facility.FacilityType.CWS, "Eastern", "Kirehe"),
+    ("HQ", "Baho Coffee HQ Dry Mill", Facility.FacilityType.HQ_DRY_MILL, "Kigali City"),
+    ("BUGOYI", "Bugoyi CWS", Facility.FacilityType.CWS, "Rutsiro"),
+    ("GITOKI", "Gitoki CWS", Facility.FacilityType.CWS, "Rutsiro"),
+    ("KINAZI", "Kinazi CWS", Facility.FacilityType.CWS, "Huye"),
+    ("HUMURE", "Humure CWS", Facility.FacilityType.CWS, "Kirehe"),
 ]
 
 # (email, full name, role code, facility code or None for global)
@@ -54,15 +55,15 @@ class Command(BaseCommand):
         )
 
         facilities = {}
-        for code, name, ftype, province, district in FACILITIES:
+        for code, name, ftype, place in FACILITIES:
+            location = (
+                AdminUnit.objects.filter(name=place, level__in=["DISTRICT", "PROVINCE"])
+                .order_by("level")
+                .first()
+            )
             facilities[code], _ = Facility.objects.update_or_create(
                 code=code,
-                defaults={
-                    "name": name,
-                    "facility_type": ftype,
-                    "province": province,
-                    "district": district,
-                },
+                defaults={"name": name, "facility_type": ftype, "location": location},
             )
 
         for email, full_name, role_code, facility_code in USERS:

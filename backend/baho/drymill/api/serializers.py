@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from rest_framework import serializers
 
 from baho.core.fields import ActiveFlagField
+from baho.organization.api.serializers import LocationFieldsMixin
 from baho.organization.models import Facility
 
 from ..models import DryMillBatch, DryMillOutput, ExportGrade, HqStockReceipt, Supplier
@@ -12,7 +13,7 @@ ZERO = Decimal("0")
 CWS_FACILITIES = Facility.objects.filter(facility_type=Facility.FacilityType.CWS, is_active=True)
 
 
-class SupplierSerializer(serializers.ModelSerializer):
+class SupplierSerializer(LocationFieldsMixin, serializers.ModelSerializer):
     is_active = ActiveFlagField()
 
     class Meta:
@@ -23,9 +24,7 @@ class SupplierSerializer(serializers.ModelSerializer):
             "tin",
             "contact_name",
             "phone",
-            "province",
-            "district",
-            "sector",
+            *LocationFieldsMixin.LOCATION_FIELDS,
             "notes",
             "is_active",
             "created_at",

@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Badge, Button, Card, Group, Modal, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Badge, Button, Card, Group, Modal, NumberInput, Select, SimpleGrid, Stack, Table, Text, TextInput } from '@mantine/core';
 import { IconClipboardCheck } from '@tabler/icons-react';
-import { EmptyState, ErrorMessage, Loading, SuccessMessage } from '../../components/Feedback';
+import { DataTable } from '../../components/DataTable';
+import { EmptyState, ErrorMessage, SuccessMessage } from '../../components/Feedback';
+import { PageHeader } from '../../components/PageHeader';
+import { FormSkeleton, PageSkeleton } from '../../components/Skeletons';
+import { StationSelect } from '../../components/StationSelect';
 import { api } from '../../lib/api';
 import { canWrite } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { calculateEstimate, calculateOutturnPct, kg, num, pct, today } from '../../lib/format';
 import { useMyStations } from '../../lib/stations';
 import type { ProcessingLot, ProcessType } from '../../lib/types';
-import { errorText, query, useApi, useList } from '../../lib/useApi';
+import { query, useApi, useList } from '../../lib/useApi';
+import { useSubmit } from '../../lib/useSubmit';
 
 const statusColor: Record<ProcessingLot['status'], string> = { IN_PROGRESS: 'blue', SORTED: 'teal', CLOSED: 'gray' };
 const statusLabel: Record<ProcessingLot['status'], string> = { IN_PROGRESS: 'In progress', SORTED: 'Sorted', CLOSED: 'Closed' };
@@ -17,7 +22,8 @@ const statusLabel: Record<ProcessingLot['status'], string> = { IN_PROGRESS: 'In 
 export function ProcessingLotForm() {
   const { user } = useAuth();
   const writable = canWrite(user, 'cws');
-  const { station, setStationId, options, loading: stationsLoading } = useMyStations();
+  const stations = useMyStations();
+  const { station } = stations;
   const processes = useApi<ProcessType[]>(station ? `/processing/process-types/${query({ facility: station.id, is_active: 'true' })}` : null);
   const lots = useList<ProcessingLot>(station ? `/processing/lots/${query({ facility: station.id, page_size: 20 })}` : null);
 
@@ -26,10 +32,9 @@ export function ProcessingLotForm() {
   const [lotDate, setLotDate] = useState(today());
   const [cherryInputKg, setCherryInputKg] = useState<number | ''>('');
   const [actuals, setActuals] = useState<Record<string, number | ''>>({});
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [actualsLot, setActualsLot] = useState<ProcessingLot | null>(null);
+  const submit = useSubmit();
 
   const processList = processes.data ?? [];
   const process = processList.find((p) => p.id === processId) ?? processList[0] ?? null;
@@ -53,10 +58,8 @@ export function ProcessingLotForm() {
 
   async function save() {
     if (!process) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const lot = await api<ProcessingLot>('/processing/lots/', {
+    const lot = await submit.run(() =>
+      api<ProcessingLot>('/processing/lots/', {
         method: 'POST',
         body: {
           process_type: process.id,
@@ -65,38 +68,29 @@ export function ProcessingLotForm() {
           cherry_input_kg: input,
           actuals: rows.filter((r) => r.actual !== '' && r.actual !== undefined).map((r) => ({ grade: r.grade.id, actual_kg: num(r.actual) })),
         },
-      });
-      setSaved(`Saved lot ${lot.lot_number}: ${kg(lot.cherry_input_kg)} kg cherry, estimate ${kg(lot.total_estimated_kg, 2)} kg.`);
-      setLotNumber('');
-      setCherryInputKg('');
-      setActuals({});
-      lots.reload();
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setSaving(false);
-    }
+      }),
+    );
+    if (!lot) return;
+    setSaved(`Saved lot ${lot.lot_number}: ${kg(lot.cherry_input_kg)} kg cherry, estimate ${kg(lot.total_estimated_kg, 2)} kg.`);
+    setLotNumber('');
+    setCherryInputKg('');
+    setActuals({});
+    lots.reload();
   }
 
-  if (stationsLoading) return <Loading />;
+  if (stations.loading && !station) return <PageSkeleton />;
   if (!station) return <EmptyState title="No station assigned">Ask an administrator to assign you to a CWS.</EmptyState>;
 
   return (
     <Stack gap="lg" maw={1200}>
-      <Group justify="space-between" align="flex-end">
-        <div>
-          <Text c="gray.6" fw={700} tt="uppercase" size="xs">CWS operations</Text>
-          <Title order={2}>Processing lots</Title>
-        </div>
-        <Select label="Station" data={options} value={station.id} onChange={(v) => v && setStationId(v)} allowDeselect={false} w={240} />
-      </Group>
+      <PageHeader eyebrow="CWS operations" title="Processing lots" actions={<StationSelect stations={stations} />} />
 
       <SuccessMessage onClose={() => setSaved(null)}>{saved}</SuccessMessage>
 
       {writable && (
         <Card withBorder radius="md" p="lg">
           {processes.loading && !processes.data ? (
-            <Loading />
+            <FormSkeleton fields={4} columns={4} />
           ) : !processList.length ? (
             <EmptyState title="No processes registered at this station">
               Register a process with its estimate ratios under “Register Process” first.
@@ -117,50 +111,52 @@ export function ProcessingLotForm() {
                 <NumberInput label="Cherry input (kg)" value={cherryInputKg} onChange={(v) => setCherryInputKg(v === '' ? '' : Number(v))} min={0} thousandSeparator="," hideControls />
               </SimpleGrid>
 
-              <Table withTableBorder>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Grade</Table.Th>
-                    <Table.Th>Estimate ratio</Table.Th>
-                    <Table.Th ta="right">Estimated (kg)</Table.Th>
-                    <Table.Th>Actual sorted (kg)</Table.Th>
-                    <Table.Th ta="right">Out-turn</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {rows.map((row) => (
-                    <Table.Tr key={row.grade.id}>
-                      <Table.Td fw={600}>{row.grade.name}</Table.Td>
-                      <Table.Td>{pct(row.ratio * 100, 2)}</Table.Td>
-                      <Table.Td ta="right">{kg(row.estimated, 2)}</Table.Td>
-                      <Table.Td>
-                        <NumberInput
-                          aria-label={`Actual ${row.grade.code}`}
-                          placeholder="Later"
-                          value={row.actual ?? ''}
-                          onChange={(v) => setActuals((prev) => ({ ...prev, [row.grade.id]: v === '' ? '' : Number(v) }))}
-                          min={0}
-                          hideControls
-                          maw={140}
-                        />
-                      </Table.Td>
-                      <Table.Td ta="right">{row.outturn === null || input <= 0 ? '—' : pct(row.outturn, 2)}</Table.Td>
+              <Table.ScrollContainer minWidth={620}>
+                <Table withTableBorder>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Grade</Table.Th>
+                      <Table.Th>Estimate ratio</Table.Th>
+                      <Table.Th ta="right">Estimated (kg)</Table.Th>
+                      <Table.Th>Actual sorted (kg)</Table.Th>
+                      <Table.Th ta="right">Out-turn</Table.Th>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-                <Table.Tfoot>
-                  <Table.Tr>
-                    <Table.Th>Total</Table.Th>
-                    <Table.Th>{pct(num(process?.total_ratio) * 100, 2)}</Table.Th>
-                    <Table.Th ta="right">{kg(rows.reduce((s, r) => s + r.estimated, 0), 2)}</Table.Th>
-                    <Table.Th colSpan={2} />
-                  </Table.Tr>
-                </Table.Tfoot>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {rows.map((row) => (
+                      <Table.Tr key={row.grade.id}>
+                        <Table.Td fw={600}>{row.grade.name}</Table.Td>
+                        <Table.Td>{pct(row.ratio * 100, 2)}</Table.Td>
+                        <Table.Td ta="right">{kg(row.estimated, 2)}</Table.Td>
+                        <Table.Td>
+                          <NumberInput
+                            aria-label={`Actual ${row.grade.code}`}
+                            placeholder="Later"
+                            value={row.actual ?? ''}
+                            onChange={(v) => setActuals((prev) => ({ ...prev, [row.grade.id]: v === '' ? '' : Number(v) }))}
+                            min={0}
+                            hideControls
+                            maw={140}
+                          />
+                        </Table.Td>
+                        <Table.Td ta="right">{row.outturn === null || input <= 0 ? '—' : pct(row.outturn, 2)}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                  <Table.Tfoot>
+                    <Table.Tr>
+                      <Table.Th>Total</Table.Th>
+                      <Table.Th>{pct(num(process?.total_ratio) * 100, 2)}</Table.Th>
+                      <Table.Th ta="right">{kg(rows.reduce((s, r) => s + r.estimated, 0), 2)}</Table.Th>
+                      <Table.Th colSpan={2} />
+                    </Table.Tr>
+                  </Table.Tfoot>
+                </Table>
+              </Table.ScrollContainer>
 
-              <ErrorMessage>{error}</ErrorMessage>
+              <ErrorMessage>{submit.error}</ErrorMessage>
               <Group justify="flex-end">
-                <Button onClick={save} loading={saving} disabled={input <= 0}>Save processing lot</Button>
+                <Button onClick={save} loading={submit.saving} disabled={input <= 0}>Save processing lot</Button>
               </Group>
             </Stack>
           )}
@@ -169,54 +165,38 @@ export function ProcessingLotForm() {
 
       <Card withBorder radius="md" p="lg">
         <Text fw={600} mb="sm">Recent lots at {station.name}</Text>
-        {lots.loading && !lots.data ? (
-          <Loading />
-        ) : lots.error ? (
-          <ErrorMessage>{lots.error}</ErrorMessage>
-        ) : lots.items.length === 0 ? (
-          <EmptyState title="No lots yet">Saved processing lots appear here.</EmptyState>
-        ) : (
-          <Table.ScrollContainer minWidth={760}>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Lot</Table.Th>
-                  <Table.Th>Date</Table.Th>
-                  <Table.Th>Process</Table.Th>
-                  <Table.Th ta="right">Cherry (kg)</Table.Th>
-                  <Table.Th ta="right">Estimated (kg)</Table.Th>
-                  <Table.Th ta="right">Actual (kg)</Table.Th>
-                  <Table.Th ta="right">Out-turn</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  {writable && <Table.Th />}
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {lots.items.map((lot) => (
-                  <Table.Tr key={lot.id}>
-                    <Table.Td ff="monospace">{lot.lot_number}</Table.Td>
-                    <Table.Td>{lot.lot_date}</Table.Td>
-                    <Table.Td>{lot.process_label}</Table.Td>
-                    <Table.Td ta="right">{kg(lot.cherry_input_kg)}</Table.Td>
-                    <Table.Td ta="right">{kg(lot.total_estimated_kg, 2)}</Table.Td>
-                    <Table.Td ta="right">{lot.total_actual_kg === null ? '—' : kg(lot.total_actual_kg, 2)}</Table.Td>
-                    <Table.Td ta="right">{lot.total_outturn_pct === null ? '—' : pct(lot.total_outturn_pct, 2)}</Table.Td>
-                    <Table.Td><Badge color={statusColor[lot.status]} variant="light">{statusLabel[lot.status]}</Badge></Table.Td>
-                    {writable && (
-                      <Table.Td>
-                        {lot.status !== 'CLOSED' && (
-                          <Button size="compact-xs" variant="light" leftSection={<IconClipboardCheck size={14} />} onClick={() => setActualsLot(lot)}>
-                            Actuals
-                          </Button>
-                        )}
-                      </Table.Td>
-                    )}
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-        )}
+        <DataTable
+          rows={lots.items}
+          rowKey={(lot) => lot.id}
+          loading={lots.loading}
+          error={lots.error}
+          minWidth={820}
+          empty={{ title: 'No lots yet', hint: 'Saved processing lots appear here.' }}
+          columns={[
+            { key: 'lot', header: 'Lot', mono: true, render: (lot) => lot.lot_number },
+            { key: 'date', header: 'Date', render: (lot) => lot.lot_date },
+            { key: 'process', header: 'Process', render: (lot) => lot.process_label },
+            { key: 'cherry', header: 'Cherry (kg)', align: 'right', render: (lot) => kg(lot.cherry_input_kg) },
+            { key: 'est', header: 'Estimated (kg)', align: 'right', render: (lot) => kg(lot.total_estimated_kg, 2) },
+            { key: 'act', header: 'Actual (kg)', align: 'right', render: (lot) => (lot.total_actual_kg === null ? '—' : kg(lot.total_actual_kg, 2)) },
+            { key: 'out', header: 'Out-turn', align: 'right', render: (lot) => (lot.total_outturn_pct === null ? '—' : pct(lot.total_outturn_pct, 2)) },
+            {
+              key: 'status',
+              header: 'Status',
+              render: (lot) => <Badge color={statusColor[lot.status]} variant="light">{statusLabel[lot.status]}</Badge>,
+            },
+            writable && {
+              key: 'actions',
+              header: '',
+              render: (lot) =>
+                lot.status !== 'CLOSED' && (
+                  <Button size="compact-xs" variant="light" leftSection={<IconClipboardCheck size={14} />} onClick={() => setActualsLot(lot)}>
+                    Actuals
+                  </Button>
+                ),
+            },
+          ]}
+        />
       </Card>
 
       {actualsLot && (
@@ -238,23 +218,16 @@ function ActualsModal({ lot, onClose, onSaved }: { lot: ProcessingLot; onClose: 
   const [values, setValues] = useState<Record<string, number | ''>>(() =>
     Object.fromEntries(lot.results.map((r) => [r.grade, r.actual_kg === null ? '' : num(r.actual_kg)])),
   );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const submit = useSubmit();
 
   async function save() {
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await api<ProcessingLot>(`/processing/lots/${lot.id}/actuals/`, {
+    const updated = await submit.run(() =>
+      api<ProcessingLot>(`/processing/lots/${lot.id}/actuals/`, {
         method: 'POST',
         body: { actuals: lot.results.map((r) => ({ grade: r.grade, actual_kg: values[r.grade] === '' ? null : num(values[r.grade]) })) },
-      });
-      onSaved(updated);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setSaving(false);
-    }
+      }),
+    );
+    if (updated) onSaved(updated);
   }
 
   return (
@@ -263,7 +236,9 @@ function ActualsModal({ lot, onClose, onSaved }: { lot: ProcessingLot; onClose: 
         <Text size="sm" c="dimmed">Cherry input {kg(lot.cherry_input_kg)} kg · {lot.process_label}</Text>
         {lot.results.map((r) => (
           <Group key={r.grade} grow>
-            <Text size="sm" fw={600}>{r.grade_name} <Text span c="dimmed" size="xs">est. {kg(r.estimated_kg, 2)} kg</Text></Text>
+            <Text size="sm" fw={600}>
+              {r.grade_name} <Text span c="dimmed" size="xs">est. {kg(r.estimated_kg, 2)} kg</Text>
+            </Text>
             <NumberInput
               aria-label={`Actual ${r.grade_code}`}
               value={values[r.grade]}
@@ -273,8 +248,8 @@ function ActualsModal({ lot, onClose, onSaved }: { lot: ProcessingLot; onClose: 
             />
           </Group>
         ))}
-        <ErrorMessage>{error}</ErrorMessage>
-        <Button onClick={save} loading={saving}>Save actuals</Button>
+        <ErrorMessage>{submit.error}</ErrorMessage>
+        <Button onClick={save} loading={submit.saving}>Save actuals</Button>
       </Stack>
     </Modal>
   );

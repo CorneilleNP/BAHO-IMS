@@ -11,10 +11,10 @@ class CropYearAdmin(admin.ModelAdmin):
 
 @admin.register(Facility)
 class FacilityAdmin(admin.ModelAdmin):
-    list_display = ["code", "name", "facility_type", "district", "sector", "is_active"]
-    list_filter = ["facility_type", "is_active", "district"]
-    search_fields = ["code", "name", "district", "sector"]
-    autocomplete_fields = ["village"]
+    list_display = ["code", "name", "facility_type", "location", "is_active"]
+    list_filter = ["facility_type", "is_active"]
+    search_fields = ["code", "name"]
+    autocomplete_fields = ["location"]
 
 
 @admin.register(AdminUnit)

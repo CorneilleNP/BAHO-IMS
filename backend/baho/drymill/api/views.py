@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from baho.core.access import DRYMILL_READ_ROLES, DRYMILL_WRITE_ROLES
 from baho.core.permissions import RoleAccess
+from baho.organization.locations import ANCESTORS
 
 from ..models import ExportGrade, Supplier
 from ..selectors import batches_with_totals, coffee_sources, stock_receipts
@@ -42,10 +43,10 @@ class SupplierViewSet(
 ):
     """Partner suppliers. Baho's own CWS stations are facilities, see /drymill/sources/."""
 
-    queryset = Supplier.objects.all()
+    queryset = Supplier.objects.select_related(f"location__{ANCESTORS}")
     serializer_class = SupplierSerializer
-    filterset_fields = ["is_active", "district"]
-    search_fields = ["name", "contact_name", "district"]
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "contact_name", "location__name"]
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def perform_create(self, serializer):

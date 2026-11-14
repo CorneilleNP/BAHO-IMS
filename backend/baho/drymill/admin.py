@@ -5,9 +5,10 @@ from .models import DryMillBatch, DryMillOutput, ExportGrade, HqStockReceipt, Su
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
-    list_display = ["name", "contact_name", "phone", "district", "is_active"]
-    list_filter = ["is_active", "district"]
+    list_display = ["name", "contact_name", "phone", "location", "is_active"]
+    list_filter = ["is_active"]
     search_fields = ["name", "contact_name", "tin"]
+    autocomplete_fields = ["location"]
 
 
 @admin.register(ExportGrade)
