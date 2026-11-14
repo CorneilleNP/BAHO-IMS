@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
-import { AppShell, Button, Group, NavLink as MantineNavLink, ScrollArea, Text } from '@mantine/core';
+import { AppShell, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
 import {
   IconBuildingWarehouse,
   IconCoffee,
   IconDroplet,
+  IconLogout,
   IconShip,
   IconUsers,
 } from '@tabler/icons-react';
 import { NavLink as RouterNavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { LoginPage } from './features/auth/LoginPage';
+import { allowedSections, canAccessSection, sectionForPath, type Section } from './lib/access';
+import { useAuth } from './lib/authContext';
 import { defaultCwsRegistry } from './features/cws/CwsRegistryPage';
 import { defaultProcessDefinitions, ProcessOnCwsPage } from './features/cws/ProcessOnCwsPage';
 import { CherryReceiptForm } from './features/reception/CherryReceiptForm';
@@ -40,6 +43,22 @@ const navSections = [
 
 function DashboardLandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const sections = allowedSections(user);
+
+  if (sections.length === 0) {
+    return (
+      <Center h="100%" p="xl">
+        <Stack align="center" gap="xs" maw={460} ta="center">
+          <Text fw={700} size="xl">No sections assigned yet</Text>
+          <Text c="dimmed">
+            Your account has no role that opens a section of the app. Ask your Baho administrator to
+            assign you a role and a station.
+          </Text>
+        </Stack>
+      </Center>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
@@ -51,7 +70,8 @@ function DashboardLandingPage() {
           Choose your section
         </Text>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24 }}>
+          {sections.includes('drymill') && (
           <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
             <Text fw={700} size="xl" mb="xs">Dry Mill</Text>
             <Text c="dimmed" size="sm" mb="lg">
@@ -61,7 +81,9 @@ function DashboardLandingPage() {
               Open Dry Mill
             </Button>
           </div>
+          )}
 
+          {sections.includes('cws') && (
           <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
             <Text fw={700} size="xl" mb="xs">CWS</Text>
             <Text c="dimmed" size="sm" mb="lg">
@@ -71,6 +93,7 @@ function DashboardLandingPage() {
               Open CWS
             </Button>
           </div>
+          )}
         </div>
       </div>
     </div>
@@ -80,6 +103,7 @@ function DashboardLandingPage() {
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading, logout } = useAuth();
   const [processDefinitions, setProcessDefinitions] = useState(() => {
     const stored = localStorage.getItem('baho-process-definitions');
     if (!stored) return defaultProcessDefinitions;
@@ -114,11 +138,7 @@ function App() {
   const isLoginPage = location.pathname === '/';
   const isDashboardPage = location.pathname === '/dashboard';
 
-  const currentSection = location.pathname.startsWith('/drymill/')
-    ? 'drymill'
-    : location.pathname.startsWith('/cws/') || location.pathname === '/reception' || location.pathname === '/processing'
-      ? 'cws'
-      : null;
+  const currentSection: Section | null = sectionForPath(location.pathname);
 
   const visibleSections = currentSection === 'drymill'
     ? [navSections[0]]
@@ -134,9 +154,37 @@ function App() {
     setSourceRegistry((previous) => [source, ...previous]);
   };
 
+  if (loading) {
+    return (
+      <Center h="100vh">
+        <Loader color="coffee" />
+      </Center>
+    );
+  }
+
   if (isLoginPage) {
     return <LoginPage />;
   }
+
+  // Every other page needs a signed-in user; remember where they were going.
+  if (!user) {
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  }
+
+  // A user without the role for this section is sent to the section chooser.
+  if (currentSection && !canAccessSection(user, currentSection)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const hasSeveralSections = allowedSections(user).length > 1;
+  const roleSummary = user.roles
+    .map((assignment) => (assignment.facility ? `${assignment.role_name} · ${assignment.facility.name}` : assignment.role_name))
+    .join(', ');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/', { replace: true });
+  };
 
   return (
     <AppShell
@@ -150,7 +198,7 @@ function App() {
             <img src="/baho-image.jpg" alt="BAHO coffee company" style={{ height: 52, width: 'auto', display: 'block', objectFit: 'contain' }} />
           </Group>
           <Group gap="sm">
-            {currentSection && (
+            {currentSection && hasSeveralSections && (
               <Button
                 size="compact-sm"
                 variant="subtle"
@@ -162,6 +210,19 @@ function App() {
               </Button>
             )}
             <Text size="sm" fw={600} c="#3d5140">Crop year 2026</Text>
+            <Stack gap={0} align="flex-end" visibleFrom="sm">
+              <Text size="sm" fw={700} c="#1a1a1a">{user.full_name}</Text>
+              <Text size="xs" c="dimmed" lineClamp={1} maw={320}>{roleSummary || 'No role assigned'}</Text>
+            </Stack>
+            <Button
+              size="compact-sm"
+              variant="light"
+              color="dark"
+              leftSection={<IconLogout size={14} />}
+              onClick={handleLogout}
+            >
+              Sign out
+            </Button>
           </Group>
         </Group>
       </AppShell.Header>

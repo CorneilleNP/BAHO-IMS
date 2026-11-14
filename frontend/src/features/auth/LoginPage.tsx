@@ -1,14 +1,57 @@
-import { useState } from 'react';
-import { Button, PasswordInput, Text, TextInput } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Alert, Button, PasswordInput, Text, TextInput } from '@mantine/core';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { allowedSections, canAccessPath, type CurrentUser } from '../../lib/access';
+import { useAuth } from '../../lib/authContext';
+
+const SECTION_HOME = { drymill: '/drymill/stock', cws: '/cws/process' } as const;
+
+/**
+ * Where to land after login: the page they were sent away from (only if
+ * their role may open it), else their only section, else the chooser.
+ */
+function landingPath(user: CurrentUser, from?: string): string {
+  if (from && from !== '/' && canAccessPath(user, from)) return from;
+  const sections = allowedSections(user);
+  return sections.length === 1 ? SECTION_HOME[sections[0]] : '/dashboard';
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('info@baho.rw');
+  const location = useLocation();
+  const { user, login } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [showForgotHelp, setShowForgotHelp] = useState(false);
+  const from = (location.state as { from?: string } | null)?.from;
 
-  const handleSubmit = () => {
-    navigate('/dashboard');
+  if (user) {
+    return <Navigate to={landingPath(user, from)} replace />;
+  }
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!email.trim() || !password) {
+      setError('Enter your email and password.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const me = await login(email, password);
+      navigate(landingPath(me, from), { replace: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign in failed.';
+      setError(
+        message === 'No active account found with the given credentials'
+          ? 'Incorrect email or password.'
+          : message,
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -27,10 +70,23 @@ export function LoginPage() {
             Track coffee receipts, processing, and stock in one place.
           </Text>
 
-          <div style={{ marginTop: 28 }}>
+          <form onSubmit={handleSubmit} noValidate style={{ marginTop: 28 }}>
+            {error && (
+              <Alert color="red" variant="light" radius="md" mb="md" role="alert">
+                {error}
+              </Alert>
+            )}
+
             <TextInput
               value={email}
               onChange={(event) => setEmail(event.currentTarget.value)}
+              type="email"
+              name="email"
+              autoComplete="username"
+              placeholder="Email address"
+              aria-label="Email address"
+              autoFocus
+              disabled={submitting}
               radius="md"
               size="lg"
               leftSection={<span style={{ fontSize: 18 }}>✉</span>}
@@ -48,6 +104,11 @@ export function LoginPage() {
             <PasswordInput
               value={password}
               onChange={(event) => setPassword(event.currentTarget.value)}
+              name="password"
+              autoComplete="current-password"
+              placeholder="Password"
+              aria-label="Password"
+              disabled={submitting}
               mt="sm"
               radius="md"
               size="lg"
@@ -68,6 +129,7 @@ export function LoginPage() {
             <div style={{ textAlign: 'center', marginTop: 14 }}>
               <button
                 type="button"
+                onClick={() => setShowForgotHelp((shown) => !shown)}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -78,13 +140,19 @@ export function LoginPage() {
               >
                 Forgot password?
               </button>
+              {showForgotHelp && (
+                <Text size="sm" c="gray.7" mt={6}>
+                  Accounts are managed by your Baho administrator. Ask them to reset your password.
+                </Text>
+              )}
             </div>
 
             <Button
+              type="submit"
               fullWidth
               mt="lg"
               size="lg"
-              onClick={handleSubmit}
+              loading={submitting}
               style={{
                 background: '#0b5b40',
                 minHeight: 50,
@@ -95,7 +163,7 @@ export function LoginPage() {
             >
               Sign In
             </Button>
-          </div>
+          </form>
         </div>
       </div>
 

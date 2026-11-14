@@ -18,7 +18,8 @@ baho IMS/
 |---|---|
 | Backend: `core`, `organization`, `accounts` | Done: email + JWT login, roles per facility, facilities, crop years, address tree, Django admin, 18 tests |
 | Backend: farmers, reception, inventory, processing, finance, labor, drymill, sales, reporting, imports, notifications | App skeletons only: next to build, translating `backend/legacy/sql/` |
-| Frontend | Runs on mock data; switches to the API screen by screen |
+| Frontend: sign-in | Real login against the database (JWT), session kept across reloads, pages protected, menu limited by role (CWS roles → CWS, HQ dry mill/export → Dry Mill, ADMIN/HQ finance → both) |
+| Frontend: business screens | Still on mock data; switch to the API screen by screen |
 
 ## Running it locally (Windows, no admin rights needed)
 

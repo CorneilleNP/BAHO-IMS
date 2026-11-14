@@ -6,6 +6,7 @@ import '@mantine/core/styles.css'
 import '@mantine/charts/styles.css'
 import './index.css'
 import App from './App.tsx'
+import { AuthProvider } from './lib/auth'
 
 const theme = createTheme({
   primaryColor: 'coffee',
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={theme}>
       <BrowserRouter>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </BrowserRouter>
     </MantineProvider>
   </StrictMode>,
