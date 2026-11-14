@@ -59,8 +59,13 @@ def test_commit_imports_with_agreed_rules(sheet):
     assert (first.process.code, first.net_weight_kg, first.stock_balance_kg) == ("NN", 4229, 4219)
     assert first.purchase_contract_number == ""  # N/A cleaned
 
-    completed = receipts[3]  # "Completed" -> opening adjustment, balance 0
-    assert (completed.processing_status, completed.stock_balance_kg) == ("COMPLETED", Decimal("0"))
+    # "Processing Status = Completed" is ignored: stock only moves through dry mill batches.
+    completed = receipts[3]
+    assert (completed.processing_status, completed.stock_balance_kg) == (
+        "NOT_STARTED",
+        Decimal("4121"),
+    )
+    assert not completed.adjustments.exists()
 
     ngororero = receipts[4]  # PARTNER in the sheet, but always Baho
     assert ngororero.origin_type == "OWN_CWS" and ngororero.source_facility.code == "NGORORERO"

@@ -148,7 +148,10 @@ cd backend
 
 Rules: Ngororero is always Baho; other BAHO sources become CWS stations,
 PARTNER/UBUNTU/AGRINOS become suppliers (Kayenzi → Agrinos Ltd); FLOOT→FLOAT,
-HHPC→HPC; blank quality → Pending; "Completed" rows get an opening adjustment.
+HHPC→HPC; blank quality → Pending. The sheet is receipts only: the columns
+"Processing Status", "Processing Date", "Stock processed (Kg)" and "Stock Balance (Kg)"
+are ignored (added by mistake); stock is only deducted by dry mill batches /
+the processing report.
 Re-running skips rows already imported. **`reset_dev_data` deletes imported
 receipts too** — re-import afterwards.
 

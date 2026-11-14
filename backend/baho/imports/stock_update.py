@@ -10,8 +10,11 @@ Rules agreed with operations (Nov 2026):
   on the Processes screen.
 - Grade typos FLOOT -> FLOAT, HHPC -> HPC.
 - Quality "Accepted" -> ACCEPTED, blank -> PENDING.
-- "Completed" rows have no processed quantity in the sheet: they get an opening
-  stock adjustment of minus their pure weight, so their balance is 0.
+- The sheet is a list of RECEIPTS only. Nothing in it deducts stock: processing
+  (milling) comes from the processing report / dry mill batches. Therefore these
+  columns are IGNORED (added to the sheet by mistake, per operations, Nov 2026):
+  "Processing Status", "Processing Date", "Stock processed (Kg)", "Stock Balance (Kg)".
+  Every imported receipt starts with its full pure weight in stock.
 - Every receipt keeps its sheet row number; re-running skips rows already imported.
 """
 
@@ -26,7 +29,7 @@ from pathlib import Path
 from django.db import transaction
 
 from baho.drymill.models import HqStockReceipt, OriginType, Supplier
-from baho.drymill.services import adjust_stock, create_stock_receipt
+from baho.drymill.services import create_stock_receipt
 from baho.organization.models import Facility
 from baho.processing.catalog import resolve_process_label
 from baho.processing.models import SubProcess
@@ -54,8 +57,15 @@ COLUMNS = {
     "bags": "Weight of bags (Kg)",
     "pure": "Pure Weight (Kg)",
     "quality": "Quality Status",
-    "processing": "Processing Status",
 }
+
+# Present in the sheet but deliberately not imported (see module docstring).
+IGNORED_COLUMNS = (
+    "Processing Status",
+    "Processing Date",
+    "Stock processed (Kg)",
+    "Stock Balance (Kg)",
+)
 
 
 class DryRun(Exception):
@@ -74,7 +84,6 @@ class ImportReport:
     new_suppliers: list = field(default_factory=list)
     file_totals: Counter = field(default_factory=Counter)
     imported_totals: Counter = field(default_factory=Counter)
-    opening_adjustments: int = 0
 
     def warn(self, kind, row):
         self.warnings[kind].append(row)
@@ -228,7 +237,7 @@ def import_stock_update(path: Path, *, batch: str, user=None, commit: bool = Fal
                 seen.setdefault(key, line_no)
 
                 dn_qty = _decimal(raw["dn_qty"])
-                receipt = create_stock_receipt(
+                create_stock_receipt(
                     user=user,
                     arrival_date=arrival,
                     origin_type=origin_type,
@@ -264,19 +273,6 @@ def import_stock_update(path: Path, *, batch: str, user=None, commit: bool = Fal
                 report.imported_totals["pure"] += net - bags
                 if isinstance(sheet_pure, Decimal):
                     report.imported_totals["pure_where_sheet_has_it"] += net - bags
-
-                if _text(raw["processing"]).upper() == "COMPLETED" and net - bags > 0:
-                    adjust_stock(
-                        user=user,
-                        receipt=receipt,
-                        qty_kg=-(net - bags),
-                        reason=(
-                            "Opening balance: marked 'Completed' in the BAHO STOCK UPDATE sheet "
-                            "(no processed quantity recorded there)."
-                        ),
-                        adjusted_on=arrival,
-                    )
-                    report.opening_adjustments += 1
 
             report.unassigned_sub_processes = list(
                 SubProcess.objects.filter(process__isnull=True)

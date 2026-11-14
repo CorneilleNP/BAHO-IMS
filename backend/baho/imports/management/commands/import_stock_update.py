@@ -47,7 +47,7 @@ class Command(BaseCommand):
         w(f"  empty rows skipped      {r.skipped_empty}")
         w(f"  already imported        {r.already_imported}")
         w(self.style.SUCCESS(f"  receipts {'created' if commit else 'to create'}      {r.created}"))
-        w(f"  opening adjustments     {r.opening_adjustments}  (rows marked Completed)")
+        w("  ignored columns         Processing Status / Date, Stock processed, Stock Balance")
         w("")
         w("  Totals        file            imported")
         checks = [
