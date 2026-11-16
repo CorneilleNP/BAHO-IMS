@@ -1,3 +1,5 @@
+from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
@@ -10,7 +12,7 @@ from baho.core.permissions import RoleAccess
 
 from ..models import Client, ExportShipment
 from ..selectors import shipments_with_totals
-from ..services import create_client, create_shipment, update_shipment_status
+from ..services import create_client, create_shipment, green_balance, update_shipment_status
 from .serializers import ClientSerializer, ExportShipmentSerializer, ShipmentStatusSerializer
 
 
@@ -54,13 +56,23 @@ class ExportShipmentViewSet(
         "client": ["exact"],
         "status": ["exact"],
         "delivery_to_naeb_date": ["exact", "gte", "lte"],
+        "lines__process": ["exact"],
+        "lines__sub_process": ["exact"],
+        "lines__source_facility": ["exact"],
+        "lines__source_supplier": ["exact"],
         "lines__export_grade": ["exact"],
         "lines__process_product": ["exact"],
     }
     search_fields = ["shipment_no", "client__name"]
 
     def get_queryset(self):
-        return super().get_queryset().distinct()
+        queryset = super().get_queryset()
+        source = self.request.query_params.get("source")  # station code or supplier name
+        if source:
+            queryset = queryset.filter(
+                Q(lines__source_facility__code=source) | Q(lines__source_supplier__name=source)
+            )
+        return queryset.distinct()
 
     def check_can_void(self, instance):
         if instance.status != ExportShipment.Status.PLANNED:
@@ -77,3 +89,17 @@ class ExportShipmentViewSet(
         data.is_valid(raise_exception=True)
         update_shipment_status(user=request.user, shipment=self.get_object(), **data.validated_data)
         return Response(ExportShipmentSerializer(shipments_with_totals().get(pk=pk)).data)
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    @action(detail=False)
+    def available(self, request):
+        """Green coffee available to ship for a process / sub-process / source / grade."""
+        params = request.query_params
+        available_kg = green_balance(
+            process=params.get("process") or None,
+            sub_process=params.get("sub_process") or None,
+            source_facility=params.get("source_facility") or None,
+            source_supplier=params.get("source_supplier") or None,
+            export_grade=params.get("export_grade") or None,
+        )
+        return Response({"available_kg": str(available_kg)})

@@ -27,7 +27,7 @@ from ..catalog import (
     set_sub_processes_active,
     suggest_process,
 )
-from ..models import Process, SubProcess
+from ..models import Process, ProcessGrade, SubProcess
 
 KG = DecimalField(max_digits=14, decimal_places=2)
 READ_ROLES = tuple(set(CWS_READ_ROLES) | set(DRYMILL_READ_ROLES))
@@ -108,6 +108,17 @@ class SubProcessSerializer(serializers.ModelSerializer):
         return [a.label for a in obj.aliases.all()]
 
 
+class ProcessGradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessGrade
+        fields = ["id", "code", "name", "display_order"]
+
+
+class ProcessGradeWriteSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=20)
+    name = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+
 class SelectionSerializer(serializers.Serializer):
     ids = serializers.PrimaryKeyRelatedField(
         queryset=SubProcess.objects.all(), many=True, allow_empty=False
@@ -149,6 +160,34 @@ class ProcessViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             sub_process_count=Count("sub_processes", filter=Q(sub_processes__is_active=True))
         )
         return _usage(qs, "process")
+
+    @extend_schema(responses=ProcessGradeSerializer(many=True))
+    @action(detail=True, methods=["get"])
+    def grades(self, request, pk=None):
+        """This process's grades (registered once at a CWS, reused everywhere,
+        including here for dry mill reception)."""
+        process = self.get_object()
+        rows = process.grades.order_by("display_order", "code")
+        return Response(ProcessGradeSerializer(rows, many=True).data)
+
+    @extend_schema(request=ProcessGradeWriteSerializer, responses=ProcessGradeSerializer)
+    @grades.mapping.post
+    def add_grade(self, request, pk=None):
+        """Add a grade not already known for this process - for coffee received
+        from a partner supplier, which has no CWS registration to source it from."""
+        process = self.get_object()
+        data = ProcessGradeWriteSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        code = data.validated_data["code"].strip().upper()
+        grade, _ = ProcessGrade.objects.get_or_create(
+            process=process,
+            code=code,
+            defaults={
+                "name": data.validated_data.get("name") or code,
+                "display_order": process.grades.count() + 1,
+            },
+        )
+        return Response(ProcessGradeSerializer(grade).data, status=status.HTTP_201_CREATED)
 
 
 class SubProcessViewSet(

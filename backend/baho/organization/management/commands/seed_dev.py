@@ -96,11 +96,15 @@ class Command(BaseCommand):
 
     def _seed_gitoki_fully_washed(self, gitoki):
         """Real estimate ratios read from the BAHO GITOKI CWS production workbook (FW sheet)."""
-        from baho.processing.models import GradeRatio, ProcessGrade, ProcessType
+        from baho.processing.models import GradeRatio, Process, ProcessGrade, ProcessType
 
         crop_year = CropYear.objects.get(label="2026")
+        fw = Process.objects.get(code="FW")
         process, _ = ProcessType.objects.get_or_create(
-            facility=gitoki, name="Fully Washed", sub_process="Standard Run"
+            facility=gitoki,
+            process=fw,
+            sub_process_ref=None,
+            defaults={"name": fw.name, "sub_process": "Standard Run"},
         )
         for order, (code, name, ratio) in enumerate(
             [
@@ -111,8 +115,9 @@ class Command(BaseCommand):
             ],
             start=1,
         ):
+            # Grades are shared per process: reused as-is if another station already has them.
             grade, _ = ProcessGrade.objects.update_or_create(
-                process_type=process, code=code, defaults={"name": name, "display_order": order}
+                process=fw, code=code, defaults={"name": name, "display_order": order}
             )
             GradeRatio.objects.update_or_create(
                 grade=grade,

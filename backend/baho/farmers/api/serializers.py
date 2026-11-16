@@ -23,6 +23,8 @@ class FarmerSerializer(LocationFieldsMixin, serializers.ModelSerializer):
             "home_facility",
             "home_facility_name",
             *LocationFieldsMixin.LOCATION_FIELDS,
+            "household_size",
+            "land_area_ha",
             "is_active",
             "created_at",
         ]

@@ -3,6 +3,8 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from baho.farmers.models import Farmer
+from baho.organization.api.serializers import LocationPathSerializer
+from baho.organization.locations import location_path
 from baho.organization.models import Facility
 
 from ..models import CherryReceipt, CherryReceiptLine
@@ -40,6 +42,15 @@ class CherryReceiptSerializer(serializers.ModelSerializer):
     facility_name = serializers.CharField(source="facility.name", read_only=True)
     farmer_name = serializers.CharField(source="farmer.full_name", read_only=True)
     farmer_code = serializers.CharField(source="farmer.farmer_code", read_only=True)
+    # For the printable GRN/payment voucher given to the farmer.
+    farmer_phone = serializers.CharField(source="farmer.phone", read_only=True, default="")
+    farmer_national_id = serializers.CharField(
+        source="farmer.national_id", read_only=True, default=""
+    )
+    farmer_location = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default=""
+    )
     total_kg = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True)
     total_amount = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True)
 
@@ -53,6 +64,10 @@ class CherryReceiptSerializer(serializers.ModelSerializer):
             "farmer",
             "farmer_name",
             "farmer_code",
+            "farmer_phone",
+            "farmer_national_id",
+            "farmer_location",
+            "created_by_name",
             "received_on",
             "payment_method",
             "payment_status",
@@ -63,3 +78,6 @@ class CherryReceiptSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["grn_number", "created_at"]
+
+    def get_farmer_location(self, obj) -> dict:
+        return LocationPathSerializer(location_path(obj.farmer.location)).data

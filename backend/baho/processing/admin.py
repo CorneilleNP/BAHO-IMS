@@ -19,16 +19,19 @@ class ProcessGradeInline(admin.TabularInline):
 
 @admin.register(ProcessType)
 class ProcessTypeAdmin(admin.ModelAdmin):
-    list_display = ["name", "sub_process", "facility", "is_active"]
-    list_filter = ["facility", "is_active"]
+    list_display = ["name", "sub_process", "facility", "process", "is_active"]
+    list_filter = ["facility", "process", "is_active"]
     search_fields = ["name", "sub_process"]
-    inlines = [ProcessGradeInline]
 
 
 @admin.register(GradeRatio)
 class GradeRatioAdmin(admin.ModelAdmin):
-    list_display = ["grade", "grade__process_type", "crop_year", "ratio", "effective_from"]
-    list_filter = ["crop_year", "grade__process_type__facility"]
+    list_display = ["grade", "process", "crop_year", "ratio", "effective_from"]
+    list_filter = ["crop_year", "grade__process"]
+
+    @admin.display(description="Process")
+    def process(self, obj):
+        return obj.grade.process
 
 
 class LotResultInline(admin.TabularInline):
@@ -55,6 +58,7 @@ class ProcessingLotAdmin(admin.ModelAdmin):
 @admin.register(Process)
 class ProcessAdmin(admin.ModelAdmin):
     list_display = ["code", "name", "display_order", "is_active"]
+    inlines = [ProcessGradeInline]
 
 
 class AliasInline(admin.TabularInline):

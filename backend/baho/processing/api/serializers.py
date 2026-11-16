@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from baho.organization.models import Facility
 
-from ..models import LotGradeResult, ProcessingLot, ProcessType
+from ..models import LotGradeResult, Process, ProcessingLot, ProcessType, SubProcess
 from ..selectors import current_ratio
 
 ZERO = Decimal("0")
@@ -39,13 +39,36 @@ class ProcessTypeCreateSerializer(serializers.Serializer):
     facility = serializers.PrimaryKeyRelatedField(
         queryset=Facility.objects.filter(is_active=True, facility_type=Facility.FacilityType.CWS)
     )
-    name = serializers.CharField(max_length=80)
-    sub_process = serializers.CharField(max_length=80, required=False, allow_blank=True, default="")
+    process = serializers.PrimaryKeyRelatedField(queryset=Process.objects.filter(is_active=True))
+    sub_process = serializers.PrimaryKeyRelatedField(
+        queryset=SubProcess.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
     grades = GradeInputSerializer(many=True)
+
+
+class ProcessTypeUpdateSerializer(serializers.Serializer):
+    """Correct a station's registration: move it, (de)activate it, and/or
+    re-enter its estimate ratios. Every field is optional (PATCH semantics)."""
+
+    process = serializers.PrimaryKeyRelatedField(
+        queryset=Process.objects.filter(is_active=True), required=False
+    )
+    sub_process = serializers.PrimaryKeyRelatedField(
+        queryset=SubProcess.objects.filter(is_active=True), required=False, allow_null=True
+    )
+    is_active = serializers.BooleanField(required=False)
+    grades = GradeInputSerializer(many=True, required=False)
 
 
 class ProcessTypeSerializer(serializers.ModelSerializer):
     facility_name = serializers.CharField(source="facility.name", read_only=True)
+    process_name = serializers.CharField(source="process.name", read_only=True)
+    sub_process_id = serializers.UUIDField(
+        source="sub_process_ref_id", read_only=True, allow_null=True
+    )
     grades = serializers.SerializerMethodField()
     total_ratio = serializers.SerializerMethodField()
 
@@ -55,6 +78,9 @@ class ProcessTypeSerializer(serializers.ModelSerializer):
             "id",
             "facility",
             "facility_name",
+            "process",
+            "process_name",
+            "sub_process_id",
             "name",
             "sub_process",
             "is_active",
@@ -64,7 +90,7 @@ class ProcessTypeSerializer(serializers.ModelSerializer):
 
     def _grades(self, obj):
         rows = []
-        for grade in obj.grades.all():
+        for grade in obj.process.grades.all():
             ratio = current_ratio(grade)
             rows.append(
                 {

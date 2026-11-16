@@ -95,10 +95,17 @@ export function SupplierWizard({ supplier, onClose, onSaved }: { supplier?: Supp
     onSaved(saved);
   }
 
+  // Closing a new supplier without saving also clears its draft, so the next
+  // registration starts blank. Editing an existing supplier has no draft (key is null).
+  const close = () => {
+    if (!editing) draft.reset();
+    onClose();
+  };
+
   return (
     <FormWizard
       opened
-      onClose={onClose}
+      onClose={close}
       title={editing ? `Edit ${supplier!.name}` : 'Register partner supplier'}
       steps={steps}
       review={review}

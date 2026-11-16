@@ -24,7 +24,12 @@ def _line_total(expression):
 
 def receipts_with_totals():
     return (
-        CherryReceipt.objects.select_related("facility", "farmer")
+        CherryReceipt.objects.select_related(
+            "facility",
+            "farmer",
+            "farmer__location__parent__parent__parent__parent",
+            "created_by",
+        )
         .prefetch_related("lines")
         .annotate(
             total_kg=_line_total(F("quantity_kg")),

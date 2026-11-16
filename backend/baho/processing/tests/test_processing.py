@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pytest
 
+from baho.processing.models import Process
 from tests.helpers import login
 
 pytestmark = pytest.mark.django_db
@@ -18,14 +19,11 @@ FW_GRADES = [
 
 
 def register_fw(api, facility):
+    # Grades are shared per catalogue process, not typed per station.
+    fw = Process.objects.get(code="FW")
     return api.post(
         PROCESSES,
-        {
-            "facility": str(facility.id),
-            "name": "Fully Washed",
-            "sub_process": "Standard Run",
-            "grades": FW_GRADES,
-        },
+        {"facility": str(facility.id), "process": str(fw.id), "grades": FW_GRADES},
         format="json",
     )
 
@@ -50,7 +48,7 @@ def test_ratios_over_100_percent_are_rejected(api, gitoki_clerk, gitoki):
         PROCESSES,
         {
             "facility": str(gitoki.id),
-            "name": "Bad",
+            "process": str(Process.objects.get(code="NN").id),
             "grades": [{"code": "A1", "ratio": "0.7"}, {"code": "A2", "ratio": "0.5"}],
         },
         format="json",
@@ -107,3 +105,56 @@ def test_other_station_cannot_create_lot_on_my_process(api, gitoki_clerk, bugoyi
     res = api.post(LOTS, {"process_type": process["id"], "cherry_input_kg": "100"}, format="json")
     assert res.status_code == 403
     assert api.get(PROCESSES).data == []
+
+
+def test_estimate_ratios_can_be_corrected(api, gitoki_clerk, gitoki):
+    """Grades are shared per catalogue process, so correcting A1's ratio here is
+    visible to every station on Fully Washed; A3/HPC (not in this PATCH) are
+    untouched, since nothing resets or removes an existing shared grade."""
+    login(api, gitoki_clerk)
+    process = register_fw(api, gitoki).data
+    res = api.patch(
+        f"{PROCESSES}{process['id']}/",
+        {"grades": [{"code": "A1", "ratio": "0.20"}, {"code": "A2", "ratio": "0.04"}]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    assert {g["code"] for g in res.data["grades"]} == {"A1", "A2", "A3", "HPC"}
+    a1 = next(g for g in res.data["grades"] if g["code"] == "A1")
+    assert Decimal(a1["ratio"]) == Decimal("0.20")
+    # 0.20 + 0.04 (unchanged) + 0.025 + 0.015 (both untouched by this PATCH)
+    assert Decimal(res.data["total_ratio"]) == Decimal("0.28")
+
+
+def test_process_can_be_moved_and_deactivated(api, gitoki_clerk, gitoki):
+    login(api, gitoki_clerk)
+    process = register_fw(api, gitoki).data
+    nn = Process.objects.get(code="NN")
+    res = api.patch(
+        f"{PROCESSES}{process['id']}/", {"process": str(nn.id), "is_active": False}, format="json"
+    )
+    assert res.status_code == 200, res.data
+    assert res.data["process_name"] == "Normal Natural"
+    assert res.data["is_active"] is False
+
+
+def test_moving_onto_an_existing_registration_is_rejected(api, gitoki_clerk, gitoki):
+    login(api, gitoki_clerk)
+    fw = register_fw(api, gitoki).data
+    nn = Process.objects.get(code="NN")
+    res = api.post(
+        PROCESSES,
+        {"facility": str(gitoki.id), "process": str(nn.id), "grades": FW_GRADES},
+        format="json",
+    )
+    assert res.status_code == 201, res.data
+    res = api.patch(f"{PROCESSES}{fw['id']}/", {"process": str(nn.id)}, format="json")
+    assert res.status_code == 400
+
+
+def test_other_station_cannot_correct_my_process(api, gitoki_clerk, bugoyi_clerk, gitoki):
+    login(api, gitoki_clerk)
+    process = register_fw(api, gitoki).data
+    login(api, bugoyi_clerk)
+    res = api.patch(f"{PROCESSES}{process['id']}/", {"is_active": False}, format="json")
+    assert res.status_code in (403, 404)

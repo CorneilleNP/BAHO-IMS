@@ -46,9 +46,38 @@ const blank = (): GrnForm => ({
   payment_method: 'CASH',
 });
 
+function fromReceipt(r: CherryReceipt): GrnForm {
+  const lines: Record<CherryGrade, Line> = { GOOD: emptyLine(), FLOAT: emptyLine() };
+  for (const l of r.lines) {
+    lines[l.cherry_grade] = {
+      quantityKg: num(l.quantity_kg),
+      pricePerKg: num(l.price_per_kg),
+      transportCost: num(l.transport_cost),
+      commission: num(l.commission),
+    };
+  }
+  return {
+    farmer: r.farmer,
+    received_on: r.received_on,
+    lines,
+    payment_status: r.payment_status,
+    payment_method: r.payment_method,
+  };
+}
+
+interface Props {
+  station: Facility;
+  /** Correct this GRN; omit to record a new one. */
+  receipt?: CherryReceipt | null;
+  onClose: () => void;
+  onSaved: (r: CherryReceipt) => void;
+}
+
 /** Cherry delivery (GRN): farmer → Good/Float cherry → payment → review. */
-export function GrnWizard({ station, onClose, onSaved }: { station: Facility; onClose: () => void; onSaved: (r: CherryReceipt) => void }) {
-  const draft = useDraft<GrnForm>(`grn-${station.id}`, blank);
+export function GrnWizard({ station, receipt, onClose, onSaved }: Props) {
+  const editing = !!receipt;
+  // New GRNs keep a draft; edits start from the receipt (render with key={receipt.id}).
+  const draft = useDraft<GrnForm>(editing ? null : `grn-${station.id}`, () => (receipt ? fromReceipt(receipt) : blank()));
   const form = draft.value;
   const submit = useSubmit();
   const [registering, setRegistering] = useState(false);
@@ -102,7 +131,7 @@ export function GrnWizard({ station, onClose, onSaved }: { station: Facility; on
               <Table.Tr>
                 <Table.Th>Cherry</Table.Th>
                 {FIELDS.map((f) => <Table.Th key={f.field}>{f.label}</Table.Th>)}
-                <Table.Th ta="right">Line amount</Table.Th>
+                <Table.Th ta="right">Cost of cherry</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -114,7 +143,7 @@ export function GrnWizard({ station, onClose, onSaved }: { station: Facility; on
                       <NumberInput aria-label={`${r.label} ${label}`} value={form.lines[r.grade][field]} onChange={(v) => setLine(r.grade, field, v)} min={0} hideControls thousandSeparator="," />
                     </Table.Td>
                   ))}
-                  <Table.Td ta="right" fw={600}>{rwf(r.amount)}</Table.Td>
+                  <Table.Td ta="right" fw={600}>{rwf(r.amount + r.extras)}</Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>
@@ -177,41 +206,61 @@ export function GrnWizard({ station, onClose, onSaved }: { station: Facility; on
         {rows.filter((r) => r.qty > 0).map((r) => `${r.label}: ${kg(r.qty)} kg × ${rwf(form.lines[r.grade].pricePerKg)}`).join(' · ')} ·{' '}
         {form.payment_status === 'PAID' ? `paid by ${form.payment_method.replace('_', ' ').toLowerCase()}` : 'not paid yet'}
       </Text>
-      <Text size="xs" c="dimmed">The GRN number is assigned automatically when saved.</Text>
+      <Text size="xs" c="dimmed">{editing ? `GRN ${receipt!.grn_number} (number never changes).` : 'The GRN number is assigned automatically when saved.'}</Text>
     </Stack>
   );
 
   async function save() {
-    const receipt = await submit.run(() =>
-      api<CherryReceipt>('/reception/receipts/', {
-        method: 'POST',
-        body: {
-          facility: station.id,
-          farmer: form.farmer,
-          received_on: form.received_on,
-          payment_status: form.payment_status,
-          payment_method: form.payment_status === 'PAID' ? form.payment_method : '',
-          lines: rows
-            .filter((r) => r.qty > 0)
-            .map((r) => ({
-              cherry_grade: r.grade,
-              quantity_kg: r.qty,
-              price_per_kg: num(form.lines[r.grade].pricePerKg),
-              transport_cost: num(form.lines[r.grade].transportCost),
-              commission: num(form.lines[r.grade].commission),
-            })),
-        },
-      }),
+    const body = {
+      facility: station.id,
+      farmer: form.farmer,
+      received_on: form.received_on,
+      payment_status: form.payment_status,
+      payment_method: form.payment_status === 'PAID' ? form.payment_method : '',
+      lines: rows
+        .filter((r) => r.qty > 0)
+        .map((r) => ({
+          cherry_grade: r.grade,
+          quantity_kg: r.qty,
+          price_per_kg: num(form.lines[r.grade].pricePerKg),
+          transport_cost: num(form.lines[r.grade].transportCost),
+          commission: num(form.lines[r.grade].commission),
+        })),
+    };
+    const receiptResult = await submit.run(() =>
+      editing
+        ? api<CherryReceipt>(`/reception/receipts/${receipt!.id}/`, { method: 'PATCH', body })
+        : api<CherryReceipt>('/reception/receipts/', { method: 'POST', body }),
     );
-    if (!receipt) return;
-    toast.success(`GRN ${receipt.grn_number} for ${receipt.farmer_name}: ${kg(receipt.total_kg)} kg, ${rwf(receipt.total_amount)}.`, 'GRN saved');
+    if (!receiptResult) return;
+    toast.success(
+      `GRN ${receiptResult.grn_number} for ${receiptResult.farmer_name}: ${kg(receiptResult.total_kg)} kg, ${rwf(receiptResult.total_amount)}.`,
+      editing ? 'GRN updated' : 'GRN saved',
+    );
     draft.reset();
-    onSaved(receipt);
+    onSaved(receiptResult);
   }
+
+  // Closing a new GRN without saving also clears its draft, so the next one
+  // starts blank. Editing an existing GRN has no draft to clear (key is null).
+  const close = () => {
+    if (!editing) draft.reset();
+    onClose();
+  };
 
   return (
     <>
-      <FormWizard opened={!registering} onClose={onClose} title={`New GRN at ${station.name}`} steps={steps} review={review} onSubmit={save} submitLabel="Save GRN" saving={submit.saving} error={submit.error} />
+      <FormWizard
+        opened={!registering}
+        onClose={close}
+        title={editing ? `Edit ${receipt!.grn_number}` : `New GRN at ${station.name}`}
+        steps={steps}
+        review={review}
+        onSubmit={save}
+        submitLabel={editing ? 'Save changes' : 'Save GRN'}
+        saving={submit.saving}
+        error={submit.error}
+      />
       {registering && (
         <FarmerWizard
           stationId={station.id}

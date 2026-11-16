@@ -15,11 +15,29 @@ from .labels import label_key
 
 
 class ProcessType(TimeStampedModel):
-    """E.g. "Fully Washed / Standard Run" at Gitoki."""
+    """A station's registration of one of the 5 processes (e.g. "Fully Washed /
+    Standard Run" at Gitoki), linked to the shared catalogue below so its grades
+    are the same ones dry mill reception uses - registered once, reused everywhere.
+    """
 
     facility = models.ForeignKey(
         "organization.Facility", on_delete=models.PROTECT, related_name="process_types"
     )
+    process = models.ForeignKey(
+        "processing.Process",
+        on_delete=models.PROTECT,
+        related_name="process_types",
+        help_text="One of the 5 company-wide processes.",
+    )
+    sub_process_ref = models.ForeignKey(
+        "processing.SubProcess",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="process_types",
+        help_text="Optional catalogue sub-process.",
+    )
+    # Display labels, kept in sync with process/sub_process_ref at registration time.
     name = models.CharField(max_length=80)
     sub_process = models.CharField(max_length=80, blank=True)
     is_active = models.BooleanField(default=True)
@@ -28,7 +46,8 @@ class ProcessType(TimeStampedModel):
         ordering = ["facility", "name", "sub_process"]
         constraints = [
             models.UniqueConstraint(
-                fields=["facility", "name", "sub_process"], name="process_type_unique_per_station"
+                fields=["facility", "process", "sub_process_ref"],
+                name="process_type_unique_per_station",
             ),
         ]
 
@@ -38,9 +57,16 @@ class ProcessType(TimeStampedModel):
 
 
 class ProcessGrade(TimeStampedModel):
-    """Output grade of a process (A1, A2, A3, HPC for washed; HG, HPC for naturals)."""
+    """Output grade of a process (A1, A2, A3, HPC for washed; HG, HPC for naturals).
 
-    process_type = models.ForeignKey(ProcessType, on_delete=models.CASCADE, related_name="grades")
+    Shared company-wide per process (not per station): a station registering a
+    process it already knows reuses these same grades instead of recreating them,
+    and dry mill reception sources its grade choices from here too.
+    """
+
+    process = models.ForeignKey(
+        "processing.Process", on_delete=models.CASCADE, related_name="grades"
+    )
     code = models.CharField(max_length=20)
     name = models.CharField(max_length=50)
     display_order = models.PositiveSmallIntegerField(default=0)
@@ -48,9 +74,7 @@ class ProcessGrade(TimeStampedModel):
     class Meta:
         ordering = ["display_order", "code"]
         constraints = [
-            models.UniqueConstraint(
-                fields=["process_type", "code"], name="grade_unique_per_process"
-            ),
+            models.UniqueConstraint(fields=["process", "code"], name="grade_unique_per_process"),
         ]
 
     def __str__(self):

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Stack, Text } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { ActionIcon, Button, Card, Stack, Text, Tooltip } from '@mantine/core';
+import { IconPencil, IconPlus } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
 import { EmptyState } from '../../components/Feedback';
 import { PageHeader } from '../../components/PageHeader';
@@ -21,7 +21,7 @@ export function ProcessOnCwsPage() {
   const stations = useMyStations();
   const { station } = stations;
   const processes = useApi<ProcessType[]>(station ? `/processing/process-types/${query({ facility: station.id })}` : null);
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizard, setWizard] = useState<{ processType: ProcessType | null } | null>(null);
 
   if (stations.loading && !station) return <PageSkeleton />;
   if (!station) return <EmptyState title="No station assigned">Ask an administrator to assign you to a CWS.</EmptyState>;
@@ -34,7 +34,7 @@ export function ProcessOnCwsPage() {
         actions={
           <>
             <StationSelect stations={stations} />
-            {writable && <Button leftSection={<IconPlus size={16} />} onClick={() => setWizardOpen(true)}>Register process</Button>}
+            {writable && <Button leftSection={<IconPlus size={16} />} onClick={() => setWizard({ processType: null })}>Register process</Button>}
           </>
         }
       />
@@ -63,16 +63,30 @@ export function ProcessOnCwsPage() {
             },
             { key: 'ratios', header: 'Estimate ratios', render: (p) => p.grades.map((g) => `${g.name} ${pct(num(g.ratio) * 100, 2)}`).join(' · ') },
             { key: 'total', header: 'Total', align: 'right', render: (p) => pct(num(p.total_ratio) * 100, 2) },
+            writable && {
+              key: 'edit',
+              header: '',
+              exportValue: false,
+              render: (p) => (
+                <Tooltip label="Edit this process / ratios">
+                  <ActionIcon variant="subtle" aria-label={`Edit ${p.name}`} onClick={() => setWizard({ processType: p })}>
+                    <IconPencil size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              ),
+            },
           ]}
         />
       </Card>
 
-      {wizardOpen && (
+      {wizard && (
         <CwsProcessWizard
+          key={wizard.processType?.id ?? 'new'}
           station={station}
-          onClose={() => setWizardOpen(false)}
+          processType={wizard.processType}
+          onClose={() => setWizard(null)}
           onSaved={() => {
-            setWizardOpen(false);
+            setWizard(null);
             processes.reload();
           }}
         />

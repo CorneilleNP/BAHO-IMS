@@ -205,7 +205,6 @@ export function ParchProcessingPage() {
 
       {modalOpen && (
         <BatchWizard
-          knownProducts={s?.options.process_products ?? []}
           onClose={() => setModalOpen(false)}
           onSaved={() => {
             setModalOpen(false);

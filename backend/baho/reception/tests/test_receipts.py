@@ -80,3 +80,49 @@ def test_date_outside_any_crop_year_is_rejected(api, gitoki_clerk, gitoki, farme
     login(api, gitoki_clerk)
     res = api.post(URL, receipt_payload(gitoki, farmer, received_on="1999-05-01"), format="json")
     assert res.status_code == 400
+
+
+def test_receipt_lines_can_be_corrected(api, gitoki_clerk, gitoki, farmer):
+    login(api, gitoki_clerk)
+    created = api.post(URL, receipt_payload(gitoki, farmer), format="json").data
+    res = api.patch(
+        f"{URL}{created['id']}/",
+        {"lines": [{"cherry_grade": "GOOD", "quantity_kg": "150", "price_per_kg": "600"}]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    assert res.data["grn_number"] == created["grn_number"]  # number never changes
+    assert Decimal(res.data["total_kg"]) == Decimal("150")
+    assert Decimal(res.data["total_amount"]) == Decimal("90000")
+    assert len(res.data["lines"]) == 1
+
+
+def test_receipt_payment_and_farmer_can_be_corrected(api, gitoki_clerk, gitoki, farmer):
+    login(api, gitoki_clerk)
+    other = Farmer.objects.create(
+        farmer_code="GITOKI-F00002", full_name="Alice", home_facility=gitoki
+    )
+    created = api.post(URL, receipt_payload(gitoki, farmer), format="json").data
+    res = api.patch(
+        f"{URL}{created['id']}/",
+        {"farmer": str(other.id), "payment_status": "PAID", "payment_method": "CASH"},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    assert res.data["farmer_name"] == "Alice"
+    assert res.data["payment_status"] == "PAID"
+
+
+def test_marking_paid_without_a_method_is_rejected(api, gitoki_clerk, gitoki, farmer):
+    login(api, gitoki_clerk)
+    created = api.post(URL, receipt_payload(gitoki, farmer, payment_method=""), format="json").data
+    res = api.patch(f"{URL}{created['id']}/", {"payment_status": "PAID"}, format="json")
+    assert res.status_code == 400
+
+
+def test_other_station_cannot_correct_a_receipt(api, gitoki_clerk, bugoyi_clerk, gitoki, farmer):
+    login(api, gitoki_clerk)
+    created = api.post(URL, receipt_payload(gitoki, farmer), format="json").data
+    login(api, bugoyi_clerk)
+    res = api.patch(f"{URL}{created['id']}/", {"notes": "hijacked"}, format="json")
+    assert res.status_code in (403, 404)

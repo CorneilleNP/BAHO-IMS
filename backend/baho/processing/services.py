@@ -21,20 +21,7 @@ def estimate_kg(cherry_input_kg: Decimal, ratio: Decimal) -> Decimal:
     return (cherry_input_kg * ratio).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
-@transaction.atomic
-def register_process(*, user, facility, name, sub_process="", grades) -> ProcessType:
-    """Create a process type at a station with its grades and estimate ratios.
-
-    `grades`: [{"code": "A1", "name": "A1", "ratio": Decimal("0.14")}, ...]
-    """
-    ensure_facility_access(user, facility)
-    name, sub_process = name.strip(), sub_process.strip()
-    if ProcessType.objects.filter(
-        facility=facility, name__iexact=name, sub_process__iexact=sub_process
-    ).exists():
-        raise ValidationError(
-            {"name": [f"{name} / {sub_process or '—'} is already registered at {facility.name}."]}
-        )
+def _validate_grades(grades) -> list[str]:
     codes = [g["code"].strip().upper() for g in grades]
     if not codes or len(codes) != len(set(codes)):
         raise ValidationError({"grades": ["Give each grade a unique code."]})
@@ -42,21 +29,95 @@ def register_process(*, user, facility, name, sub_process="", grades) -> Process
         raise ValidationError({"grades": ["Enter at least one estimate ratio above 0%."]})
     if sum(g["ratio"] for g in grades) > 1:
         raise ValidationError({"grades": ["Estimate ratios cannot add up to more than 100%."]})
+    return codes
 
+
+def _apply_grades(process, grades) -> None:
+    """Create/reuse each grade under `process` and set its estimate ratio for
+    today's crop year. Grades are shared company-wide per process, not per
+    station: a code another station already registered is reused as-is (so dry
+    mill reception, which sources its grade choices from here, keeps seeing one
+    consistent list); a new code becomes available to everyone from now on."""
+    codes = _validate_grades(grades)
     today = date.today()
     crop_year = crop_year_for(today)
-    process = ProcessType.objects.create(facility=facility, name=name, sub_process=sub_process)
+    existing = {g.code: g for g in process.grades.all()}
+    effective_from = crop_year.start_date if crop_year.start_date <= today else today
     for order, (code, grade) in enumerate(zip(codes, grades, strict=True), start=1):
-        process_grade = ProcessGrade.objects.create(
-            process_type=process, code=code, name=grade.get("name") or code, display_order=order
-        )
-        GradeRatio.objects.create(
+        process_grade = existing.get(code)
+        if process_grade is None:
+            process_grade = ProcessGrade.objects.create(
+                process=process, code=code, name=grade.get("name") or code, display_order=order
+            )
+            existing[code] = process_grade
+        GradeRatio.objects.update_or_create(
             grade=process_grade,
             crop_year=crop_year,
-            ratio=grade["ratio"],
-            effective_from=crop_year.start_date if crop_year.start_date <= today else today,
+            effective_from=effective_from,
+            defaults={"ratio": grade["ratio"]},
         )
-    return process
+
+
+@transaction.atomic
+def register_process(*, user, facility, process, sub_process=None, grades) -> ProcessType:
+    """Register a station's process (one of the 5, with an optional catalogue
+    sub-process) and its estimate ratios. `grades`: [{"code": "A1", "name": "A1",
+    "ratio": Decimal("0.14")}, ...] - see `_apply_grades` for how they're shared."""
+    ensure_facility_access(user, facility)
+    if ProcessType.objects.filter(
+        facility=facility, process=process, sub_process_ref=sub_process
+    ).exists():
+        label = f"{process.name}{f' / {sub_process.name}' if sub_process else ''}"
+        raise ValidationError({"process": [f"{label} is already registered at {facility.name}."]})
+
+    process_type = ProcessType.objects.create(
+        facility=facility,
+        process=process,
+        sub_process_ref=sub_process,
+        name=process.name,
+        sub_process=sub_process.name if sub_process else "",
+    )
+    _apply_grades(process, grades)
+    return process_type
+
+
+@transaction.atomic
+def update_process_type(
+    *, user, process_type, process=None, sub_process=None, is_active=None, grades=None
+) -> ProcessType:
+    """Correct a station's process registration: move it to another catalogue
+    process/sub-process, (de)activate it, and/or update its estimate ratios
+    (same sharing rules as `register_process` - see `_apply_grades`)."""
+    ensure_facility_access(user, process_type.facility)
+
+    new_process = process if process is not None else process_type.process
+    new_sub_process = sub_process if sub_process is not None else process_type.sub_process_ref
+    if (new_process, new_sub_process) != (process_type.process, process_type.sub_process_ref):
+        clash = ProcessType.objects.filter(
+            facility=process_type.facility, process=new_process, sub_process_ref=new_sub_process
+        ).exclude(pk=process_type.pk)
+        if clash.exists():
+            label = f"{new_process.name}{f' / {new_sub_process.name}' if new_sub_process else ''}"
+            raise ValidationError(
+                {"process": [f"{label} is already registered at {process_type.facility.name}."]}
+            )
+
+    fields = []
+    if process is not None or sub_process is not None:
+        process_type.process = new_process
+        process_type.sub_process_ref = new_sub_process
+        process_type.name = new_process.name
+        process_type.sub_process = new_sub_process.name if new_sub_process else ""
+        fields += ["process", "sub_process_ref", "name", "sub_process"]
+    if is_active is not None:
+        process_type.is_active = is_active
+        fields.append("is_active")
+    if fields:
+        process_type.save(update_fields=[*fields, "updated_at"])
+
+    if grades is not None:
+        _apply_grades(new_process, grades)
+    return process_type
 
 
 @transaction.atomic
@@ -70,7 +131,7 @@ def create_lot(
     facility = process_type.facility
     ensure_facility_access(user, facility)
     crop_year = crop_year_for(lot_date)
-    grades = list(process_type.grades.prefetch_related("ratios"))
+    grades = list(process_type.process.grades.prefetch_related("ratios"))
     if not grades:
         raise ValidationError({"process_type": ["This process has no grades configured."]})
 

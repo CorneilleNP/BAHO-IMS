@@ -17,9 +17,11 @@ def current_ratio(grade: ProcessGrade, on: date | None = None):
 
 
 def process_types_with_grades():
-    return ProcessType.objects.select_related("facility").prefetch_related(
+    return ProcessType.objects.select_related(
+        "facility", "process", "sub_process_ref"
+    ).prefetch_related(
         Prefetch(
-            "grades",
+            "process__grades",
             queryset=ProcessGrade.objects.prefetch_related(
                 Prefetch("ratios", queryset=GradeRatio.objects.order_by("-effective_from"))
             ),

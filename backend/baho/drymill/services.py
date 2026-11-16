@@ -315,6 +315,8 @@ def create_dry_mill_batch(
     inputs=None,
     batch_no="",
     status=DryMillBatch.Status.COMPLETED,
+    process=None,
+    sub_process=None,
 ) -> DryMillBatch:
     """Mill parchment taken out of the available stock.
 
@@ -322,6 +324,8 @@ def create_dry_mill_batch(
                     "qty_kg"}] — what was milled; deducted from matching stock, oldest first.
     `inputs`:      [{"receipt", "qty_kg"}] — explicit receipts (imports / corrections only).
     `outputs`:     [{"export_grade", "qty_kg"}] — zero lines are skipped.
+    `process`/`sub_process`: what this batch produced - lets export shipments filter and
+    balance their green stock by the same catalogue, not just by export grade.
     """
     if stock_lines:
         inputs = allocate_from_stock(stock_lines)
@@ -379,6 +383,8 @@ def create_dry_mill_batch(
         origin_type=origin_type,
         source_facility_id=facility_id,
         source_supplier_id=supplier_id,
+        process=process,
+        sub_process=sub_process,
         process_product=process_product.strip(),
         parch_input_kg=parch_input_kg,
         status=status,

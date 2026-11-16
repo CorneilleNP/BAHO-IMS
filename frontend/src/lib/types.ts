@@ -27,6 +27,8 @@ export interface Farmer extends Located {
   phone: string;
   home_facility: string;
   home_facility_name: string;
+  household_size: number | null;
+  land_area_ha: Decimal | null;
   is_active: boolean;
 }
 
@@ -41,6 +43,10 @@ export interface CherryReceipt {
   farmer: string;
   farmer_name: string;
   farmer_code: string;
+  farmer_phone: string;
+  farmer_national_id: string;
+  farmer_location: LocationPath;
+  created_by_name: string;
   received_on: string;
   payment_method: PaymentMethod;
   payment_status: 'PAID' | 'UNPAID';
@@ -69,11 +75,22 @@ export interface ProcessType {
   id: string;
   facility: string;
   facility_name: string;
+  process: string;
+  process_name: string;
+  sub_process_id: string | null;
   name: string;
   sub_process: string;
   is_active: boolean;
   grades: ProcessGradeConfig[];
   total_ratio: Decimal;
+}
+
+/** A catalogue process's grade (no ratio - that's per-station, see ProcessGradeConfig). */
+export interface CatalogProcessGrade {
+  id: string;
+  code: string;
+  name: string;
+  display_order: number;
 }
 
 export interface ProcessingLot {
@@ -98,6 +115,20 @@ export interface ProcessingLot {
   total_estimated_kg: Decimal;
   total_actual_kg: Decimal | null;
   total_outturn_pct: Decimal | null;
+}
+
+export interface LotSummary {
+  lots: number;
+  open_lots: number;
+  cherry_input_kg: Decimal;
+  estimated_kg: Decimal;
+  actual_kg: Decimal;
+  outturn_pct: Decimal;
+  change_vs_previous_day_pct: Decimal | null;
+  last_day: string | null;
+  by_grade: Array<{ code: string; name: string; estimated_kg: Decimal; actual_kg: Decimal }>;
+  by_station: RankedKg[];
+  by_process: RankedKg[];
 }
 
 export type OriginType = 'OWN_CWS' | 'PARTNER_SUPPLIER';
@@ -272,7 +303,19 @@ export interface ExportShipment {
   client_name: string;
   delivery_to_naeb_date: string;
   status: 'PLANNED' | 'SHIPPED' | 'DELIVERED';
-  lines: Array<{ process_product: string; export_grade: string; grade_name: string; qty_kg: Decimal }>;
+  lines: Array<{
+    process: string | null;
+    process_name: string;
+    sub_process: string | null;
+    sub_process_name: string;
+    source_facility: string | null;
+    source_supplier: string | null;
+    source_name: string;
+    process_product: string;
+    export_grade: string;
+    grade_name: string;
+    qty_kg: Decimal;
+  }>;
   total_qty_kg: Decimal;
 }
 
@@ -345,8 +388,48 @@ export interface ExportSummary {
     produced_kg: Decimal;
     balance_kg: Decimal;
   }>;
+  by_process: Array<{
+    id: string;
+    name: string;
+    produced_kg: Decimal;
+    exported_kg: Decimal;
+    balance_kg: Decimal;
+  }>;
+  by_source: Array<{
+    label: string;
+    produced_kg: Decimal;
+    exported_kg: Decimal;
+    balance_kg: Decimal;
+  }>;
   by_client: RankedKg[];
-  options: { process_products: string[] };
+  options: { processes: Array<{ id: string; name: string }>; sources: string[]; process_products: string[] };
+}
+
+interface CherryGradeFigures {
+  kg: Decimal;
+  amount: Decimal;
+  /** Full cost per kg: cherry price + transport + commission, same total paid to the farmer. */
+  avg_cost_per_kg: Decimal;
+}
+
+export interface CwsSummary {
+  receipts: number;
+  total_kg: Decimal;
+  total_amount: Decimal;
+  good: CherryGradeFigures;
+  float: CherryGradeFigures;
+  by_station: RankedKg[];
+  recent_farmers: Array<{
+    id: string;
+    farmer_code: string;
+    full_name: string;
+    phone: string;
+    home_facility_name: string;
+    location_label: string;
+    household_size: number | null;
+    land_area_ha: Decimal | null;
+    created_at: string;
+  }>;
 }
 
 // --- Rwanda locations (one shared hierarchy) -----------------------------------

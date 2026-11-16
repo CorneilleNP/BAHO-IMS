@@ -300,6 +300,16 @@ class AvailableStockSerializer(serializers.Serializer):
 class DryMillBatchSerializer(serializers.ModelSerializer):
     processing_date = serializers.DateField(default=date.today)
     batch_no = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
+    process = serializers.PrimaryKeyRelatedField(
+        queryset=Process.objects.filter(is_active=True), required=False, allow_null=True
+    )
+    sub_process = serializers.PrimaryKeyRelatedField(
+        queryset=SubProcess.objects.all(), required=False, allow_null=True
+    )
+    process_name = serializers.CharField(source="process.name", read_only=True, default="")
+    sub_process_name = serializers.CharField(
+        source="sub_process.name", read_only=True, default=""
+    )
     stock_lines = StockLineSerializer(many=True, write_only=True, required=False)
     inputs = DryMillInputSerializer(many=True, required=False)
     outputs = DryMillOutputSerializer(many=True)
@@ -317,6 +327,10 @@ class DryMillBatchSerializer(serializers.ModelSerializer):
             "origin_type",
             "source_name",
             "source_code",
+            "process",
+            "process_name",
+            "sub_process",
+            "sub_process_name",
             "process_product",
             "parch_input_kg",
             "stock_lines",

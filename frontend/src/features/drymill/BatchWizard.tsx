@@ -12,8 +12,13 @@ import { query, useApi } from '../../lib/useApi';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
 
-const COMMON_PRODUCTS = ['FULLWASHED A1', 'FULLWASHED A2', 'FULLWASHED A3', 'NATURAL A1', 'HONEY A1', 'FW HG', 'NATURAL HG', 'SEMI-WASHED A1'];
 const COMMON_GRADES = ['A1', 'A2', 'A3', 'A4', 'HG', 'HPC', 'FLOAT', 'HC', 'LG'];
+const PRODUCTS = [
+  { value: 'A1', label: 'A1 (High Grade)' },
+  { value: 'A2', label: 'A2' },
+  { value: 'A3', label: 'A3' },
+  { value: 'HPC', label: 'HPC' },
+];
 
 /** One "what was milled" line: N kg of a process / sub-process / grade (from a source). */
 interface StockLine {
@@ -26,7 +31,9 @@ interface StockLine {
 }
 
 interface BatchForm {
-  process_product: string;
+  process: string | null;
+  sub_process: string | null;
+  product: string;
   processing_date: string;
   batch_no: string;
   lines: StockLine[];
@@ -34,10 +41,9 @@ interface BatchForm {
 }
 
 const newLine = (key = Date.now()): StockLine => ({ key, process: null, sub_process: null, grade: '', source: null, qty: '' });
-const blank = (): BatchForm => ({ process_product: '', processing_date: today(), batch_no: '', lines: [newLine(1)], outputs: {} });
+const blank = (): BatchForm => ({ process: null, sub_process: null, product: '', processing_date: today(), batch_no: '', lines: [newLine(1)], outputs: {} });
 
 interface Props {
-  knownProducts: string[];
   onClose: () => void;
   onSaved: (batch: DryMillBatch) => void;
 }
@@ -47,13 +53,18 @@ interface Props {
  * sub-process / grade / source, and kg): it is taken out of the available stock
  * automatically, oldest accepted parchment first. No receipt picking.
  */
-export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
-  const draft = useDraft<BatchForm>('dry-mill-batch-v2', blank);
+export function BatchWizard({ onClose, onSaved }: Props) {
+  const draft = useDraft<BatchForm>('dry-mill-batch-v3', blank);
   const form = draft.value;
   const submit = useSubmit();
   const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
   const processes = useApi<CatalogProcess[]>('/processing/catalog/processes/');
   const sources = useApi<CoffeeSource[]>('/drymill/sources/');
+  // The product being milled (step 1): process + sub-process dropdown, same catalogue as the stock lines below.
+  const productSubs = useApi<CatalogSubProcess[]>(form.process ? `/processing/catalog/sub-processes/?process=${form.process}&is_active=true` : null);
+  const productProcessName = processes.data?.find((p) => p.id === form.process)?.name ?? '';
+  const productSubProcessName = productSubs.data?.find((s) => s.id === form.sub_process)?.name ?? '';
+  const processProduct = [productProcessName, productSubProcessName, form.product].filter(Boolean).join(' ').toUpperCase().trim();
   // Each line reports how much stock is available for its selection.
   const available = useDraft<Record<number, number>>(null, () => ({}));
   const setAvailable = available.setValue;
@@ -76,16 +87,34 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
     {
       label: 'Product',
       description: 'What is produced',
-      validate: () => (!form.process_product.trim() ? 'Enter the process / product being milled.' : !form.processing_date ? 'Enter the processing date.' : null),
+      validate: () =>
+        !form.process
+          ? 'Choose the process being milled.'
+          : !form.product
+            ? 'Choose the product (A1, A2, A3 or HPC).'
+            : !form.processing_date
+              ? 'Enter the processing date.'
+              : null,
       content: (
         <SimpleGrid cols={{ base: 1, sm: 3 }}>
-          <Autocomplete
-            label="Process / product"
+          <Select
+            label="Process"
             required
-            data={Array.from(new Set([...knownProducts, ...COMMON_PRODUCTS]))}
-            value={form.process_product}
-            onChange={(v) => draft.set('process_product')(v.toUpperCase())}
+            data={(processes.data ?? []).map((p) => ({ value: p.id, label: p.name }))}
+            value={form.process}
+            onChange={(v) => draft.setValue((prev) => ({ ...prev, process: v, sub_process: null }))}
           />
+          <Select
+            label="Sub-process"
+            placeholder={form.process ? 'Any' : 'Choose process'}
+            data={(productSubs.data ?? []).map((s) => ({ value: s.id, label: s.name }))}
+            value={form.sub_process}
+            onChange={(v) => draft.set('sub_process')(v)}
+            disabled={!form.process}
+            searchable
+            clearable
+          />
+          <Select label="Product" required data={PRODUCTS} value={form.product} onChange={(v) => draft.set('product')(v ?? '')} />
           <TextInput label="Processing date" type="date" required value={form.processing_date} onChange={(e) => draft.set('processing_date')(e.currentTarget.value)} />
           <TextInput label="Batch no." placeholder="Automatic if empty" value={form.batch_no} onChange={(e) => draft.set('batch_no')(e.currentTarget.value)} />
         </SimpleGrid>
@@ -159,7 +188,7 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
   const review = (
     <Stack gap="sm">
       <Group gap="lg">
-        <Fig label="Product" value={form.process_product} />
+        <Fig label="Product" value={processProduct || '—'} />
         <Fig label="Date" value={form.processing_date} />
         <Fig label="Batch no." value={form.batch_no || 'automatic'} />
         <Fig label="Parchment in" value={`${kg(inputTotal)} kg`} />
@@ -195,7 +224,9 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
       api<DryMillBatch>('/drymill/batches/', {
         method: 'POST',
         body: {
-          process_product: form.process_product.trim(),
+          process: form.process,
+          sub_process: form.sub_process,
+          process_product: processProduct,
           processing_date: form.processing_date,
           batch_no: form.batch_no.trim(),
           stock_lines: lines.map((l) => {
@@ -221,7 +252,12 @@ export function BatchWizard({ knownProducts, onClose, onSaved }: Props) {
     onSaved(batch);
   }
 
-  return <FormWizard opened onClose={onClose} title="Record dry mill batch" steps={steps} review={review} onSubmit={save} submitLabel="Save batch" saving={submit.saving} error={submit.error} size="70rem" />;
+  // Closing without saving (Cancel, X, Esc) also clears the draft, so the next batch starts blank.
+  const close = () => {
+    draft.reset();
+    onClose();
+  };
+  return <FormWizard opened onClose={close} title="Record dry mill batch" steps={steps} review={review} onSubmit={save} submitLabel="Save batch" saving={submit.saving} error={submit.error} size="70rem" />;
 }
 
 function StockLineEditor({

@@ -4,9 +4,13 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from baho.core.fields import ActiveFlagField
-from baho.drymill.models import ExportGrade
+from baho.drymill.models import ExportGrade, Supplier
+from baho.organization.models import Facility
+from baho.processing.models import Process, SubProcess
 
 from ..models import Client, ExportShipment, ExportShipmentLine
+
+CWS_FACILITIES = Facility.objects.filter(facility_type=Facility.FacilityType.CWS, is_active=True)
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -30,6 +34,24 @@ class ClientSerializer(serializers.ModelSerializer):
 
 
 class ShipmentLineSerializer(serializers.ModelSerializer):
+    process = serializers.PrimaryKeyRelatedField(
+        queryset=Process.objects.filter(is_active=True), required=False, allow_null=True
+    )
+    sub_process = serializers.PrimaryKeyRelatedField(
+        queryset=SubProcess.objects.all(), required=False, allow_null=True
+    )
+    process_name = serializers.CharField(source="process.name", read_only=True, default="")
+    sub_process_name = serializers.CharField(
+        source="sub_process.name", read_only=True, default=""
+    )
+    source_facility = serializers.PrimaryKeyRelatedField(
+        queryset=CWS_FACILITIES, required=False, allow_null=True
+    )
+    source_supplier = serializers.PrimaryKeyRelatedField(
+        queryset=Supplier.objects.all(), required=False, allow_null=True
+    )
+    source_name = serializers.SerializerMethodField()
+    process_product = serializers.CharField(required=False, allow_blank=True, default="")
     export_grade = serializers.PrimaryKeyRelatedField(
         queryset=ExportGrade.objects.filter(is_active=True)
     )
@@ -38,7 +60,23 @@ class ShipmentLineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ExportShipmentLine
-        fields = ["process_product", "export_grade", "grade_name", "qty_kg"]
+        fields = [
+            "process",
+            "process_name",
+            "sub_process",
+            "sub_process_name",
+            "source_facility",
+            "source_supplier",
+            "source_name",
+            "process_product",
+            "export_grade",
+            "grade_name",
+            "qty_kg",
+        ]
+
+    def get_source_name(self, obj) -> str:
+        source = obj.source_facility or obj.source_supplier
+        return source.name if source else ""
 
 
 class ExportShipmentSerializer(serializers.ModelSerializer):

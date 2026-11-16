@@ -46,7 +46,38 @@ class ExportShipment(AuditedModel):
 
 class ExportShipmentLine(TimeStampedModel):
     shipment = models.ForeignKey(ExportShipment, on_delete=models.CASCADE, related_name="lines")
-    process_product = models.CharField(max_length=60)
+    source_facility = models.ForeignKey(
+        "organization.Facility",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        help_text="The Baho CWS this green coffee's parchment came from (optional).",
+    )
+    source_supplier = models.ForeignKey(
+        "drymill.Supplier",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        help_text="The partner supplier this green coffee's parchment came from (optional).",
+    )
+    process = models.ForeignKey(
+        "processing.Process",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="shipment_lines",
+        help_text="Which process this green coffee came from.",
+    )
+    sub_process = models.ForeignKey(
+        "processing.SubProcess",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="shipment_lines",
+    )
+    process_product = models.CharField(max_length=60, blank=True)
     export_grade = models.ForeignKey(
         "drymill.ExportGrade", on_delete=models.PROTECT, related_name="+"
     )
@@ -56,4 +87,8 @@ class ExportShipmentLine(TimeStampedModel):
         ordering = ["created_at"]
         constraints = [
             models.CheckConstraint(condition=Q(qty_kg__gt=0), name="shipment_line_qty_positive"),
+            models.CheckConstraint(
+                condition=~(Q(source_facility__isnull=False) & Q(source_supplier__isnull=False)),
+                name="shipment_line_one_source",
+            ),
         ]

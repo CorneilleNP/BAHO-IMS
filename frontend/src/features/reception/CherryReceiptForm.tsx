@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Badge, Button, Card, Group, Stack, Text } from '@mantine/core';
-import { IconCoffee, IconUserPlus } from '@tabler/icons-react';
+import { ActionIcon, Badge, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { IconCoffee, IconPencil, IconPrinter, IconUserPlus } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
 import { DateRangeFilter } from '../../components/DateRangeFilter';
 import { EmptyState } from '../../components/Feedback';
@@ -16,6 +16,7 @@ import { useMyStations } from '../../lib/stations';
 import type { CherryReceipt } from '../../lib/types';
 import { query, useList } from '../../lib/useApi';
 import { FarmerWizard } from './FarmerWizard';
+import { GrnReceiptPrint } from './GrnReceiptPrint';
 import { GrnWizard } from './GrnWizard';
 
 const PAGE_SIZE = 25;
@@ -28,7 +29,9 @@ export function CherryReceiptForm() {
   const { station } = stations;
   const [range, setRange] = useState<DateRange>(ANY_DATE);
   const [page, setPage] = useState(1);
-  const [wizard, setWizard] = useState<'grn' | 'farmer' | null>(null);
+  const [grnWizard, setGrnWizard] = useState<{ receipt: CherryReceipt | null } | null>(null);
+  const [farmerWizardOpen, setFarmerWizardOpen] = useState(false);
+  const [printReceipt, setPrintReceipt] = useState<CherryReceipt | null>(null);
 
   const receiptsQuery = station
     ? `/reception/receipts/${query({ facility: station.id, received_on__gte: range[0], received_on__lte: range[1] })}`
@@ -48,8 +51,8 @@ export function CherryReceiptForm() {
             <StationSelect stations={stations} />
             {writable && (
               <>
-                <Button variant="light" leftSection={<IconUserPlus size={16} />} onClick={() => setWizard('farmer')}>Register farmer</Button>
-                <Button leftSection={<IconCoffee size={16} />} onClick={() => setWizard('grn')}>New GRN</Button>
+                <Button variant="light" leftSection={<IconUserPlus size={16} />} onClick={() => setFarmerWizardOpen(true)}>Register farmer</Button>
+                <Button leftSection={<IconCoffee size={16} />} onClick={() => setGrnWizard({ receipt: null })}>New GRN</Button>
               </>
             )}
           </>
@@ -96,6 +99,30 @@ export function CherryReceiptForm() {
               ),
             },
             writable && {
+              key: 'edit',
+              header: '',
+              exportValue: false,
+              render: (r) => (
+                <Tooltip label="Edit this GRN">
+                  <ActionIcon variant="subtle" aria-label={`Edit GRN ${r.grn_number}`} onClick={() => setGrnWizard({ receipt: r })}>
+                    <IconPencil size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              ),
+            },
+            {
+              key: 'print',
+              header: '',
+              exportValue: false,
+              render: (r) => (
+                <Tooltip label="Print GRN / payment voucher">
+                  <ActionIcon variant="subtle" aria-label={`Print GRN ${r.grn_number}`} onClick={() => setPrintReceipt(r)}>
+                    <IconPrinter size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              ),
+            },
+            writable && {
               key: 'void',
               header: '',
               exportValue: false,
@@ -105,19 +132,23 @@ export function CherryReceiptForm() {
         />
       </Card>
 
-      {wizard === 'grn' && (
+      {grnWizard && (
         <GrnWizard
+          key={grnWizard.receipt?.id ?? 'new'}
           station={station}
-          onClose={() => setWizard(null)}
-          onSaved={() => {
-            setWizard(null);
+          receipt={grnWizard.receipt}
+          onClose={() => setGrnWizard(null)}
+          onSaved={(receipt) => {
+            setGrnWizard(null);
             receipts.reload();
+            setPrintReceipt(receipt);
           }}
         />
       )}
-      {wizard === 'farmer' && (
-        <FarmerWizard stationId={station.id} stationName={station.name} onClose={() => setWizard(null)} onSaved={() => setWizard(null)} />
+      {farmerWizardOpen && (
+        <FarmerWizard stationId={station.id} stationName={station.name} onClose={() => setFarmerWizardOpen(false)} onSaved={() => setFarmerWizardOpen(false)} />
       )}
+      {printReceipt && <GrnReceiptPrint receipt={printReceipt} onClose={() => setPrintReceipt(null)} />}
     </Stack>
   );
 }

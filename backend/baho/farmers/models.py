@@ -22,6 +22,16 @@ class Farmer(AuditedModel):
         "organization.Facility", on_delete=models.PROTECT, related_name="farmers"
     )
     location = location_field()
+    household_size = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Number of people in the farmer's household."
+    )
+    land_area_ha = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Coffee plot / land area, in hectares (optional).",
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta(AuditedModel.Meta):

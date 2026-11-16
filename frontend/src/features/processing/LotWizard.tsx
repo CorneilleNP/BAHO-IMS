@@ -164,5 +164,10 @@ export function LotWizard({ station, processes, onClose, onSaved }: { station: F
     onSaved(lot);
   }
 
-  return <FormWizard opened onClose={onClose} title={`New processing lot at ${station.name}`} steps={steps} review={review} onSubmit={save} submitLabel="Save lot" saving={submit.saving} error={submit.error} />;
+  // Closing without saving also clears the draft, so the next lot starts blank.
+  const close = () => {
+    draft.reset();
+    onClose();
+  };
+  return <FormWizard opened onClose={close} title={`New processing lot at ${station.name}`} steps={steps} review={review} onSubmit={save} submitLabel="Save lot" saving={submit.saving} error={submit.error} />;
 }

@@ -10,13 +10,14 @@ from baho.core.permissions import RoleAccess
 
 from ..models import ProcessingLot, ProcessType
 from ..selectors import lots_with_results, process_types_with_grades
-from ..services import create_lot, record_actuals, register_process
+from ..services import create_lot, record_actuals, register_process, update_process_type
 from .serializers import (
     LotActualsSerializer,
     LotCreateSerializer,
     ProcessingLotSerializer,
     ProcessTypeCreateSerializer,
     ProcessTypeSerializer,
+    ProcessTypeUpdateSerializer,
 )
 
 
@@ -26,14 +27,16 @@ class ProcessTypeViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Processes registered per station, with grades and current estimate ratios."""
+    """Processes registered per station, with grades and current estimate ratios.
+    Both the registration and its ratios can be corrected afterwards with PATCH."""
 
     queryset = ProcessType.objects.all()
     serializer_class = ProcessTypeSerializer
     permission_classes = [RoleAccess]
     read_roles = CWS_READ_ROLES
     write_roles = CWS_WRITE_ROLES
-    filterset_fields = ["facility", "is_active"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+    filterset_fields = ["facility", "process", "is_active"]
     pagination_class = None  # a station has a handful of processes
 
     def get_queryset(self):
@@ -47,6 +50,17 @@ class ProcessTypeViewSet(
         process = register_process(user=request.user, **data.validated_data)
         process = process_types_with_grades().get(pk=process.pk)
         return Response(ProcessTypeSerializer(process).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(request=ProcessTypeUpdateSerializer, responses=ProcessTypeSerializer)
+    def partial_update(self, request, pk=None):
+        process_type = self.get_object()
+        data = ProcessTypeUpdateSerializer(data=request.data, partial=True)
+        data.is_valid(raise_exception=True)
+        updated = update_process_type(
+            user=request.user, process_type=process_type, **data.validated_data
+        )
+        updated = process_types_with_grades().get(pk=updated.pk)
+        return Response(ProcessTypeSerializer(updated).data)
 
 
 class ProcessingLotViewSet(

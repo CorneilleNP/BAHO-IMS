@@ -226,6 +226,21 @@ class DryMillBatch(SourcedModel):
     )
     crop_year = models.ForeignKey("organization.CropYear", on_delete=models.PROTECT)
     processing_date = models.DateField()
+    process = models.ForeignKey(
+        "processing.Process",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="dry_mill_batches",
+        help_text="What this batch produced (one of the 5 processes).",
+    )
+    sub_process = models.ForeignKey(
+        "processing.SubProcess",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="dry_mill_batches",
+    )
     process_product = models.CharField(max_length=60)
     parch_input_kg = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.COMPLETED)

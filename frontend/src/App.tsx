@@ -1,6 +1,8 @@
 import { AppShell, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
 import {
   IconBuildingWarehouse,
+  IconChartBar,
+  IconClipboardList,
   IconCoffee,
   IconDroplet,
   IconLogout,
@@ -14,7 +16,9 @@ import { allowedSections, canAccessSection, sectionForPath, type Section } from 
 import { useAuth } from './lib/authContext';
 import { ProcessOnCwsPage } from './features/cws/ProcessOnCwsPage';
 import { CherryReceiptForm } from './features/reception/CherryReceiptForm';
+import { CwsDashboardPage } from './features/reception/CwsDashboardPage';
 import { ProcessingLotForm } from './features/processing/ProcessingLotForm';
+import { ProcessingLotReportPage } from './features/processing/ProcessingLotReportPage';
 import { SourceRegistryPage } from './features/drymill/SourceRegistryPage';
 import { ProcessesPage } from './features/drymill/ProcessesPage';
 import { StockUpdatePage } from './features/drymill/StockUpdatePage';
@@ -35,8 +39,10 @@ const navSections = [
   {
     label: 'CWS',
     items: [
+      { to: '/cws/dashboard', label: 'Dashboard', icon: IconChartBar },
       { to: '/reception', label: 'Cherry Reception', icon: IconCoffee },
       { to: '/processing', label: 'Processing Lots', icon: IconUsers },
+      { to: '/cws/lots-report', label: 'Lots Report', icon: IconClipboardList },
       { to: '/cws/process', label: 'Register Process', icon: IconUsers },
     ],
   },
@@ -90,7 +96,7 @@ function DashboardLandingPage() {
             <Text c="dimmed" size="sm" mb="lg">
               Field operations, cherry reception, process registration, and lot processing.
             </Text>
-            <Button onClick={() => navigate('/cws/process')} style={{ background: '#0b5b40', borderRadius: 12 }}>
+            <Button onClick={() => navigate('/cws/dashboard')} style={{ background: '#0b5b40', borderRadius: 12 }}>
               Open CWS
             </Button>
           </div>
@@ -229,8 +235,10 @@ function App() {
           <Route path="/drymill/processes" element={<ProcessesPage />} />
           <Route path="/drymill/processing" element={<ParchProcessingPage />} />
           <Route path="/drymill/export" element={<ExportUpdatesPage />} />
+          <Route path="/cws/dashboard" element={<CwsDashboardPage />} />
           <Route path="/reception" element={<CherryReceiptForm />} />
           <Route path="/processing" element={<ProcessingLotForm />} />
+          <Route path="/cws/lots-report" element={<ProcessingLotReportPage />} />
           <Route path="/cws/process" element={<ProcessOnCwsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

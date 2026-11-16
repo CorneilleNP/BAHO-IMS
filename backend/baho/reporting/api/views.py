@@ -4,10 +4,17 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from baho.core.access import DRYMILL_READ_ROLES
+from baho.core.access import CWS_READ_ROLES, DRYMILL_READ_ROLES, get_user_access
 from baho.core.permissions import RoleAccess
 
-from ..selectors import export_summary, processing_summary, stock_summary
+from ..selectors import (
+    cherry_summary,
+    export_summary,
+    lot_summary,
+    processing_summary,
+    recent_farmers,
+    stock_summary,
+)
 
 
 class _Filters(serializers.Serializer):
@@ -112,8 +119,65 @@ class ExportSummaryView(DryMillReport):
             export_summary(
                 client=str(f["client"]) if f.get("client") else "",
                 export_grade=str(f["export_grade"]) if f.get("export_grade") else "",
+                process=f["process"],
+                sub_process=f["sub_process"],
+                source=f["source"],
                 process_product=f["process_product"],
                 date_from=f.get("date_from"),
                 date_to=f.get("date_to"),
+            )
+        )
+
+
+class CwsSummaryView(APIView):
+    """Cherry Reception dashboard: total bought, good vs float, average cost per kg
+    (including transport & commission), quantity by station, and recently registered
+    farmers. Admin/HQ roles see every station; a CWS clerk sees their own."""
+
+    permission_classes = [RoleAccess]
+    read_roles = CWS_READ_ROLES
+    write_roles = ()
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("date_from", OpenApiTypes.DATE),
+            OpenApiParameter("date_to", OpenApiTypes.DATE),
+        ],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        f = _filters(request)
+        access = get_user_access(request.user)
+        facility_ids = None if access.is_global else access.facility_ids
+        summary = cherry_summary(
+            facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
+        )
+        summary["recent_farmers"] = recent_farmers(facility_ids=facility_ids)
+        return Response(summary)
+
+
+class LotSummaryView(APIView):
+    """Processing Lots dashboard: cherry input, estimated vs actual, out-turn %,
+    by grade / station / process. Admin/HQ roles see every station; a CWS clerk
+    sees their own."""
+
+    permission_classes = [RoleAccess]
+    read_roles = CWS_READ_ROLES
+    write_roles = ()
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("date_from", OpenApiTypes.DATE),
+            OpenApiParameter("date_to", OpenApiTypes.DATE),
+        ],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        f = _filters(request)
+        access = get_user_access(request.user)
+        facility_ids = None if access.is_global else access.facility_ids
+        return Response(
+            lot_summary(
+                facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
             )
         )

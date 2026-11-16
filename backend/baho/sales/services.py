@@ -11,38 +11,72 @@ from baho.core.numbering import next_sequence
 from .models import Client, ExportShipment, ExportShipmentLine
 
 
-def green_balance_by_grade() -> dict:
-    """Green coffee available per export grade: produced by live batches - shipped."""
+def green_balance(
+    *, process=None, sub_process=None, source_facility=None, source_supplier=None, export_grade=None
+) -> Decimal:
+    """Green coffee available for one process / sub-process / source / export-grade
+    selection: produced by live dry mill batches matching it, minus what's already
+    shipped against that same selection. Any of these can be left out to widen the
+    match. A batch pooled from several sources ("Mixed") only counts under no source
+    filter, since its output can't be attributed to one CWS or supplier."""
     from django.db.models import Sum
 
     from baho.drymill.models import DryMillOutput
 
-    produced = dict(
-        DryMillOutput.objects.filter(batch__is_deleted=False)
-        .values_list("export_grade")
-        .annotate(kg=Sum("qty_kg"))
-    )
-    shipped = dict(
-        ExportShipmentLine.objects.filter(shipment__is_deleted=False)
-        .values_list("export_grade")
-        .annotate(kg=Sum("qty_kg"))
-    )
-    return {
-        g: produced.get(g, Decimal("0")) - shipped.get(g, Decimal("0")) for g in produced | shipped
-    }
+    outputs = DryMillOutput.objects.filter(batch__is_deleted=False)
+    lines = ExportShipmentLine.objects.filter(shipment__is_deleted=False)
+    if process is not None:
+        outputs = outputs.filter(batch__process=process)
+        lines = lines.filter(process=process)
+    if sub_process is not None:
+        outputs = outputs.filter(batch__sub_process=sub_process)
+        lines = lines.filter(sub_process=sub_process)
+    if source_facility is not None:
+        outputs = outputs.filter(batch__source_facility=source_facility)
+        lines = lines.filter(source_facility=source_facility)
+    if source_supplier is not None:
+        outputs = outputs.filter(batch__source_supplier=source_supplier)
+        lines = lines.filter(source_supplier=source_supplier)
+    if export_grade is not None:
+        outputs = outputs.filter(export_grade=export_grade)
+        lines = lines.filter(export_grade=export_grade)
+    produced = outputs.aggregate(v=Sum("qty_kg"))["v"] or Decimal("0")
+    shipped = lines.aggregate(v=Sum("qty_kg"))["v"] or Decimal("0")
+    return produced - shipped
 
 
 def _check_green_stock(lines) -> None:
+    """Each line can only claim green coffee actually milled for its own
+    process / sub-process / source / grade selection - not just any stock of that grade."""
     wanted: dict = {}
     for line in lines:
-        grade = line["export_grade"]
-        wanted[grade] = wanted.get(grade, Decimal("0")) + Decimal(line["qty_kg"])
-    balance = green_balance_by_grade()
-    short = [
-        f"{grade.name}: {balance.get(grade.pk, Decimal('0'))} kg available, {kg} kg requested"
-        for grade, kg in wanted.items()
-        if kg > balance.get(grade.pk, Decimal("0"))
-    ]
+        key = (
+            line.get("process"),
+            line.get("sub_process"),
+            line.get("source_facility"),
+            line.get("source_supplier"),
+            line["export_grade"],
+        )
+        wanted[key] = wanted.get(key, Decimal("0")) + Decimal(line["qty_kg"])
+    short = []
+    for (process, sub_process, source_facility, source_supplier, grade), kg in wanted.items():
+        available = green_balance(
+            process=process,
+            sub_process=sub_process,
+            source_facility=source_facility,
+            source_supplier=source_supplier,
+            export_grade=grade,
+        )
+        if kg > available:
+            source = source_facility or source_supplier
+            parts = [
+                process and process.name,
+                sub_process and sub_process.name,
+                source and source.name,
+                grade.name,
+            ]
+            label = " / ".join(filter(None, parts))
+            short.append(f"{label}: {available} kg available, {kg} kg requested")
     if short:
         raise ValidationError({"lines": ["Not enough green coffee in stock. " + "; ".join(short)]})
 
@@ -59,7 +93,8 @@ def create_client(*, user, name, **fields) -> Client:
 def create_shipment(
     *, user, client, delivery_to_naeb_date, lines, status=ExportShipment.Status.PLANNED, notes=""
 ) -> ExportShipment:
-    """`lines`: [{"process_product": str, "export_grade": ExportGrade, "qty_kg": Decimal}]"""
+    """`lines`: [{"process"?, "sub_process"?, "process_product"?, "export_grade", "qty_kg"}].
+    `process_product` is a display label, auto-built from process/sub_process when left blank."""
     lines = [line for line in lines if line["qty_kg"] > 0]
     if not lines:
         raise ValidationError({"lines": ["Add at least one product line with a quantity."]})
@@ -77,11 +112,18 @@ def create_shipment(
         created_by=user,
         updated_by=user,
     )
+
+    def label(line) -> str:
+        given = (line.get("process_product") or "").strip()
+        if given:
+            return given
+        process, sub_process = line.get("process"), line.get("sub_process")
+        parts = [process and process.name, sub_process and sub_process.name]
+        return " ".join(filter(None, parts)).upper()
+
     ExportShipmentLine.objects.bulk_create(
         [
-            ExportShipmentLine(
-                shipment=shipment, **{**line, "process_product": line["process_product"].strip()}
-            )
+            ExportShipmentLine(shipment=shipment, **{**line, "process_product": label(line)})
             for line in lines
         ]
     )

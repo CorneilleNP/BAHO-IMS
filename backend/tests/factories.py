@@ -59,7 +59,7 @@ def stock_receipt(source_facility, net="1000", bags="0", quality="ACCEPTED", use
     )
 
 
-def produce_green(source_facility, grade_code="15PLUS", kg="1000", parch="2000"):
+def produce_green(source_facility, grade_code="15PLUS", kg="1000", parch="2000", process=None):
     """Mill a fresh receipt so `kg` of green coffee of a grade is in stock."""
     from decimal import Decimal
 
@@ -71,6 +71,7 @@ def produce_green(source_facility, grade_code="15PLUS", kg="1000", parch="2000")
         user=None,
         processing_date=receipt.arrival_date,
         process_product="FULLWASHED A1",
+        process=process,
         inputs=[{"receipt": receipt, "qty_kg": Decimal(parch)}],
         outputs=[{"export_grade": ExportGrade.objects.get(code=grade_code), "qty_kg": Decimal(kg)}],
     )

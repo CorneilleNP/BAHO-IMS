@@ -3,7 +3,7 @@
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Count, Q, Sum, Value
+from django.db.models import Count, F, Q, Sum, Value
 from django.db.models.functions import Coalesce, NullIf
 
 from baho.drymill.models import (
@@ -13,20 +13,47 @@ from baho.drymill.models import (
     ExportGrade,
     HqStockReceipt,
 )
-from baho.processing.models import Process
+from baho.farmers.models import Farmer
+from baho.organization.locations import location_label
+from baho.processing.models import LotGradeResult, Process, ProcessingLot
+from baho.reception.models import CherryReceipt, CherryReceiptLine
 from baho.sales.models import ExportShipmentLine
 
 ZERO = Decimal("0")
 
 
-def _live_outputs():
-    """Dry mill outputs of batches that are not voided."""
-    return DryMillOutput.objects.filter(batch__is_deleted=False)
+def _live_outputs(*, process: str = "", sub_process: str = "", source: str = ""):
+    """Dry mill outputs of batches that are not voided, optionally filtered to what
+    the batch produced (one of the 5 processes / its sub-process; "none" = unassigned)
+    and/or its source CWS or supplier (a batch pooled from several sources is "Mixed"
+    and matches no source filter)."""
+    qs = DryMillOutput.objects.filter(batch__is_deleted=False)
+    if process == "none":
+        qs = qs.filter(batch__process__isnull=True)
+    elif process:
+        qs = qs.filter(batch__process_id=process)
+    if sub_process:
+        qs = qs.filter(batch__sub_process_id=sub_process)
+    if source:
+        qs = qs.filter(
+            Q(batch__source_facility__code=source) | Q(batch__source_supplier__name=source)
+        )
+    return qs
 
 
-def _live_lines():
-    """Shipment lines of shipments that are not voided."""
-    return ExportShipmentLine.objects.filter(shipment__is_deleted=False)
+def _live_lines(*, process: str = "", sub_process: str = "", source: str = ""):
+    """Shipment lines of shipments that are not voided, optionally filtered to the
+    process / sub-process / source recorded on the line ("none" = unassigned process)."""
+    qs = ExportShipmentLine.objects.filter(shipment__is_deleted=False)
+    if process == "none":
+        qs = qs.filter(process__isnull=True)
+    elif process:
+        qs = qs.filter(process_id=process)
+    if sub_process:
+        qs = qs.filter(sub_process_id=sub_process)
+    if source:
+        qs = qs.filter(Q(source_facility__code=source) | Q(source_supplier__name=source))
+    return qs
 
 
 def _in_range(qs, field, date_from, date_to):
@@ -326,11 +353,19 @@ def export_summary(
     *,
     client: str = "",
     export_grade: str = "",
+    process: str = "",
+    sub_process: str = "",
+    source: str = "",
     process_product: str = "",
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> dict:
-    lines = _live_lines()
+    """Processed (dry mill output) vs exported (shipment lines) green coffee, with the
+    same process / sub-process / source / grade filters as the stock and processing
+    pages - so a shipment can never claim more than what was actually milled for that
+    selection, including which CWS or partner supplier it came from."""
+    catalog_filters = {"process": process, "sub_process": sub_process, "source": source}
+    lines = _live_lines(**catalog_filters)
     if client:
         lines = lines.filter(shipment__client_id=client)
     if export_grade:
@@ -348,11 +383,13 @@ def export_summary(
     }
     exported_all = {
         row["export_grade"]: row["kg"]
-        for row in _live_lines().values("export_grade").annotate(kg=Sum("qty_kg"))
+        for row in _live_lines(**catalog_filters).values("export_grade").annotate(kg=Sum("qty_kg"))
     }
     produced = {
         row["export_grade"]: row["kg"]
-        for row in _live_outputs().values("export_grade").annotate(kg=Sum("qty_kg"))
+        for row in _live_outputs(**catalog_filters)
+        .values("export_grade")
+        .annotate(kg=Sum("qty_kg"))
     }
 
     by_grade = []
@@ -369,19 +406,233 @@ def export_summary(
             }
         )
 
+    produced_by_process = {
+        row["batch__process"]: row["kg"]
+        for row in _live_outputs().values("batch__process").annotate(kg=Sum("qty_kg"))
+    }
+    exported_by_process = {
+        row["process"]: row["kg"]
+        for row in _live_lines().values("process").annotate(kg=Sum("qty_kg"))
+    }
+    by_process = [
+        {
+            "id": str(p.id),
+            "name": p.name,
+            "produced_kg": produced_by_process.get(p.id, ZERO),
+            "exported_kg": exported_by_process.get(p.id, ZERO),
+            "balance_kg": produced_by_process.get(p.id, ZERO) - exported_by_process.get(p.id, ZERO),
+        }
+        for p in Process.objects.filter(is_active=True)
+    ]
+
+    produced_by_source = {
+        row["label"]: row["kg"]
+        for row in _live_outputs()
+        .annotate(label=Coalesce("batch__source_facility__code", "batch__source_supplier__name"))
+        .values("label")
+        .annotate(kg=Sum("qty_kg"))
+        if row["label"]
+    }
+    exported_by_source = {
+        row["label"]: row["kg"]
+        for row in _live_lines()
+        .annotate(label=_source_label())
+        .values("label")
+        .annotate(kg=Sum("qty_kg"))
+        if row["label"]
+    }
+    by_source = [
+        {
+            "label": s,
+            "produced_kg": produced_by_source.get(s, ZERO),
+            "exported_kg": exported_by_source.get(s, ZERO),
+            "balance_kg": produced_by_source.get(s, ZERO) - exported_by_source.get(s, ZERO),
+        }
+        for s in sorted(set(produced_by_source) | set(exported_by_source))
+    ]
+
     produced_total = sum(produced.values(), ZERO)
     return {
         "exported_kg": sum(exported.values(), ZERO),
         "produced_kg": produced_total,
         "stock_balance_kg": produced_total - sum(exported_all.values(), ZERO),
         "by_grade": by_grade,
+        "by_process": by_process,
+        "by_source": by_source,
         "by_client": _ranked(
             lines.values("shipment__client__name").annotate(kg=Sum("qty_kg")),
             "shipment__client__name",
         ),
         "options": {
+            "processes": [
+                {"id": str(p.id), "name": p.name} for p in Process.objects.filter(is_active=True)
+            ],
+            "sources": sorted(produced_by_source),
             "process_products": sorted(
                 set(_live_lines().values_list("process_product", flat=True))
             ),
         },
+    }
+
+
+# --- Cherry reception (CWS) ---------------------------------------------------------
+
+
+def cherry_summary(
+    *,
+    facility_ids: frozenset | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict:
+    """Cherry Reception dashboard: total bought, good vs float, average cost per kg
+    (the full cost - cherry price + transport + commission - the same total the
+    farmer is paid), and quantity by station. `facility_ids=None` means every
+    station (admin/HQ); otherwise only those stations (a CWS clerk's own)."""
+    receipts = CherryReceipt.objects.all()
+    if facility_ids is not None:
+        receipts = receipts.filter(facility_id__in=facility_ids)
+    receipts = _in_range(receipts, "received_on", date_from, date_to)
+
+    full_amount = F("line_amount") + F("transport_cost") + F("commission")
+    lines = CherryReceiptLine.objects.filter(receipt__in=receipts)
+    by_grade = {
+        row["cherry_grade"]: row
+        for row in lines.values("cherry_grade").annotate(
+            kg=Coalesce(Sum("quantity_kg"), ZERO), amount=Coalesce(Sum(full_amount), ZERO)
+        )
+    }
+    good = by_grade.get("GOOD", {"kg": ZERO, "amount": ZERO})
+    float_ = by_grade.get("FLOAT", {"kg": ZERO, "amount": ZERO})
+    total_kg, total_amount = good["kg"] + float_["kg"], good["amount"] + float_["amount"]
+
+    by_station = sorted(
+        (
+            {
+                "label": row["facility__name"] or "—",
+                "kg": row["kg"],
+            }
+            for row in receipts.values("facility__name").annotate(
+                kg=Coalesce(Sum("lines__quantity_kg"), ZERO)
+            )
+        ),
+        key=lambda r: r["kg"],
+        reverse=True,
+    )
+
+    return {
+        "receipts": receipts.count(),
+        "total_kg": total_kg,
+        "total_amount": total_amount,
+        "good": {
+            "kg": good["kg"],
+            "amount": good["amount"],
+            "avg_cost_per_kg": _div(good["amount"], good["kg"]),
+        },
+        "float": {
+            "kg": float_["kg"],
+            "amount": float_["amount"],
+            "avg_cost_per_kg": _div(float_["amount"], float_["kg"]),
+        },
+        "by_station": by_station,
+    }
+
+
+def _div(amount: Decimal, kg: Decimal) -> Decimal:
+    if not kg:
+        return ZERO
+    return (Decimal(amount) / Decimal(kg)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def recent_farmers(*, facility_ids: frozenset | None = None, limit: int = 10) -> list[dict]:
+    """The most recently registered farmers (admin/HQ see every station's)."""
+    qs = Farmer.objects.select_related("home_facility", "location__parent__parent__parent__parent")
+    if facility_ids is not None:
+        qs = qs.filter(home_facility_id__in=facility_ids)
+    return [
+        {
+            "id": str(f.id),
+            "farmer_code": f.farmer_code,
+            "full_name": f.full_name,
+            "phone": f.phone,
+            "home_facility_name": f.home_facility.name,
+            "location_label": location_label(f.location),
+            "household_size": f.household_size,
+            "land_area_ha": f.land_area_ha,
+            "created_at": f.created_at,
+        }
+        for f in qs.order_by("-created_at")[:limit]
+    ]
+
+
+def lot_summary(
+    *,
+    facility_ids: frozenset | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict:
+    """Processing Lots dashboard: cherry input, estimated vs actual sorted kg,
+    out-turn %, by grade / station / process. Admin/HQ roles see every station's
+    lots; a CWS clerk sees their own (`facility_ids=None` means every station)."""
+    lots = ProcessingLot.objects.all()
+    if facility_ids is not None:
+        lots = lots.filter(facility_id__in=facility_ids)
+    lots = _in_range(lots, "lot_date", date_from, date_to)
+    results = LotGradeResult.objects.filter(lot__in=lots)
+
+    input_kg = lots.aggregate(v=Coalesce(Sum("cherry_input_kg"), ZERO))["v"]
+    result_totals = results.aggregate(
+        estimated_kg=Coalesce(Sum("estimated_kg"), ZERO),
+        actual_kg=Coalesce(Sum("actual_kg"), ZERO),
+    )
+    actual_kg = result_totals["actual_kg"]
+
+    by_grade = [
+        {
+            "code": row["grade__code"],
+            "name": row["grade__name"],
+            "estimated_kg": row["estimated_kg"],
+            "actual_kg": row["actual_kg"],
+        }
+        for row in results.values("grade__code", "grade__name")
+        .annotate(
+            estimated_kg=Coalesce(Sum("estimated_kg"), ZERO),
+            actual_kg=Coalesce(Sum("actual_kg"), ZERO),
+        )
+        .order_by("grade__display_order")
+    ]
+
+    by_station = _ranked(
+        lots.values("facility__name").annotate(kg=Coalesce(Sum("cherry_input_kg"), ZERO)),
+        "facility__name",
+    )
+    by_process = _ranked(
+        lots.annotate(label=Coalesce("process_type__process__name", Value("Not assigned")))
+        .values("label")
+        .annotate(kg=Coalesce(Sum("cherry_input_kg"), ZERO)),
+        "label",
+    )
+
+    # Actual sorted kg on the last lot date with actuals vs the day before it.
+    per_day = list(
+        results.filter(actual_kg__isnull=False)
+        .values("lot__lot_date")
+        .annotate(kg=Sum("actual_kg"))
+        .order_by("-lot__lot_date")[:2]
+    )
+    change = None
+    if len(per_day) == 2 and per_day[1]["kg"]:
+        change = _pct(per_day[0]["kg"] - per_day[1]["kg"], per_day[1]["kg"])
+
+    return {
+        "lots": lots.count(),
+        "open_lots": lots.filter(status=ProcessingLot.Status.IN_PROGRESS).count(),
+        "cherry_input_kg": input_kg,
+        "estimated_kg": result_totals["estimated_kg"],
+        "actual_kg": actual_kg,
+        "outturn_pct": _pct(actual_kg, input_kg),
+        "change_vs_previous_day_pct": change,
+        "last_day": per_day[0]["lot__lot_date"] if per_day else None,
+        "by_grade": by_grade,
+        "by_station": by_station,
+        "by_process": by_process,
     }

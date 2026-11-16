@@ -7,7 +7,8 @@ import { api } from '../../lib/api';
 import { kg, num, today } from '../../lib/format';
 import { sourceFields } from '../../lib/sources';
 import { toast } from '../../lib/toast';
-import type { HqStockReceipt } from '../../lib/types';
+import type { CatalogProcessGrade, HqStockReceipt } from '../../lib/types';
+import { useApi } from '../../lib/useApi';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
 
@@ -113,6 +114,11 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
   const bagsKg = form.weight_of_bags_kg !== '' ? num(form.weight_of_bags_kg) : num(form.number_of_bags) * num(form.tare_per_bag_kg);
   const pure = num(form.net_weight_kg) - bagsKg;
   const variance = form.delivery_note_qty_kg === '' ? null : num(form.net_weight_kg) - num(form.delivery_note_qty_kg);
+  // Received from a Baho CWS: the grade comes from what that CWS already registered
+  // for this process (no need to create others here). A partner supplier has no such
+  // registration, so dry mill can still type a new grade for them.
+  const isCwsSource = form.source?.startsWith('OWN_CWS:') ?? false;
+  const catalogGrades = useApi<CatalogProcessGrade[]>(form.process ? `/processing/catalog/processes/${form.process}/grades/` : null);
   const grades = Array.from(new Set([...knownGrades, ...COMMON_GRADES]));
 
   const steps = [
@@ -153,7 +159,20 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
             canAdd={canAddSubProcess}
             onChange={({ process, subProcess }) => draft.setValue((prev) => ({ ...prev, process, sub_process: subProcess }))}
           />
-          <Autocomplete label="Grade" data={grades} value={form.grade} onChange={(v) => set('grade')(v.toUpperCase())} />
+          {isCwsSource && form.process ? (
+            <Select
+              label="Grade"
+              placeholder={catalogGrades.loading ? 'Loading…' : catalogGrades.data?.length ? 'Choose a grade' : 'Not registered for this process yet'}
+              data={(catalogGrades.data ?? []).map((g) => ({ value: g.code, label: g.name }))}
+              value={form.grade || null}
+              onChange={(v) => set('grade')(v ?? '')}
+              disabled={!catalogGrades.data?.length}
+              searchable
+              description="From this CWS's registered grades"
+            />
+          ) : (
+            <Autocomplete label="Grade" data={grades} value={form.grade} onChange={(v) => set('grade')(v.toUpperCase())} description={form.process ? 'Partner supplier: type a new grade if needed' : undefined} />
+          )}
           <TextInput label="Lot ID" value={form.lot_reference} onChange={(e) => set('lot_reference')(e.currentTarget.value)} />
           {editing && receipt!.process_raw && (
             <Text size="xs" c="dimmed">
@@ -306,10 +325,18 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
     onSaved(saved);
   }
 
+  // Closing a new receipt without saving (Cancel, X, Esc) also clears its draft,
+  // so the next "Log new stock receipt" starts blank. Editing an existing receipt
+  // has no draft to clear (its key is null).
+  const close = () => {
+    if (!editing) draft.reset();
+    onClose();
+  };
+
   return (
     <FormWizard
       opened={opened}
-      onClose={onClose}
+      onClose={close}
       title={editing ? `Edit ${receipt!.receipt_number}` : 'Log new stock receipt'}
       steps={steps}
       review={review}

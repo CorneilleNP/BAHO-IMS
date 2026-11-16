@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button, Card, Group, NativeSelect, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Badge, Button, Card, Group, NativeSelect, Select, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconScale, IconShip } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
@@ -15,18 +15,22 @@ import { confirmAction } from '../../lib/confirm';
 import { fetchAllPages } from '../../lib/exportTable';
 import { ANY_DATE, kg, num, type DateRange } from '../../lib/format';
 import { toast } from '../../lib/toast';
-import type { Client, ExportGrade, ExportShipment, ExportSummary } from '../../lib/types';
+import type { CatalogSubProcess, Client, ExportGrade, ExportShipment, ExportSummary } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
 import { ShipmentWizard } from './ShipmentWizard';
 
 const statusColor: Record<ExportShipment['status'], string> = { PLANNED: 'gray', SHIPPED: 'blue', DELIVERED: 'teal' };
+const UNASSIGNED = 'none';
 
 export function ExportUpdatesPage() {
   const { user } = useAuth();
   const writable = canWrite(user, 'export');
   const [client, setClient] = useState('All');
   const [grade, setGrade] = useState('All');
+  const [process, setProcess] = useState('All');
+  const [subProcess, setSubProcess] = useState('All');
+  const [source, setSource] = useState<string | null>(null);
   const [product, setProduct] = useState('All');
   const [range, setRange] = useState<DateRange>(ANY_DATE);
   const [modalOpen, setModalOpen] = useState(false);
@@ -34,28 +38,40 @@ export function ExportUpdatesPage() {
 
   const clients = useList<Client>('/sales/clients/?page_size=500');
   const grades = useApi<ExportGrade[]>('/drymill/export-grades/');
-  const summary = useApi<ExportSummary>(
-    `/reporting/drymill/export/${query({ client, export_grade: grade, process_product: product, date_from: range[0], date_to: range[1] })}`,
+  const subProcesses = useApi<CatalogSubProcess[]>(
+    process !== 'All' && process !== UNASSIGNED ? `/processing/catalog/sub-processes/?process=${process}` : null,
   );
-  const shipmentsQuery = `/sales/shipments/${query({
+  const summary = useApi<ExportSummary>(
+    `/reporting/drymill/export/${query({
+      client,
+      export_grade: grade,
+      process: process !== 'All' ? process : null,
+      sub_process: subProcess !== 'All' ? subProcess : null,
+      source,
+      process_product: product,
+      date_from: range[0],
+      date_to: range[1],
+    })}`,
+  );
+  const listParams = {
     client,
     lines__export_grade: grade,
+    lines__process: process !== 'All' ? process : null,
+    lines__sub_process: subProcess !== 'All' ? subProcess : null,
+    source,
     lines__process_product: product,
     delivery_to_naeb_date__gte: range[0],
     delivery_to_naeb_date__lte: range[1],
-  })}`;
-  const shipments = useList<ExportShipment>(
-    `/sales/shipments/${query({
-      client,
-      lines__export_grade: grade,
-      lines__process_product: product,
-      delivery_to_naeb_date__gte: range[0],
-      delivery_to_naeb_date__lte: range[1],
-      page_size: 25,
-    })}`,
-  );
+  };
+  const shipmentsQuery = `/sales/shipments/${query(listParams)}`;
+  const shipments = useList<ExportShipment>(`/sales/shipments/${query({ ...listParams, page_size: 25 })}`);
   const s = summary.data;
   const kpiLoading = summary.loading && !s;
+
+  const setProcessFilter = (value: string) => {
+    setProcess(value);
+    setSubProcess('All');
+  };
 
   async function setStatus(shipment: ExportShipment, status: ExportShipment['status']) {
     const confirmed = await confirmAction({
@@ -82,8 +98,24 @@ export function ExportUpdatesPage() {
 
       <Group justify="flex-end" gap="md" align="flex-end">
         <NativeSelect label="Client" data={[{ value: 'All', label: 'All' }, ...clients.items.map((c) => ({ value: c.id, label: c.name }))]} value={client} onChange={(e) => setClient(e.currentTarget.value)} miw={170} />
-        <NativeSelect label="Process / product" data={['All', ...(s?.options.process_products ?? [])]} value={product} onChange={(e) => setProduct(e.currentTarget.value)} miw={180} />
+        <NativeSelect
+          label="Process"
+          data={[{ value: 'All', label: 'All' }, ...(s?.options.processes ?? []).map((p) => ({ value: p.id, label: p.name })), { value: UNASSIGNED, label: 'Not assigned' }]}
+          value={process}
+          onChange={(e) => setProcessFilter(e.currentTarget.value)}
+          miw={170}
+        />
+        <NativeSelect
+          label="Sub-process"
+          data={[{ value: 'All', label: 'All' }, ...(subProcesses.data ?? []).map((sp) => ({ value: sp.id, label: sp.name }))]}
+          value={subProcess}
+          onChange={(e) => setSubProcess(e.currentTarget.value)}
+          disabled={process === 'All' || process === UNASSIGNED}
+          miw={170}
+        />
+        <Select label="Source" placeholder="All" data={s?.options.sources ?? []} value={source} onChange={setSource} searchable clearable w={170} />
         <NativeSelect label="Grade" data={[{ value: 'All', label: 'All' }, ...(grades.data ?? []).map((g) => ({ value: g.id, label: g.name }))]} value={grade} onChange={(e) => setGrade(e.currentTarget.value)} miw={150} />
+        <NativeSelect label="Process / product" data={['All', ...(s?.options.process_products ?? [])]} value={product} onChange={(e) => setProduct(e.currentTarget.value)} miw={180} />
         <DateRangeFilter value={range} onChange={setRange} label="Delivery to NAEB" />
       </Group>
 
@@ -117,6 +149,54 @@ export function ExportUpdatesPage() {
         />
       </Card>
 
+      <Card withBorder radius="md" p="md">
+        <Text fw={600} mb="sm">By process: produced, exported, balance</Text>
+        <DataTable
+          rows={s?.by_process ?? []}
+          rowKey={(p) => p.id}
+          loading={summary.loading}
+          minWidth={560}
+          empty={{ title: 'No processes configured' }}
+          exportName="export-balance-by-process"
+          columns={[
+            { key: 'process', header: 'Process', render: (p) => <Text fw={600} size="sm">{p.name}</Text>, exportValue: (p) => p.name },
+            { key: 'made', header: 'Produced (kg)', align: 'right', render: (p) => kg(p.produced_kg), exportValue: (p) => p.produced_kg },
+            { key: 'shipped', header: 'Exported (kg)', align: 'right', render: (p) => kg(p.exported_kg), exportValue: (p) => p.exported_kg },
+            {
+              key: 'balance',
+              header: 'Balance (kg)',
+              exportValue: (p) => p.balance_kg,
+              align: 'right',
+              render: (p) => <Text size="sm" c={num(p.balance_kg) < 0 ? 'red' : undefined}>{kg(p.balance_kg)}</Text>,
+            },
+          ]}
+        />
+      </Card>
+
+      <Card withBorder radius="md" p="md">
+        <Text fw={600} mb="sm">By source: produced, exported, balance</Text>
+        <DataTable
+          rows={s?.by_source ?? []}
+          rowKey={(r) => r.label}
+          loading={summary.loading}
+          minWidth={560}
+          empty={{ title: 'No sourced green coffee yet' }}
+          exportName="export-balance-by-source"
+          columns={[
+            { key: 'source', header: 'CWS / supplier', render: (r) => <Text fw={600} size="sm">{r.label}</Text>, exportValue: (r) => r.label },
+            { key: 'made', header: 'Produced (kg)', align: 'right', render: (r) => kg(r.produced_kg), exportValue: (r) => r.produced_kg },
+            { key: 'shipped', header: 'Exported (kg)', align: 'right', render: (r) => kg(r.exported_kg), exportValue: (r) => r.exported_kg },
+            {
+              key: 'balance',
+              header: 'Balance (kg)',
+              exportValue: (r) => r.balance_kg,
+              align: 'right',
+              render: (r) => <Text size="sm" c={num(r.balance_kg) < 0 ? 'red' : undefined}>{kg(r.balance_kg)}</Text>,
+            },
+          ]}
+        />
+      </Card>
+
       <ChartCard title="Exported quantity by client" rows={s?.by_client ?? []} loading={kpiLoading} labelWidth={120} />
 
       <Card withBorder radius="md" p="md">
@@ -137,8 +217,8 @@ export function ExportUpdatesPage() {
             {
               key: 'products',
               header: 'Products',
-              exportValue: (sh) => sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${l.qty_kg}`).join('; '),
-              render: (sh) => <Text size="xs">{sh.lines.map((l) => `${l.process_product} / ${l.grade_name}: ${kg(l.qty_kg)} kg`).join(' • ')}</Text>,
+              exportValue: (sh) => sh.lines.map((l) => `${l.process_product}${l.source_name ? ` (${l.source_name})` : ''} / ${l.grade_name}: ${l.qty_kg}`).join('; '),
+              render: (sh) => <Text size="xs">{sh.lines.map((l) => `${l.process_product}${l.source_name ? ` (${l.source_name})` : ''} / ${l.grade_name}: ${kg(l.qty_kg)} kg`).join(' • ')}</Text>,
             },
             { key: 'qty', header: 'Qty (kg)', align: 'right', render: (sh) => kg(sh.total_qty_kg), exportValue: (sh) => sh.total_qty_kg },
             {
@@ -182,8 +262,6 @@ export function ExportUpdatesPage() {
         <ShipmentWizard
           clients={clients.items}
           grades={grades.data ?? []}
-          balances={Object.fromEntries((s?.by_grade ?? []).map((g) => [g.id, num(g.balance_kg)]))}
-          knownProducts={s?.options.process_products ?? []}
           onClientAdded={() => clients.reload()}
           onClose={() => setModalOpen(false)}
           onSaved={() => {
