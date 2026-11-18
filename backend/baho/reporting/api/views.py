@@ -14,6 +14,7 @@ from ..selectors import (
     processing_summary,
     recent_farmers,
     stock_summary,
+    transfer_reconciliation_summary,
 )
 
 
@@ -178,6 +179,33 @@ class LotSummaryView(APIView):
         facility_ids = None if access.is_global else access.facility_ids
         return Response(
             lot_summary(
+                facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
+            )
+        )
+
+
+class TransferSummaryView(APIView):
+    """CWS -> dry mill transfers dashboard: gross/bags/net weight and stock
+    loss/gain from the blind double-entry reconciliation. Admin/HQ roles see
+    every station; a CWS clerk sees their own."""
+
+    permission_classes = [RoleAccess]
+    read_roles = CWS_READ_ROLES + DRYMILL_READ_ROLES
+    write_roles = ()
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("date_from", OpenApiTypes.DATE),
+            OpenApiParameter("date_to", OpenApiTypes.DATE),
+        ],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        f = _filters(request)
+        access = get_user_access(request.user)
+        facility_ids = None if access.is_global else access.facility_ids
+        return Response(
+            transfer_reconciliation_summary(
                 facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
             )
         )

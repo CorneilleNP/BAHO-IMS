@@ -129,6 +129,16 @@ export interface LotSummary {
   by_grade: Array<{ code: string; name: string; estimated_kg: Decimal; actual_kg: Decimal }>;
   by_station: RankedKg[];
   by_process: RankedKg[];
+  /** Sorted at the station vs already delivered to HQ dry mill, by station/process/grade. Always all-time. */
+  cws_stock: Array<{
+    facility_name: string;
+    process_name: string;
+    sub_process_name: string;
+    grade: string;
+    processed_kg: Decimal;
+    delivered_kg: Decimal;
+    balance_kg: Decimal;
+  }>;
 }
 
 export type OriginType = 'OWN_CWS' | 'PARTNER_SUPPLIER';
@@ -453,6 +463,118 @@ export interface LocationPath {
   sector: LocationRef;
   cell: LocationRef;
   village: LocationRef;
+}
+
+export interface TransferWeighing {
+  id?: string;
+  bags: number;
+  weight_kg: Decimal;
+}
+
+/** One process/sub-process/grade on a delivery note (a truck can carry several). */
+export interface CwsTransferLine {
+  id: string;
+  process: string;
+  process_name: string;
+  sub_process: string | null;
+  sub_process_name: string;
+  grade: string;
+  grade_code: string;
+  moisture_content_pct: Decimal | null;
+  number_of_bags: number;
+  gross_weight_kg: Decimal;
+  weight_of_bags_kg: Decimal;
+  net_weight_kg: Decimal;
+  weighings: TransferWeighing[];
+}
+
+/** What dry mill sees for a line before it has confirmed its own weighing - none of the station's figures. */
+export interface CwsTransferLineBlind {
+  id: string;
+  process_name: string;
+  sub_process_name: string;
+  grade_code: string;
+}
+
+/** A CWS's own record of a delivery note it loaded for dry mill (blind to dry mill until confirmed). */
+export interface CwsTransfer {
+  id: string;
+  delivery_note_no: string;
+  facility: string;
+  facility_name: string;
+  transfer_date: string;
+  status: 'DRAFT' | 'SUBMITTED';
+  notes: string;
+  lines: CwsTransferLine[];
+  created_at: string;
+}
+
+export type VarianceStatus = 'MATCH' | 'STOCK_LOSS' | 'STOCK_GAIN';
+
+/** Station minus ours, for each figure - null until the receipt is locked. */
+export interface TransferLineVariance {
+  number_of_bags: number;
+  gross_weight_kg: Decimal;
+  weight_of_bags_kg: Decimal;
+  net_weight_kg: Decimal;
+}
+
+/** Dry mill's own, independent weighing of one of the CWS's lines. */
+export interface DryMillTransferReceiptLine {
+  id: string;
+  cws_line: CwsTransferLine | CwsTransferLineBlind;
+  moisture_content_pct: Decimal | null;
+  number_of_bags: number;
+  gross_weight_kg: Decimal;
+  weight_of_bags_kg: Decimal;
+  net_weight_kg: Decimal;
+  variance_status: VarianceStatus | '';
+  variance_kg: Decimal | null;
+  variance: TransferLineVariance | null;
+  stock_receipt_number: string;
+  weighings: TransferWeighing[];
+}
+
+/** HQ dry mill's own, independent record of the same delivery note, line by line.
+ * PENDING = still weighing, blind to the station's figures. LOCKED = weighing
+ * frozen and variance revealed, comment not yet written. CONFIRMED = final. */
+export interface DryMillTransferReceipt {
+  id: string;
+  delivery_note_no: string;
+  facility_name: string;
+  transfer_date: string;
+  status: 'PENDING' | 'LOCKED' | 'CONFIRMED';
+  comment: string;
+  is_locked: boolean;
+  confirmed_by_name: string;
+  confirmed_at: string | null;
+  unlocked_by_name: string;
+  unlocked_at: string | null;
+  lines: DryMillTransferReceiptLine[];
+  created_at: string;
+}
+
+/** Transfers dashboard: confirmed CWS -> dry mill reconciliation totals, one row per line. */
+export interface TransferSummary {
+  count: number;
+  gross_weight_kg: Decimal;
+  weight_of_bags_kg: Decimal;
+  net_weight_kg: Decimal;
+  stock_loss_kg: Decimal;
+  stock_gain_kg: Decimal;
+  rows: Array<{
+    delivery_note_no: string;
+    facility_name: string;
+    transfer_date: string;
+    process_name: string;
+    sub_process_name: string;
+    grade: string;
+    cws_net_kg: Decimal;
+    dry_mill_net_kg: Decimal;
+    variance_kg: Decimal;
+    variance_status: VarianceStatus;
+    comment: string;
+  }>;
 }
 
 /** Fields every located record (farmer, supplier, station) returns. */

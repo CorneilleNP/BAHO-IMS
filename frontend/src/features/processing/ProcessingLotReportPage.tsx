@@ -7,7 +7,7 @@ import { DateRangeFilter } from '../../components/DateRangeFilter';
 import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
-import { ANY_DATE, changeLabel, kgWhole, pct, type DateRange } from '../../lib/format';
+import { ANY_DATE, changeLabel, kgWhole, num, pct, type DateRange } from '../../lib/format';
 import type { LotSummary } from '../../lib/types';
 import { query, useApi } from '../../lib/useApi';
 
@@ -65,6 +65,35 @@ export function ProcessingLotReportPage() {
         <ChartCard title="Cherry input by station (kg)" rows={s?.by_station ?? []} loading={kpiLoading} color="coffee.6" />
         <ChartCard title="Cherry input by process (kg)" rows={s?.by_process ?? []} loading={kpiLoading} color="green.6" />
       </SimpleGrid>
+
+      <Card withBorder radius="md" p="md">
+        <Text fw={600}>Sorted at the station vs delivered to dry mill</Text>
+        <Text size="xs" c="dimmed" mb="sm">
+          What each station has sorted into parchment (all-time, not limited by the date filter above) minus what it has already sent to HQ dry mill as stock receipts - the balance is still sitting at the station.
+        </Text>
+        <DataTable
+          rows={s?.cws_stock ?? []}
+          rowKey={(r) => `${r.facility_name}-${r.process_name}-${r.sub_process_name}-${r.grade}`}
+          loading={summary.loading}
+          minWidth={760}
+          empty={{ title: 'Nothing sorted yet', hint: 'Record actuals on a lot to see it here.' }}
+          exportName="cws-stock-vs-delivered"
+          columns={[
+            { key: 'station', header: 'Station', render: (r) => <Text fw={600} size="sm">{r.facility_name}</Text> },
+            { key: 'process', header: 'Process / sub-process', render: (r) => (r.sub_process_name ? `${r.process_name} / ${r.sub_process_name}` : r.process_name) },
+            { key: 'grade', header: 'Grade', render: (r) => r.grade },
+            { key: 'processed', header: 'Processed (kg)', align: 'right', render: (r) => kgWhole(r.processed_kg), exportValue: (r) => r.processed_kg },
+            { key: 'delivered', header: 'Delivered to dry mill (kg)', align: 'right', render: (r) => kgWhole(r.delivered_kg), exportValue: (r) => r.delivered_kg },
+            {
+              key: 'balance',
+              header: 'Still at station (kg)',
+              align: 'right',
+              exportValue: (r) => r.balance_kg,
+              render: (r) => <Text size="sm" c={num(r.balance_kg) < 0 ? 'red' : undefined}>{kgWhole(r.balance_kg)}</Text>,
+            },
+          ]}
+        />
+      </Card>
     </Stack>
   );
 }

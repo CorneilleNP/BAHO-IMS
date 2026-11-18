@@ -8,24 +8,39 @@ import type { Facility, ProcessingLot, ProcessType } from '../../lib/types';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
 
+const NO_SUB = '__none__';
+
 interface LotForm {
-  process_type: string | null;
+  process: string | null;
+  sub_process: string | null;
   lot_number: string;
   lot_date: string;
   cherry_input_kg: number | '';
   actuals: Record<string, number | ''>;
 }
 
-const blank = (): LotForm => ({ process_type: null, lot_number: '', lot_date: today(), cherry_input_kg: '', actuals: {} });
+const blank = (): LotForm => ({ process: null, sub_process: null, lot_number: '', lot_date: today(), cherry_input_kg: '', actuals: {} });
 
-/** New processing lot: process → cherry input with live estimates → actuals (optional) → review. */
+/** New processing lot: process → sub-process → cherry input with live estimates → actuals (optional) → review. */
 export function LotWizard({ station, processes, onClose, onSaved }: { station: Facility; processes: ProcessType[]; onClose: () => void; onSaved: (lot: ProcessingLot) => void }) {
   const draft = useDraft<LotForm>(`lot-${station.id}`, blank);
   const form = draft.value;
   const submit = useSubmit();
-  const process = processes.find((p) => p.id === form.process_type) ?? null;
+  // This station's registered processes (one of the 5), then the sub-processes
+  // it registered under the chosen one - a lot can only use a combination this
+  // station has already registered with its estimate ratios.
+  const processOptions = Array.from(
+    new Map(processes.map((p) => [p.process, p.process_name])),
+    ([value, label]) => ({ value, label }),
+  );
+  const subOptions = processes
+    .filter((p) => p.process === form.process)
+    .map((p) => ({ value: p.sub_process_id ?? NO_SUB, label: p.sub_process || '(no sub-process)' }));
+  // Skip the extra click when there's only one sub-process registered for this process.
+  const subKey = form.sub_process ?? (subOptions.length === 1 ? subOptions[0].value : null) ?? NO_SUB;
+  const selectedType = processes.find((p) => p.process === form.process && (p.sub_process_id ?? NO_SUB) === subKey) ?? null;
   const input = num(form.cherry_input_kg);
-  const rows = (process?.grades ?? []).map((grade) => {
+  const rows = (selectedType?.grades ?? []).map((grade) => {
     const ratio = num(grade.ratio);
     const actual = form.actuals[grade.id];
     return {
@@ -75,7 +90,7 @@ export function LotWizard({ station, processes, onClose, onSaved }: { station: F
       <Table.Tfoot>
         <Table.Tr>
           <Table.Th>Total</Table.Th>
-          <Table.Th>{pct(num(process?.total_ratio) * 100, 2)}</Table.Th>
+          <Table.Th>{pct(num(selectedType?.total_ratio) * 100, 2)}</Table.Th>
           <Table.Th ta="right">{kg(estimatedTotal, 2)}</Table.Th>
           {withActuals && <Table.Th colSpan={2} />}
         </Table.Tr>
@@ -86,15 +101,24 @@ export function LotWizard({ station, processes, onClose, onSaved }: { station: F
   const steps = [
     {
       label: 'Process',
-      validate: () => (!form.process_type ? 'Choose the process.' : !form.lot_date ? 'Enter the lot date.' : null),
+      validate: () => (!form.process ? 'Choose the process.' : !selectedType ? 'Choose the sub-process.' : !form.lot_date ? 'Enter the lot date.' : null),
       content: processes.length ? (
-        <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>
           <Select
             label="Process"
             required
-            data={processes.map((p) => ({ value: p.id, label: p.sub_process ? `${p.name} / ${p.sub_process}` : p.name }))}
-            value={form.process_type}
-            onChange={(v) => draft.setValue((prev) => ({ ...prev, process_type: v, actuals: {} }))}
+            data={processOptions}
+            value={form.process}
+            onChange={(v) => draft.setValue((prev) => ({ ...prev, process: v, sub_process: null, actuals: {} }))}
+          />
+          <Select
+            label="Sub-process"
+            placeholder={form.process ? 'Choose' : 'Choose the process first'}
+            required={subOptions.length > 1}
+            data={subOptions}
+            value={form.process ? subKey : null}
+            onChange={(v) => draft.setValue((prev) => ({ ...prev, sub_process: v === NO_SUB ? null : v, actuals: {} }))}
+            disabled={!form.process}
           />
           <TextInput label="Lot code" placeholder="Automatic if empty" value={form.lot_number} onChange={(e) => draft.set('lot_number')(e.currentTarget.value)} />
           <TextInput label="Lot date" type="date" value={form.lot_date} onChange={(e) => draft.set('lot_date')(e.currentTarget.value)} />
@@ -130,7 +154,7 @@ export function LotWizard({ station, processes, onClose, onSaved }: { station: F
   const review = (
     <SimpleGrid cols={{ base: 2, sm: 4 }}>
       {[
-        ['Process', process ? (process.sub_process ? `${process.name} / ${process.sub_process}` : process.name) : ''],
+        ['Process', selectedType ? (selectedType.sub_process ? `${selectedType.name} / ${selectedType.sub_process}` : selectedType.name) : ''],
         ['Lot', form.lot_number || 'automatic'],
         ['Date', form.lot_date],
         ['Cherry input', `${kg(input)} kg`],
@@ -150,7 +174,7 @@ export function LotWizard({ station, processes, onClose, onSaved }: { station: F
       api<ProcessingLot>('/processing/lots/', {
         method: 'POST',
         body: {
-          process_type: form.process_type,
+          process_type: selectedType?.id,
           lot_number: form.lot_number.trim(),
           lot_date: form.lot_date,
           cherry_input_kg: input,

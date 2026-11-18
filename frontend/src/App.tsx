@@ -8,6 +8,7 @@ import {
   IconLogout,
   IconShip,
   IconSitemap,
+  IconTruckDelivery,
   IconUsers,
 } from '@tabler/icons-react';
 import { NavLink as RouterNavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -24,6 +25,7 @@ import { ProcessesPage } from './features/drymill/ProcessesPage';
 import { StockUpdatePage } from './features/drymill/StockUpdatePage';
 import { ParchProcessingPage } from './features/drymill/ParchProcessingPage';
 import { ExportUpdatesPage } from './features/drymill/ExportUpdatesPage';
+import { CwsTransfersPage } from './features/transfers/CwsTransfersPage';
 
 const navSections = [
   {
@@ -43,6 +45,7 @@ const navSections = [
       { to: '/reception', label: 'Cherry Reception', icon: IconCoffee },
       { to: '/processing', label: 'Processing Lots', icon: IconUsers },
       { to: '/cws/lots-report', label: 'Lots Report', icon: IconClipboardList },
+      { to: '/cws/transfers', label: 'Transfers to Dry Mill', icon: IconTruckDelivery },
       { to: '/cws/process', label: 'Register Process', icon: IconUsers },
     ],
   },
@@ -239,6 +242,7 @@ function App() {
           <Route path="/reception" element={<CherryReceiptForm />} />
           <Route path="/processing" element={<ProcessingLotForm />} />
           <Route path="/cws/lots-report" element={<ProcessingLotReportPage />} />
+          <Route path="/cws/transfers" element={<CwsTransfersPage />} />
           <Route path="/cws/process" element={<ProcessOnCwsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -635,4 +635,153 @@ def lot_summary(
         "by_grade": by_grade,
         "by_station": by_station,
         "by_process": by_process,
+        "cws_stock": cws_stock_balance(facility_ids=facility_ids),
+    }
+
+
+def cws_stock_balance(*, facility_ids: frozenset | None = None) -> list[dict]:
+    """How much sorted parchment each CWS has processed (actual kg from its
+    lots) vs how much it has already delivered to HQ dry mill (parchment stock
+    receipts sourced from it) - the balance still sitting at the station,
+    awaiting delivery. Always all-time: a stock position, not a period total,
+    same as the other stock balances in this app."""
+    lots = ProcessingLot.objects.all()
+    if facility_ids is not None:
+        lots = lots.filter(facility_id__in=facility_ids)
+    processed_rows = (
+        LotGradeResult.objects.filter(lot__in=lots, actual_kg__isnull=False)
+        .values(
+            "lot__facility_id",
+            "lot__facility__name",
+            "lot__process_type__process_id",
+            "lot__process_type__process__name",
+            "lot__process_type__sub_process_ref_id",
+            "lot__process_type__sub_process_ref__name",
+            "grade__code",
+        )
+        .annotate(kg=Coalesce(Sum("actual_kg"), ZERO))
+    )
+
+    receipts = HqStockReceipt.objects.filter(item_type="PARCH", source_facility__isnull=False)
+    if facility_ids is not None:
+        receipts = receipts.filter(source_facility_id__in=facility_ids)
+    delivered_rows = receipts.values(
+        "source_facility_id",
+        "source_facility__name",
+        "process_id",
+        "process__name",
+        "sub_process_id",
+        "sub_process__name",
+        "grade",
+    ).annotate(kg=Coalesce(Sum("pure_weight_kg"), ZERO))
+
+    def _key(facility_id, process_id, sub_process_id, grade_code) -> tuple:
+        return (facility_id, process_id, sub_process_id, (grade_code or "").strip().upper())
+
+    combined: dict[tuple, dict] = {}
+    for row in processed_rows:
+        key = _key(
+            row["lot__facility_id"],
+            row["lot__process_type__process_id"],
+            row["lot__process_type__sub_process_ref_id"],
+            row["grade__code"],
+        )
+        entry = combined.setdefault(
+            key,
+            {
+                "facility_name": row["lot__facility__name"],
+                "process_name": row["lot__process_type__process__name"] or "—",
+                "sub_process_name": row["lot__process_type__sub_process_ref__name"] or "",
+                "grade": key[3],
+                "processed_kg": ZERO,
+                "delivered_kg": ZERO,
+            },
+        )
+        entry["processed_kg"] += row["kg"]
+
+    for row in delivered_rows:
+        key = _key(
+            row["source_facility_id"], row["process_id"], row["sub_process_id"], row["grade"]
+        )
+        entry = combined.setdefault(
+            key,
+            {
+                "facility_name": row["source_facility__name"],
+                "process_name": row["process__name"] or "Not assigned",
+                "sub_process_name": row["sub_process__name"] or "",
+                "grade": key[3],
+                "processed_kg": ZERO,
+                "delivered_kg": ZERO,
+            },
+        )
+        entry["delivered_kg"] += row["kg"]
+
+    rows = []
+    for entry in combined.values():
+        entry["balance_kg"] = entry["processed_kg"] - entry["delivered_kg"]
+        rows.append(entry)
+    rows.sort(key=lambda r: (r["facility_name"], r["process_name"], r["grade"]))
+    return rows
+
+
+def transfer_reconciliation_summary(
+    *, facility_ids=None, date_from: date | None = None, date_to: date | None = None
+) -> dict:
+    """Confirmed CWS -> dry mill transfers: the blind double-entry reconciliation,
+    one row per process/sub-process/grade line (a delivery note can carry several).
+
+    Gross/bags/net are dry mill's own confirmed weighing (the stock that
+    actually exists). Stock loss is the total shortfall where the CWS
+    claimed more than dry mill weighed; stock gain is the opposite."""
+    from baho.transfers.models import DryMillTransferReceipt, DryMillTransferReceiptLine
+
+    qs = DryMillTransferReceiptLine.objects.filter(
+        receipt__status=DryMillTransferReceipt.Status.CONFIRMED
+    ).select_related(
+        "receipt", "cws_line", "cws_line__transfer", "cws_line__transfer__facility",
+        "cws_line__process", "cws_line__sub_process", "cws_line__grade",
+    )
+    if facility_ids is not None:
+        qs = qs.filter(cws_line__transfer__facility_id__in=facility_ids)
+    if date_from:
+        qs = qs.filter(cws_line__transfer__transfer_date__gte=date_from)
+    if date_to:
+        qs = qs.filter(cws_line__transfer__transfer_date__lte=date_to)
+
+    totals = qs.aggregate(
+        gross_weight_kg=Coalesce(Sum("gross_weight_kg"), ZERO),
+        weight_of_bags_kg=Coalesce(Sum("weight_of_bags_kg"), ZERO),
+        net_weight_kg=Coalesce(Sum("net_weight_kg"), ZERO),
+    )
+    loss_kg = qs.filter(variance_status="STOCK_LOSS").aggregate(
+        kg=Coalesce(Sum(F("cws_line__net_weight_kg") - F("net_weight_kg")), ZERO)
+    )["kg"]
+    gain_kg = qs.filter(variance_status="STOCK_GAIN").aggregate(
+        kg=Coalesce(Sum(F("net_weight_kg") - F("cws_line__net_weight_kg")), ZERO)
+    )["kg"]
+
+    rows = [
+        {
+            "delivery_note_no": r.cws_line.transfer.delivery_note_no,
+            "facility_name": r.cws_line.transfer.facility.name,
+            "transfer_date": r.cws_line.transfer.transfer_date,
+            "process_name": r.cws_line.process.name,
+            "sub_process_name": r.cws_line.sub_process.name if r.cws_line.sub_process else "",
+            "grade": r.cws_line.grade.code,
+            "cws_net_kg": r.cws_line.net_weight_kg,
+            "dry_mill_net_kg": r.net_weight_kg,
+            "variance_kg": r.cws_line.net_weight_kg - r.net_weight_kg,
+            "variance_status": r.variance_status,
+            "comment": r.receipt.comment,
+        }
+        for r in qs.order_by("-cws_line__transfer__transfer_date")
+    ]
+    return {
+        "count": qs.count(),
+        "gross_weight_kg": totals["gross_weight_kg"],
+        "weight_of_bags_kg": totals["weight_of_bags_kg"],
+        "net_weight_kg": totals["net_weight_kg"],
+        "stock_loss_kg": loss_kg,
+        "stock_gain_kg": gain_kg,
+        "rows": rows,
     }

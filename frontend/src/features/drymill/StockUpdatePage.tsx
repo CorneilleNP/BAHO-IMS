@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Badge, Button, Card, Group, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertTriangle, IconBuildingWarehouse, IconCheck, IconPackage, IconScale, IconSearch, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconBuildingWarehouse, IconCheck, IconDroplet, IconPackage, IconScale, IconSearch, IconTrendingDown, IconTrendingUp, IconWeight, IconX } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable, type Column } from '../../components/DataTable';
 import { DateRangeFilter } from '../../components/DateRangeFilter';
@@ -16,7 +16,7 @@ import { fetchAllPages } from '../../lib/exportTable';
 import { ANY_DATE, changeLabel, kg, kgWhole, type DateRange } from '../../lib/format';
 import { processingColor, processingLabel, qualityColor, qualityLabel } from '../../lib/stockLabels';
 import { toast } from '../../lib/toast';
-import type { CatalogSubProcess, CoffeeSource, HqStockReceipt, StockSummary, StockTotals } from '../../lib/types';
+import type { CatalogSubProcess, CoffeeSource, HqStockReceipt, StockSummary, StockTotals, TransferSummary } from '../../lib/types';
 import { errorText, query, useApi, useList } from '../../lib/useApi';
 import { StockReceiptDrawer } from './StockReceiptDrawer';
 import { StockReceiptWizard } from './StockReceiptWizard';
@@ -73,6 +73,9 @@ export function StockUpdatePage() {
       date_to: filters.range[1],
     })}`,
   );
+  const transferSummary = useApi<TransferSummary>(
+    `/reporting/transfers/${query({ date_from: filters.range[0], date_to: filters.range[1] })}`,
+  );
   const sources = useApi<CoffeeSource[]>('/drymill/sources/');
   const subProcesses = useApi<CatalogSubProcess[]>(
     filters.process && filters.process !== UNASSIGNED ? `/processing/catalog/sub-processes/?process=${filters.process}` : null,
@@ -100,6 +103,7 @@ export function StockUpdatePage() {
   const delta = changeLabel(s?.change_vs_previous_pct);
   const reloadAll = () => {
     summary.reload();
+    transferSummary.reload();
     receipts.reload();
     totals.reload();
   };
@@ -206,6 +210,47 @@ export function StockUpdatePage() {
         <KpiCard label={`Received on ${s?.date ?? ''} (kg net)`} value={kgWhole(s?.day.net_weight_kg)} icon={IconScale} delta={delta} accent="gray" loading={kpiLoading} />
         <KpiCard label={`Waiting for quality (${s?.awaiting_quality.receipts ?? 0})`} value={`${kgWhole(s?.awaiting_quality.net_weight_kg)} kg`} icon={IconAlertTriangle} accent="yellow" loading={kpiLoading} />
       </SimpleGrid>
+
+      {/* Blind double-entry reconciliation against each CWS's own delivery notes. */}
+      <Text fw={600} mt="xs">CWS transfers: confirmed vs the station's own numbers</Text>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }}>
+        <KpiCard label="Gross weight (kg)" value={kgWhole(transferSummary.data?.gross_weight_kg)} icon={IconScale} loading={transferSummary.loading && !transferSummary.data} />
+        <KpiCard label="Weight of bags (kg)" value={kgWhole(transferSummary.data?.weight_of_bags_kg)} icon={IconWeight} loading={transferSummary.loading && !transferSummary.data} accent="gray" />
+        <KpiCard label="Net weight (kg)" value={kgWhole(transferSummary.data?.net_weight_kg)} icon={IconDroplet} loading={transferSummary.loading && !transferSummary.data} accent="green" />
+        <KpiCard label="Stock loss (kg)" value={kgWhole(transferSummary.data?.stock_loss_kg)} icon={IconTrendingDown} loading={transferSummary.loading && !transferSummary.data} accent="red" />
+        <KpiCard label="Stock gain (kg)" value={kgWhole(transferSummary.data?.stock_gain_kg)} icon={IconTrendingUp} loading={transferSummary.loading && !transferSummary.data} accent="green" />
+      </SimpleGrid>
+      {(transferSummary.data?.rows.length ?? 0) > 0 && (
+        <Card withBorder radius="md" p="md">
+          <DataTable
+            rows={transferSummary.data!.rows}
+            rowKey={(r) => `${r.delivery_note_no}-${r.grade}`}
+            minWidth={900}
+            columns={[
+              { key: 'note', header: 'Delivery note', mono: true, render: (r) => r.delivery_note_no },
+              { key: 'station', header: 'Station', render: (r) => r.facility_name },
+              { key: 'grade', header: 'Process / grade', render: (r) => `${r.process_name}${r.sub_process_name ? ` / ${r.sub_process_name}` : ''} · ${r.grade}` },
+              { key: 'cws', header: "Station's net (kg)", align: 'right', render: (r) => kg(r.cws_net_kg), exportValue: (r) => r.cws_net_kg },
+              { key: 'dm', header: 'Our net (kg)', align: 'right', render: (r) => kg(r.dry_mill_net_kg), exportValue: (r) => r.dry_mill_net_kg },
+              {
+                key: 'variance',
+                header: 'Variance',
+                exportValue: (r) => r.variance_status,
+                render: (r) =>
+                  r.variance_status === 'MATCH' ? (
+                    '—'
+                  ) : (
+                    <Badge color={r.variance_status === 'STOCK_LOSS' ? 'red' : 'green'} variant="light">
+                      {r.variance_status === 'STOCK_LOSS' ? 'Stock loss' : 'Stock gain'} · {kg(Math.abs(Number(r.variance_kg)), 2)} kg
+                    </Badge>
+                  ),
+              },
+              { key: 'comment', header: 'Comment', render: (r) => r.comment || '—' },
+            ]}
+            exportName="cws-transfer-variance"
+          />
+        </Card>
+      )}
 
       <Card withBorder radius="md" p="md">
         <Group gap="sm" align="flex-end" wrap="wrap">

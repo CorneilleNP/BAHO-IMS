@@ -45,6 +45,7 @@ LOCAL_APPS = [
     "baho.processing",
     "baho.drymill",
     "baho.sales",
+    "baho.transfers",
     "baho.reporting",
     "baho.imports",
     "baho.notifications",

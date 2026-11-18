@@ -1,5 +1,6 @@
-import { Alert, Autocomplete, Badge, Card, Group, NumberInput, SegmentedControl, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
-import { IconLock } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { ActionIcon, Alert, Autocomplete, Badge, Button, Card, Group, NumberInput, SegmentedControl, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea } from '@mantine/core';
+import { IconLock, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
 import { FormWizard } from '../../components/FormWizard';
 import { ProcessPicker } from '../../components/ProcessPicker';
 import { SourceSelect } from '../../components/SourceSelect';
@@ -7,14 +8,20 @@ import { api } from '../../lib/api';
 import { kg, num, today } from '../../lib/format';
 import { sourceFields } from '../../lib/sources';
 import { toast } from '../../lib/toast';
-import type { CatalogProcessGrade, HqStockReceipt } from '../../lib/types';
-import { useApi } from '../../lib/useApi';
+import type { CatalogProcessGrade, DryMillTransferReceipt, HqStockReceipt } from '../../lib/types';
+import { errorText, query, useApi } from '../../lib/useApi';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
 
 const COMMON_GRADES = ['A1', 'A2', 'A3', 'A4', 'HG', 'HPC', 'FLOAT', 'HC', 'LG'];
 
 type Num = number | '';
+
+interface WeighingRow {
+  key: number;
+  bags: Num;
+  weight_kg: Num;
+}
 
 interface ReceiptForm {
   arrival_date: string;
@@ -40,6 +47,7 @@ interface ReceiptForm {
 }
 
 const toNum = (value: string | number | null | undefined): Num => (value === null || value === undefined || value === '' ? '' : Number(value));
+const newWeighing = (key = Date.now()): WeighingRow => ({ key, bags: '', weight_kg: '' });
 
 function blank(): ReceiptForm {
   return {
@@ -98,10 +106,17 @@ interface Props {
   receipt?: HqStockReceipt | null;
   knownGrades?: string[];
   canAddSubProcess?: boolean;
-  onSaved: (receipt: HqStockReceipt) => void;
+  onSaved: (receipt?: HqStockReceipt) => void;
 }
 
-/** Log or correct an HQ stock receipt: every column of the BAHO STOCK UPDATE sheet, in 4 steps + review. */
+/**
+ * Log or correct an HQ stock receipt. A partner supplier is recorded exactly
+ * as before (every column of the BAHO STOCK UPDATE sheet). A Baho CWS is
+ * different: that station already recorded its own delivery note, so here
+ * we only link that delivery note number and weigh it independently - the
+ * process/sub-process/grade and the station's own figures are never
+ * re-typed, and stay hidden until this weighing is confirmed.
+ */
 export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [], canAddSubProcess = false, onSaved }: Props) {
   const editing = !!receipt;
   // New receipts keep a draft; edits start from the receipt (render with key={receipt.id}).
@@ -118,35 +133,85 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
   // for this process (no need to create others here). A partner supplier has no such
   // registration, so dry mill can still type a new grade for them.
   const isCwsSource = form.source?.startsWith('OWN_CWS:') ?? false;
+  // Brand-new receipts from a CWS go through the delivery-note link + blind weighing
+  // below instead of the manual form; editing an existing receipt never does.
+  const cwsMode = !editing && isCwsSource;
   const catalogGrades = useApi<CatalogProcessGrade[]>(form.process ? `/processing/catalog/processes/${form.process}/grades/` : null);
   const grades = Array.from(new Set([...knownGrades, ...COMMON_GRADES]));
 
-  const steps = [
-    {
-      label: 'Source & arrival',
-      description: 'Where it came from',
-      validate: () => (!form.source ? 'Choose the CWS or supplier the coffee came from.' : !form.arrival_date ? 'Enter the arrival date.' : null),
-      content: (
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          <SourceSelect value={form.source} onChange={set('source')} required />
-          <TextInput label="Arrival date" type="date" required value={form.arrival_date} onChange={(e) => set('arrival_date')(e.currentTarget.value)} />
-          <div>
-            <Text size="sm" fw={500} mb={4}>Type</Text>
-            <SegmentedControl
-              value={form.item_type}
-              onChange={(v) => set('item_type')(v as ReceiptForm['item_type'])}
-              data={[
-                { value: 'PARCH', label: 'Parchment' },
-                { value: 'GREEN', label: 'Green' },
-              ]}
-            />
-          </div>
-          <Text size="xs" c="dimmed" mt={{ sm: 28 }}>
-            Origin (Baho / Partner) and crop year are set automatically from the source and date.
-          </Text>
-        </SimpleGrid>
-      ),
-    },
+  // --- CWS delivery-note linking (ephemeral: not part of the manual-form draft) ---
+  const [deliveryNoteNo, setDeliveryNoteNo] = useState('');
+  const [looking, setLooking] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [dmReceipt, setDmReceipt] = useState<DryMillTransferReceipt | null>(null);
+  const [lineInputs, setLineInputs] = useState<Record<string, { weighings: WeighingRow[]; weight_of_bags_kg: Num }>>({});
+  const [comment, setComment] = useState('');
+  const [locking, setLocking] = useState(false);
+  const [lockError, setLockError] = useState('');
+  const locked = dmReceipt ? dmReceipt.status !== 'PENDING' : false;
+
+  // Changing the source clears any delivery note already linked, so a stale lookup never carries over.
+  useEffect(() => {
+    setDmReceipt(null);
+    setLineInputs({});
+    setDeliveryNoteNo('');
+    setLookupError('');
+    setComment('');
+    setLockError('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.source]);
+
+  async function lookupDeliveryNote() {
+    const note = deliveryNoteNo.trim();
+    if (!note) return;
+    setLooking(true);
+    setLookupError('');
+    try {
+      const found = await api<DryMillTransferReceipt>(`/transfers/dry-mill/lookup/${query({ delivery_note_no: note })}`);
+      setDmReceipt(found);
+      setLineInputs(Object.fromEntries(found.lines.map((l) => [l.id, { weighings: [newWeighing(1)], weight_of_bags_kg: '' as Num }])));
+    } catch (err) {
+      setLookupError(errorText(err));
+    } finally {
+      setLooking(false);
+    }
+  }
+
+  async function lockCws() {
+    if (!dmReceipt) return;
+    setLocking(true);
+    setLockError('');
+    try {
+      for (const line of dmReceipt.lines) {
+        const t = lineTotals(line.id);
+        const input = lineInputs[line.id];
+        await api(`/transfers/dry-mill/${dmReceipt.id}/lines/${line.id}/`, {
+          method: 'PATCH',
+          body: {
+            weighings: t.rows.map((w) => ({ bags: num(w.bags), weight_kg: num(w.weight_kg) })),
+            weight_of_bags_kg: input?.weight_of_bags_kg === '' || input?.weight_of_bags_kg === undefined ? null : input.weight_of_bags_kg,
+          },
+        });
+      }
+      const result = await api<DryMillTransferReceipt>(`/transfers/dry-mill/${dmReceipt.id}/lock/`, { method: 'POST' });
+      setDmReceipt(result);
+    } catch (err) {
+      setLockError(errorText(err));
+    } finally {
+      setLocking(false);
+    }
+  }
+
+  function lineTotals(lineId: string) {
+    const input = lineInputs[lineId];
+    const rows = (input?.weighings ?? []).filter((w) => num(w.bags) > 0 && num(w.weight_kg) > 0);
+    const bags = rows.reduce((sum, w) => sum + num(w.bags), 0);
+    const gross = rows.reduce((sum, w) => sum + num(w.weight_kg), 0);
+    const bagsKgForLine = input?.weight_of_bags_kg === '' || input?.weight_of_bags_kg === undefined ? 0 : num(input.weight_of_bags_kg);
+    return { rows, bags, gross, bagsKg: bagsKgForLine, net: gross - bagsKgForLine };
+  }
+
+  const normalSteps = [
     {
       label: 'Coffee',
       description: 'Process & grade',
@@ -159,20 +224,7 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
             canAdd={canAddSubProcess}
             onChange={({ process, subProcess }) => draft.setValue((prev) => ({ ...prev, process, sub_process: subProcess }))}
           />
-          {isCwsSource && form.process ? (
-            <Select
-              label="Grade"
-              placeholder={catalogGrades.loading ? 'Loading…' : catalogGrades.data?.length ? 'Choose a grade' : 'Not registered for this process yet'}
-              data={(catalogGrades.data ?? []).map((g) => ({ value: g.code, label: g.name }))}
-              value={form.grade || null}
-              onChange={(v) => set('grade')(v ?? '')}
-              disabled={!catalogGrades.data?.length}
-              searchable
-              description="From this CWS's registered grades"
-            />
-          ) : (
-            <Autocomplete label="Grade" data={grades} value={form.grade} onChange={(v) => set('grade')(v.toUpperCase())} description={form.process ? 'Partner supplier: type a new grade if needed' : undefined} />
-          )}
+          <Autocomplete label="Grade" data={grades} value={form.grade} onChange={(v) => set('grade')(v.toUpperCase())} description={form.process ? 'Type a new grade if needed' : undefined} />
           <TextInput label="Lot ID" value={form.lot_reference} onChange={(e) => set('lot_reference')(e.currentTarget.value)} />
           {editing && receipt!.process_raw && (
             <Text size="xs" c="dimmed">
@@ -262,7 +314,187 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
     },
   ];
 
-  const review = (
+  const cwsSteps = [
+    {
+      label: 'Delivery note',
+      description: 'Link the station’s own record',
+      validate: () => (!dmReceipt ? 'Look up the delivery note first.' : null),
+      content: (
+        <Stack gap="sm">
+          <Text size="sm" c="dimmed">
+            The station already recorded this delivery’s process, sub-process and grades when it registered the transfer - look it up by its delivery note number instead of re-typing them.
+          </Text>
+          <Group align="flex-end">
+            <TextInput label="Delivery note no." value={deliveryNoteNo} onChange={(e) => setDeliveryNoteNo(e.currentTarget.value)} onKeyDown={(e) => e.key === 'Enter' && lookupDeliveryNote()} w={260} data-autofocus />
+            <Button leftSection={<IconSearch size={16} />} onClick={lookupDeliveryNote} loading={looking}>Find</Button>
+          </Group>
+          {lookupError && <Alert color="red" variant="light">{lookupError}</Alert>}
+          {dmReceipt && (
+            <Alert color="blue" variant="light">
+              Found: {dmReceipt.facility_name}, {dmReceipt.lines.length} line{dmReceipt.lines.length === 1 ? '' : 's'} to weigh. The station's own figures stay hidden until you confirm.
+            </Alert>
+          )}
+        </Stack>
+      ),
+    },
+    {
+      label: 'Weighing',
+      description: locked ? 'Variance revealed' : 'Blind, line by line',
+      validate: () => {
+        if (!dmReceipt) return 'Look up the delivery note first.';
+        if (!locked) return 'Lock the weighing and review the variance before continuing.';
+        return null;
+      },
+      content: !dmReceipt ? (
+        <Text size="sm" c="dimmed">Look up a delivery note first.</Text>
+      ) : locked ? (
+        <Stack gap="md">
+          <Alert color="blue" variant="light">
+            Weighing locked - these numbers can no longer be changed here (an admin can unlock them if needed).
+          </Alert>
+          {dmReceipt.lines.map((line) => {
+            const cws = line.cws_line as { process_name?: string; sub_process_name?: string; grade_code?: string; number_of_bags?: number; gross_weight_kg?: string; weight_of_bags_kg?: string; net_weight_kg?: string };
+            return (
+              <Card withBorder radius="md" p="sm" key={line.id}>
+                <Group justify="space-between" mb="xs">
+                  <Text fw={600} size="sm">
+                    {cws.process_name}{cws.sub_process_name ? ` / ${cws.sub_process_name}` : ''} · {cws.grade_code}
+                  </Text>
+                  {line.variance_status && line.variance_status !== 'MATCH' && (
+                    <Badge color={line.variance_status === 'STOCK_LOSS' ? 'red' : 'green'} variant="light">
+                      {line.variance_status === 'STOCK_LOSS' ? 'Stock loss' : 'Stock gain'}
+                    </Badge>
+                  )}
+                </Group>
+                <Table withTableBorder>
+                  <Table.Thead>
+                    <Table.Tr><Table.Th /><Table.Th ta="right">Bags</Table.Th><Table.Th ta="right">Gross (kg)</Table.Th><Table.Th ta="right">Bag weight (kg)</Table.Th><Table.Th ta="right">Net (kg)</Table.Th></Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    <Table.Tr>
+                      <Table.Td c="dimmed">Station recorded</Table.Td>
+                      <Table.Td ta="right">{cws.number_of_bags}</Table.Td>
+                      <Table.Td ta="right">{kg(cws.gross_weight_kg, 2)}</Table.Td>
+                      <Table.Td ta="right">{kg(cws.weight_of_bags_kg, 2)}</Table.Td>
+                      <Table.Td ta="right">{kg(cws.net_weight_kg, 2)}</Table.Td>
+                    </Table.Tr>
+                    <Table.Tr>
+                      <Table.Td c="dimmed">We weighed</Table.Td>
+                      <Table.Td ta="right">{line.number_of_bags}</Table.Td>
+                      <Table.Td ta="right">{kg(line.gross_weight_kg, 2)}</Table.Td>
+                      <Table.Td ta="right">{kg(line.weight_of_bags_kg, 2)}</Table.Td>
+                      <Table.Td ta="right">{kg(line.net_weight_kg, 2)}</Table.Td>
+                    </Table.Tr>
+                    <Table.Tr>
+                      <Table.Td fw={600}>Difference</Table.Td>
+                      <Table.Td ta="right" fw={600} c={line.variance?.number_of_bags ? 'red' : undefined}>{line.variance?.number_of_bags ?? 0}</Table.Td>
+                      <Table.Td ta="right" fw={600} c={num(line.variance?.gross_weight_kg) ? 'red' : undefined}>{kg(line.variance?.gross_weight_kg, 2)}</Table.Td>
+                      <Table.Td ta="right" fw={600} c={num(line.variance?.weight_of_bags_kg) ? 'red' : undefined}>{kg(line.variance?.weight_of_bags_kg, 2)}</Table.Td>
+                      <Table.Td ta="right" fw={600} c={num(line.variance?.net_weight_kg) ? 'red' : undefined}>{kg(line.variance?.net_weight_kg, 2)}</Table.Td>
+                    </Table.Tr>
+                  </Table.Tbody>
+                </Table>
+              </Card>
+            );
+          })}
+          <Textarea
+            label="Comment"
+            description="Explain any difference above - bags, gross, bag weight or net. Required only if something doesn't match."
+            value={comment}
+            onChange={(e) => setComment(e.currentTarget.value)}
+            minRows={2}
+          />
+        </Stack>
+      ) : (
+        <Stack gap="md">
+          {dmReceipt.lines.map((line, i) => {
+            const cws = line.cws_line as { process_name?: string; sub_process_name?: string; grade_code?: string };
+            const input = lineInputs[line.id] ?? { weighings: [newWeighing(1)], weight_of_bags_kg: '' as Num };
+            const t = lineTotals(line.id);
+            const setLine = (patch: Partial<{ weighings: WeighingRow[]; weight_of_bags_kg: Num }>) =>
+              setLineInputs((prev) => ({ ...prev, [line.id]: { ...input, ...patch } }));
+            return (
+              <Card withBorder radius="md" p="sm" key={line.id}>
+                <Text fw={600} size="sm" mb="xs">
+                  Line {i + 1}: {cws.process_name}{cws.sub_process_name ? ` / ${cws.sub_process_name}` : ''} · {cws.grade_code}
+                </Text>
+                <Table withTableBorder>
+                  <Table.Thead>
+                    <Table.Tr><Table.Th>Weighing</Table.Th><Table.Th>Bags</Table.Th><Table.Th>Weight (kg)</Table.Th><Table.Th /></Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {input.weighings.map((w, wi) => (
+                      <Table.Tr key={w.key}>
+                        <Table.Td>{wi + 1}</Table.Td>
+                        <Table.Td>
+                          <NumberInput aria-label={`Bags ${wi + 1}`} value={w.bags} onChange={(v) => setLine({ weighings: input.weighings.map((x) => (x.key === w.key ? { ...x, bags: v === '' ? '' : Number(v) } : x)) })} min={0} allowDecimal={false} hideControls maw={110} />
+                        </Table.Td>
+                        <Table.Td>
+                          <NumberInput aria-label={`Weight ${wi + 1}`} value={w.weight_kg} onChange={(v) => setLine({ weighings: input.weighings.map((x) => (x.key === w.key ? { ...x, weight_kg: v === '' ? '' : Number(v) } : x)) })} min={0} hideControls thousandSeparator="," maw={140} />
+                        </Table.Td>
+                        <Table.Td>
+                          {input.weighings.length > 1 && (
+                            <ActionIcon variant="subtle" color="red" aria-label="Remove weighing" onClick={() => setLine({ weighings: input.weighings.filter((x) => x.key !== w.key) })}>
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+                <Group justify="space-between" mt="xs" wrap="wrap">
+                  <Button size="compact-sm" variant="subtle" leftSection={<IconPlus size={14} />} onClick={() => setLine({ weighings: [...input.weighings, newWeighing(Date.now())] })}>
+                    Add another weighing
+                  </Button>
+                  <NumberInput label="Weight of bags (kg)" value={input.weight_of_bags_kg} onChange={(v) => setLine({ weight_of_bags_kg: v === '' ? '' : Number(v) })} min={0} hideControls maw={160} />
+                </Group>
+                <Group gap="lg" mt="sm">
+                  <Figure label="Bags" value={String(t.bags)} />
+                  <Figure label="Gross weight" value={`${kg(t.gross, 2)} kg`} />
+                  <Figure label="Net weight" value={`${kg(t.net, 2)} kg`} />
+                </Group>
+              </Card>
+            );
+          })}
+          {lockError && <Alert color="red" variant="light">{lockError}</Alert>}
+          <Group justify="flex-end">
+            <Button leftSection={<IconLock size={16} />} onClick={lockCws} loading={locking}>Lock & review variance</Button>
+          </Group>
+        </Stack>
+      ),
+    },
+  ];
+
+  const steps = cwsMode ? cwsSteps : normalSteps;
+
+  const review = cwsMode ? (
+    <Stack gap="sm">
+      <Text size="sm" c="dimmed">Submitting will save this comment and create the matching stock receipt(s). The weighing is already locked and cannot be changed here afterwards.</Text>
+      {dmReceipt && (
+        <Table withTableBorder>
+          <Table.Thead>
+            <Table.Tr><Table.Th>Line</Table.Th><Table.Th ta="right">Bags</Table.Th><Table.Th ta="right">Gross (kg)</Table.Th><Table.Th ta="right">Net (kg)</Table.Th><Table.Th>Variance</Table.Th></Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {dmReceipt.lines.map((line) => {
+              const cws = line.cws_line as { grade_code?: string };
+              return (
+                <Table.Tr key={line.id}>
+                  <Table.Td>{cws.grade_code}</Table.Td>
+                  <Table.Td ta="right">{line.number_of_bags}</Table.Td>
+                  <Table.Td ta="right">{kg(line.gross_weight_kg, 2)}</Table.Td>
+                  <Table.Td ta="right">{kg(line.net_weight_kg, 2)}</Table.Td>
+                  <Table.Td>{line.variance_status === 'MATCH' || !line.variance_status ? '—' : line.variance_status === 'STOCK_LOSS' ? 'Stock loss' : 'Stock gain'}</Table.Td>
+                </Table.Tr>
+              );
+            })}
+          </Table.Tbody>
+        </Table>
+      )}
+      {comment && <Text size="sm"><strong>Comment:</strong> {comment}</Text>}
+    </Stack>
+  ) : (
     <Stack gap="xs">
       <Group gap="xs">
         <Badge variant="light">{form.item_type === 'PARCH' ? 'Parchment' : 'Green'}</Badge>
@@ -282,7 +514,28 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
     </Stack>
   );
 
+  async function saveCws() {
+    if (!dmReceipt) return;
+    // The weighing is already locked (see "Lock & review variance" above) - this
+    // step only attaches the comment and creates the matching stock receipt(s).
+    const result = await submit.run(() =>
+      api<DryMillTransferReceipt>(`/transfers/dry-mill/${dmReceipt.id}/submit/`, {
+        method: 'POST',
+        body: { comment, arrival_date: form.arrival_date },
+      }),
+    );
+    if (!result) return;
+    const loss = result.lines.filter((l) => l.variance_status === 'STOCK_LOSS').length;
+    const gain = result.lines.filter((l) => l.variance_status === 'STOCK_GAIN').length;
+    const note = loss || gain ? ` (${[loss && `${loss} loss`, gain && `${gain} gain`].filter(Boolean).join(', ')})` : ' - matched';
+    toast.success(`${result.delivery_note_no} confirmed: ${result.lines.length} line${result.lines.length === 1 ? '' : 's'}${note}.`, 'Receipt confirmed');
+    draft.reset();
+    setDmReceipt(null);
+    onSaved();
+  }
+
   async function save() {
+    if (cwsMode) return saveCws();
     const origin = sourceFields(form.source);
     const body: Record<string, unknown> = {
       arrival_date: form.arrival_date,
@@ -337,11 +590,42 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
     <FormWizard
       opened={opened}
       onClose={close}
-      title={editing ? `Edit ${receipt!.receipt_number}` : 'Log new stock receipt'}
-      steps={steps}
+      title={editing ? `Edit ${receipt!.receipt_number}` : cwsMode ? 'Receive delivery from CWS' : 'Log new stock receipt'}
+      steps={[
+        {
+          label: 'Source & arrival',
+          description: 'Where it came from',
+          validate: () => (!form.source ? 'Choose the CWS or supplier the coffee came from.' : !form.arrival_date ? 'Enter the arrival date.' : null),
+          content: (
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <SourceSelect value={form.source} onChange={set('source')} required />
+              <TextInput label="Arrival date" type="date" required value={form.arrival_date} onChange={(e) => set('arrival_date')(e.currentTarget.value)} />
+              {!cwsMode && (
+                <div>
+                  <Text size="sm" fw={500} mb={4}>Type</Text>
+                  <SegmentedControl
+                    value={form.item_type}
+                    onChange={(v) => set('item_type')(v as ReceiptForm['item_type'])}
+                    data={[
+                      { value: 'PARCH', label: 'Parchment' },
+                      { value: 'GREEN', label: 'Green' },
+                    ]}
+                  />
+                </div>
+              )}
+              <Text size="xs" c="dimmed" mt={{ sm: 28 }}>
+                {cwsMode
+                  ? 'A Baho CWS delivery is always parchment. Its process, sub-process and grades come from the delivery note you link next.'
+                  : 'Origin (Baho / Partner) and crop year are set automatically from the source and date.'}
+              </Text>
+            </SimpleGrid>
+          ),
+        },
+        ...steps,
+      ]}
       review={review}
       onSubmit={save}
-      submitLabel={editing ? 'Save changes' : 'Save receipt'}
+      submitLabel={editing ? 'Save changes' : cwsMode ? 'Submit' : 'Save receipt'}
       saving={submit.saving}
       error={submit.error}
     />

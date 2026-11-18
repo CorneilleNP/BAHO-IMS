@@ -3,6 +3,7 @@ from decimal import Decimal
 import pytest
 
 from baho.processing.models import Process
+from tests.factories import stock_receipt
 from tests.helpers import login
 
 pytestmark = pytest.mark.django_db
@@ -91,3 +92,29 @@ def test_admin_sees_every_station_and_process(
     assert Decimal(res.data["cherry_input_kg"]) == Decimal("160")
     assert {row["label"] for row in res.data["by_station"]} == {"Gitoki CWS", "Bugoyi CWS"}
     assert {row["label"] for row in res.data["by_process"]} == {"Fully Washed", "Normal Natural"}
+
+
+def test_cws_stock_shows_processed_vs_delivered_to_dry_mill(api, gitoki_clerk, gitoki, hq):
+    """Sorted at the station (actual kg) minus what's already reached HQ dry mill
+    (parchment stock receipts sourced from that station) = still at the station."""
+    login(api, gitoki_clerk)
+    process = register_process(api, gitoki, "FW")
+    lot = new_lot(api, process, "355")
+    record_actuals(api, lot, process, "33", "5")  # A1=33kg, A2=5kg sorted
+
+    stock_receipt(gitoki, net="20", bags="0")  # 20kg of A1 delivered to HQ dry mill
+
+    res = api.get(URL)
+    assert res.status_code == 200, res.data
+    row = next(r for r in res.data["cws_stock"] if r["grade"] == "A1")
+    assert row["facility_name"] == "Gitoki CWS"
+    assert row["process_name"] == "Fully Washed"
+    assert Decimal(row["processed_kg"]) == Decimal("33")
+    assert Decimal(row["delivered_kg"]) == Decimal("20")
+    assert Decimal(row["balance_kg"]) == Decimal("13")
+
+    # A2 was sorted but nothing has been delivered yet - still fully at the station.
+    a2 = next(r for r in res.data["cws_stock"] if r["grade"] == "A2")
+    assert Decimal(a2["processed_kg"]) == Decimal("5")
+    assert Decimal(a2["delivered_kg"]) == Decimal("0")
+    assert Decimal(a2["balance_kg"]) == Decimal("5")

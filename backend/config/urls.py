@@ -10,6 +10,7 @@ api_v1 = [
     path("processing/", include("baho.processing.api.urls")),
     path("drymill/", include("baho.drymill.api.urls")),
     path("sales/", include("baho.sales.api.urls")),
+    path("transfers/", include("baho.transfers.api.urls")),
     path("reporting/", include("baho.reporting.api.urls")),
 ]
 

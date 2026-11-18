@@ -6,6 +6,7 @@ from .views import (
     LotSummaryView,
     ProcessingSummaryView,
     StockSummaryView,
+    TransferSummaryView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path("drymill/export/", ExportSummaryView.as_view(), name="report-drymill-export"),
     path("cws/", CwsSummaryView.as_view(), name="report-cws"),
     path("cws/lots/", LotSummaryView.as_view(), name="report-cws-lots"),
+    path("transfers/", TransferSummaryView.as_view(), name="report-transfers"),
 ]
