@@ -76,10 +76,18 @@ def test_hq_finance_can_read_but_not_write(api, hq_finance, gitoki, farmer):
     assert api.post(URL, receipt_payload(gitoki, farmer), format="json").status_code == 403
 
 
-def test_date_outside_any_crop_year_is_rejected(api, gitoki_clerk, gitoki, farmer):
+def test_date_outside_any_crop_year_creates_one_automatically(api, gitoki_clerk, gitoki, farmer):
+    """Nobody has to pre-create a crop year by hand: a date outside every
+    existing one gets a default (December-to-November) crop year on the fly
+    instead of blocking the receipt."""
+    from baho.organization.models import CropYear
+
     login(api, gitoki_clerk)
     res = api.post(URL, receipt_payload(gitoki, farmer, received_on="1999-05-01"), format="json")
-    assert res.status_code == 400
+    assert res.status_code == 201, res.data
+    crop_year = CropYear.objects.get(label="1999")
+    assert crop_year.start_date.isoformat() == "1998-12-01"
+    assert crop_year.end_date.isoformat() == "1999-11-30"
 
 
 def test_receipt_lines_can_be_corrected(api, gitoki_clerk, gitoki, farmer):
