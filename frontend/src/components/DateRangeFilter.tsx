@@ -1,3 +1,4 @@
+import { Group, Select, Stack, Text } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { IconCalendar } from '@tabler/icons-react';
 import dayjs from 'dayjs';
@@ -12,28 +13,63 @@ interface DateRangeFilterProps {
   w?: number;
 }
 
-/** One date-range filter for every list and dashboard, with quick presets. */
-export function DateRangeFilter({ value, onChange, label = 'Dates', w = 260 }: DateRangeFilterProps) {
-  const today = dayjs();
+function presets(today: dayjs.Dayjs) {
+  return [
+    { value: 'today', label: 'Today', range: [fmt(today), fmt(today)] as DateRange },
+    { value: '7d', label: 'Last 7 days', range: [fmt(today.subtract(6, 'day')), fmt(today)] as DateRange },
+    { value: 'month', label: 'This month', range: [fmt(today.startOf('month')), fmt(today)] as DateRange },
+    {
+      value: 'last-month',
+      label: 'Last month',
+      range: [fmt(today.subtract(1, 'month').startOf('month')), fmt(today.subtract(1, 'month').endOf('month'))] as DateRange,
+    },
+    { value: 'season', label: 'This season', range: [fmt(today.startOf('year')), fmt(today)] as DateRange },
+  ];
+}
+
+/** One date-range filter for every list and dashboard: an explicit "From" / "To" pair, plus quick presets. */
+export function DateRangeFilter({ value, onChange, label = 'Dates', w = 160 }: DateRangeFilterProps) {
+  const [from, to] = value;
+  const quickRanges = presets(dayjs());
+
   return (
-    <DatePickerInput
-      type="range"
-      label={label}
-      placeholder="Any date"
-      value={value}
-      onChange={(next) => onChange([next[0] ?? null, next[1] ?? null] as DateRange)}
-      allowSingleDateInRange
-      clearable
-      valueFormat="DD MMM YYYY"
-      leftSection={<IconCalendar size={16} />}
-      w={w}
-      presets={[
-        { value: [fmt(today), fmt(today)], label: 'Today' },
-        { value: [fmt(today.subtract(6, 'day')), fmt(today)], label: 'Last 7 days' },
-        { value: [fmt(today.startOf('month')), fmt(today)], label: 'This month' },
-        { value: [fmt(today.subtract(1, 'month').startOf('month')), fmt(today.subtract(1, 'month').endOf('month'))], label: 'Last month' },
-        { value: [fmt(today.startOf('year')), fmt(today)], label: 'This season' },
-      ]}
-    />
+    <Stack gap={4}>
+      <Text size="sm" fw={500}>{label}</Text>
+      <Group gap="xs" align="flex-end" wrap="nowrap">
+        <DatePickerInput
+          aria-label={`${label} from`}
+          placeholder="From"
+          value={from}
+          onChange={(d) => onChange([d, to])}
+          clearable
+          valueFormat="DD MMM YYYY"
+          leftSection={<IconCalendar size={16} />}
+          maxDate={to ?? undefined}
+          w={w}
+        />
+        <DatePickerInput
+          aria-label={`${label} to`}
+          placeholder="To"
+          value={to}
+          onChange={(d) => onChange([from, d])}
+          clearable
+          valueFormat="DD MMM YYYY"
+          leftSection={<IconCalendar size={16} />}
+          minDate={from ?? undefined}
+          w={w}
+        />
+        <Select
+          aria-label={`${label} quick range`}
+          placeholder="Quick range"
+          data={quickRanges.map((p) => ({ value: p.value, label: p.label }))}
+          value={null}
+          onChange={(picked) => {
+            const preset = quickRanges.find((p) => p.value === picked);
+            if (preset) onChange(preset.range);
+          }}
+          w={132}
+        />
+      </Group>
+    </Stack>
   );
 }
