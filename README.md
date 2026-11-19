@@ -31,6 +31,8 @@ registered through the screens. 52 backend tests.
 
 ## Running it locally (Windows, no admin rights needed)
 
+For containerized VPS deployment, see [deployment/README.md](deployment/README.md).
+
 ### 1. Database (portable PostgreSQL 17 in `~/tools`)
 
 Run one command at a time:

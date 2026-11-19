@@ -8,8 +8,8 @@ import { api } from '../../lib/api';
 import { kg, num, today } from '../../lib/format';
 import { sourceFields } from '../../lib/sources';
 import { toast } from '../../lib/toast';
-import type { CatalogProcessGrade, DryMillTransferReceipt, HqStockReceipt } from '../../lib/types';
-import { errorText, query, useApi } from '../../lib/useApi';
+import type { DryMillTransferReceipt, HqStockReceipt } from '../../lib/types';
+import { errorText, query } from '../../lib/useApi';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
 
@@ -136,7 +136,6 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
   // Brand-new receipts from a CWS go through the delivery-note link + blind weighing
   // below instead of the manual form; editing an existing receipt never does.
   const cwsMode = !editing && isCwsSource;
-  const catalogGrades = useApi<CatalogProcessGrade[]>(form.process ? `/processing/catalog/processes/${form.process}/grades/` : null);
   const grades = Array.from(new Set([...knownGrades, ...COMMON_GRADES]));
 
   // --- CWS delivery-note linking (ephemeral: not part of the manual-form draft) ---
