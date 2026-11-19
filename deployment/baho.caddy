@@ -1,0 +1,4 @@
+baho.izere.work {
+    encode zstd gzip
+    reverse_proxy baho-web:80
+}

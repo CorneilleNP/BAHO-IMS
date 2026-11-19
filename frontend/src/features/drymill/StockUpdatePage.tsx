@@ -226,6 +226,7 @@ export function StockUpdatePage() {
             rows={transferSummary.data!.rows}
             rowKey={(r) => `${r.delivery_note_no}-${r.grade}`}
             minWidth={900}
+            empty={{ title: 'No transfer variance data available' }}
             columns={[
               { key: 'note', header: 'Delivery note', mono: true, render: (r) => r.delivery_note_no },
               { key: 'station', header: 'Station', render: (r) => r.facility_name },
