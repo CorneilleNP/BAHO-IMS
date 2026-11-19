@@ -1,0 +1,748 @@
+Arrival Date,Origin (Baho/Partners),Source (Supplier/CWS name),Type (Parch/Green),Delivery note Quantity (Kg),Process,Grades,Delivery note No,Weighing status,Purchase contract number, Net-weight (Kg) ,WRN Number,Warehouse Cell Number,Stock Card number,Weight of bags (Kg), Pure Weight (Kg) ,Quality Status,Processing Status,Processing Date,Stock processed (Kg),Stock Balance (Kg),Crop year
+5/13/2026,BAHO,KINAZI,Parch,4200,NATURAL N,HG,23,Done,N/A,"  4,229 ",,N/A,N/A,10,"  4,219 ",Accepted,Not Started,,,,2026
+5/13/2026,BAHO,KINAZI,Parch,4215,EX NAT,HG,1,Done,N/A,"  4,234 ",,N/A,N/A,12,"  4,222 ",Accepted,Completed,,,,2026
+5/14/2026,BAHO,KINAZI,Parch,4120,FW,A1,4,Done,N/A,"  4,131 ",,N/A,N/A,10,"  4,121 ",Accepted,Completed,,,,2026
+5/14/2026,BAHO,KINAZI,Parch,4200,FW,A1,5,Done,N/A,"  4,214 ",,N/A,N/A,14,"  4,200 ",Accepted,Not Started,,,,2026
+5/15/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,"  7,558 ",,N/A,N/A,26,"  7,532 ",Accepted,Completed,,,,2026
+5/15/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,"  10,131 ",,N/A,N/A,28,"  10,103 ",Accepted,Not Started,,,,2026
+5/15/2026,BAHO,KINAZI,Parch,,FW,A3,,Done,N/A,"  3,785 ",,N/A,N/A,10,"  3,775 ",Accepted,Completed,,,,2026
+5/16/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  9,392 ",,N/A,N/A,26,"  9,366 ",Accepted,Completed,,,,2026
+5/17/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,099 ",,N/A,N/A,28,"  10,071 ",Accepted,Not Started,,,,2026
+5/17/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  10,447 ",,N/A,N/A,25,"  10,422 ",Accepted,Not Started,,,,2026
+5/18/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HG,,Done,N/A,"  1,306 ",,N/A,N/A,6,"  1,300 ",Accepted,Not Started,,,,2026
+5/18/2026,BAHO,BUMBOGO,Parch,,FW,A3,,Done,N/A,"  6,799 ",,N/A,N/A,23,"  6,776 ",Accepted,Completed,,,,2026
+5/19/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HPC,,Done,N/A,"  1,111 ",,N/A,N/A,3,"  1,108 ",Accepted,Not Started,,,,2026
+5/19/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HG,,Done,N/A,"  5,560 ",,N/A,N/A,14,"  5,546 ",Accepted,Not Started,,,,2026
+5/19/2026,BAHO,BUMBOGO,Parch,,FW,A2,,Done,N/A,"  3,027 ",,N/A,N/A,8,"  3,019 ",Accepted,Not Started,,,,2026
+5/19/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  10,035 ",,N/A,N/A,24,"  10,011 ",Accepted,Not Started,,,,2026
+5/19/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,206 ",,N/A,N/A,28,"  10,178 ",Accepted,Not Started,,,,2026
+5/19/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,415 ",,N/A,N/A,29,"  10,386 ",Accepted,Not Started,,,,2026
+5/19/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  4,556 ",,N/A,N/A,11,"  4,545 ",Accepted,Not Started,,,,2026
+5/20/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  10,848 ",,N/A,N/A,27,"  10,821 ",Accepted,Not Started,,,,2026
+5/21/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  4,571 ",,N/A,N/A,11,"  4,560 ",Accepted,Not Started,,,,2026
+5/21/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  10,104 ",,N/A,N/A,24,"  10,080 ",Accepted,Not Started,,,,2026
+5/22/2026,PARTNER,IMPORE,Parch,,FW,A1,,Done,N/A,"  10,157 ",,N/A,N/A,28,"  10,129 ",Accepted,Not Started,,,,2026
+5/23/2026,PARTNER,IMPORE,Parch,,FW,A1,,Done,N/A,"  10,451 ",,N/A,N/A,29,"  10,422 ",Accepted,Not Started,,,,2026
+5/24/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  4,299 ",,N/A,N/A,12,"  4,287 ",Accepted,Completed,,,,2026
+5/24/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,"  4,137 ",,N/A,N/A,14,"  4,123 ",Accepted,Completed,,,,2026
+5/26/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,"  9,136 ",,N/A,N/A,31,"  9,105 ",Accepted,Completed,,,,2026
+5/29/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HG,,Done,N/A,  770 ,,N/A,N/A,2,  768 ,Accepted,Not Started,,,,2026
+5/29/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  9,711 ",,N/A,N/A,25,"  9,686 ",Accepted,Not Started,,,,2026
+5/29/2026,PARTNER,IMPORE,Parch,,FW,A1,,Done,N/A,"  3,961 ",,N/A,N/A,11,"  3,950 ",Accepted,Not Started,,,,2026
+6/1/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  10,020 ",,N/A,N/A,24,"  9,996 ",Accepted,Not Started,,,,2026
+6/1/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  10,010 ",,N/A,N/A,24,"  9,986 ",Accepted,Not Started,,,,2026
+6/1/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  9,993 ",,N/A,N/A,24,"  9,969 ",Accepted,Not Started,,,,2026
+6/1/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  4,212 ",,N/A,N/A,10,"  4,202 ",Accepted,Not Started,,,,2026
+6/2/2026,BAHO,KINAZI,Parch,,Natural Ext.,HG,,Done,N/A,"  4,223 ",,N/A,N/A,10,"  4,213 ",Accepted,Not Started,,,,2026
+6/3/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  4,207 ",,N/A,N/A,10,"  4,197 ",Accepted,Not Started,,,,2026
+6/3/2026,BAHO,KINAZI,Parch,,FW,A3,,Done,N/A,"  2,292 ",,N/A,N/A,6,"  2,286 ",Accepted,Completed,,,,2026
+6/3/2026,BAHO,KINAZI,Parch,,FW,A2,,Done,N/A,"  2,585 ",,N/A,N/A,6,"  2,579 ",Accepted,Not Started,,,,2026
+6/3/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  5,194 ",,N/A,N/A,13,"  5,181 ",Accepted,Not Started,,,,2026
+6/4/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,035 ",,N/A,N/A,28,"  10,007 ",Accepted,Not Started,,,,2026
+6/4/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,031 ",,N/A,N/A,28,"  10,003 ",Accepted,Not Started,,,,2026
+6/4/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,019 ",,N/A,N/A,28,"  9,991 ",Accepted,Not Started,,,,2026
+6/4/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,030 ",,N/A,N/A,30,"  10,000 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,FW,A1,,Done,N/A,  775 ,,N/A,N/A,2,  773 ,Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,FW,A3,,Done,N/A,  242 ,,N/A,N/A,2,  240 ,Accepted,Completed,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 40HRS",HG,,Done,N/A,"  2,730 ",,N/A,N/A,7,"  2,723 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 60HRS",HG,,Done,N/A,"  1,852 ",,N/A,N/A,5,"  1,847 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 72HRS",HG,,Done,N/A,"  1,293 ",,N/A,N/A,3,"  1,290 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,FW,A2,,Done,N/A,  65 ,,N/A,N/A,1,  64 ,Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 48HRS",HG,,Done,N/A,"  2,498 ",,N/A,N/A,6,"  2,492 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 36HRS",HG,,Done,N/A,"  5,653 ",,N/A,N/A,11,"  5,642 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,NATURAL N,HPC,,Done,N/A,"  2,480 ",,N/A,N/A,7,"  2,473 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,MUGANZA,Parch,,Natural Exp,HG,,Done,N/A,  127 ,,N/A,N/A,1,  126 ,Accepted,Not Started,,,,2026
+6/6/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,"  7,233 ",,N/A,N/A,20,"  7,213 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,"  1,470 ",,N/A,N/A,5,"  1,465 ",Accepted,Completed,,,,2026
+6/6/2026,BAHO,GITOKI,Parch,,FW,A4,,Done,N/A,"  1,604 ",,N/A,N/A,4,"  1,600 ",Accepted,Completed,,,,2026
+6/6/2026,BAHO,GITOKI,Parch,,FW,A2,,Done,N/A,"  8,321 ",,N/A,N/A,23,"  8,298 ",Accepted,Not Started,,,,2026
+6/6/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,"  6,399 ",,N/A,N/A,22,"  6,377 ",Accepted,Completed,,,,2026
+6/6/2026,BAHO,GITOKI,Parch,,FW,A4,,Done,N/A,  560 ,,N/A,N/A,1,  559 ,Accepted,Completed,,,,2026
+6/11/2026,BAHO,BUHETA,Parch,,FW,A1,,Done,N/A,"  2,765 ",,N/A,N/A,6,"  2,759 ",Accepted,Not Started,,,,2026
+6/11/2026,BAHO,BUHETA,Parch,,FW,A2,,Done,N/A,"  1,679 ",,N/A,N/A,5,"  1,674 ",Accepted,Not Started,,,,2026
+6/11/2026,BAHO,BUHETA,Parch,,FW,A3,,Done,N/A,"  3,892 ",,N/A,N/A,16,"  3,876 ",Accepted,Completed,,,,2026
+6/11/2026,BAHO,BUHETA,Parch,,FW,A1,,Done,N/A,"  7,411 ",,N/A,N/A,21,"  7,390 ",Accepted,Not Started,,,,2026
+6/11/2026,BAHO,BUHETA,Parch,,FW,A4,,Done,N/A,"  2,474 ",,N/A,N/A,4,"  2,470 ",Accepted,Completed,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A2,,Done,N/A,"  5,667 ",,N/A,N/A,14,"  5,653 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A2,,Done,N/A,  472 ,,N/A,N/A,1,  471 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A2,,Done,N/A,  423 ,,N/A,N/A,1,  422 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,  746 ,,N/A,N/A,3,  743 ,Accepted,Completed,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,  699 ,,N/A,N/A,2,  697 ,Accepted,Completed,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,"  1,310 ",,N/A,N/A,4,"  1,306 ",Accepted,Completed,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,FW,A1,,Done,N/A,"  2,406 ",,N/A,N/A,4,"  2,402 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,FW,A3,,Done,N/A,  380 ,,N/A,N/A,1,  379 ,Accepted,Completed,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,EXP WASHED,A3,,Done,N/A,  324 ,,N/A,N/A,1,  323 ,Accepted,Completed,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 48HRS",HG,,Done,N/A,  38 ,,N/A,N/A,1,  37 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 36HRS",HG,,Done,N/A,  224 ,,N/A,N/A,1,  223 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,EXP Washed(60H),HG,,Done,N/A,5062,,N/A,N/A,10,"  5,052 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,EXP Washed(60H),HPC,,Done,N/A,370,,N/A,N/A,1,  369 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,"Natural Ext, 60HRS",HG,,Done,N/A,313,,N/A,N/A,1,  312 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,EXP Washed(72H),HG,,Done,N/A,546,,N/A,N/A,2,  544 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,EXP Washed(48H),HG,,Done,N/A,544,,N/A,N/A,2,  542 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,EXP Washed(36H),HG,,Done,N/A,573,,N/A,N/A,2,  571 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,MUGANZA,Parch,,FW,A4,,Done,N/A,125,,N/A,N/A,1,  124 ,Accepted,Completed,,,,2026
+6/12/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,862,,N/A,N/A,2,  860 ,Accepted,Not Started,,,,2026
+6/12/2026,BAHO,BUMBOGO,Parch,,FW,A2,,Done,N/A,5494,,N/A,N/A,17,"  5,477 ",Accepted,Not Started,,,,2026
+6/12/2026,BAHO,BUMBOGO,Parch,,FW,A3,,Done,N/A,2906,,N/A,N/A,11,"  2,895 ",Accepted,Completed,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,5667,,N/A,N/A,14,"  5,653 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,Forest FW,A2,,Done,N/A,472,,N/A,N/A,1,  471 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,Maritera,A2,,Done,N/A,423,,N/A,N/A,1,  422 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,Forest FW,A3,,Done,N/A,1310,,N/A,N/A,4,"  1,306 ",Accepted,Completed,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,699,,N/A,N/A,2,  697 ,Accepted,Completed,,,,2026
+6/13/2026,BAHO,GITOKI,Parch,,WASHED NO1,A3,,Done,N/A,746,,N/A,N/A,2,  744 ,Accepted,Completed,,,,2026
+6/13/2026,BAHO,BUGOYI,Parch,,FW,A3,,Done,N/A,1708,,N/A,N/A,8,"  1,700 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,BUGOYI,Parch,,FW,A2,,Done,N/A,2445,,N/A,N/A,7,"  2,438 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,BUGOYI,Parch,,HONEY BLACK,HG,,Done,N/A,6158,,N/A,N/A,17,"  6,141 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,BUGOYI,Parch,,HONEY BLACK,HPC,,Done,N/A,158,,N/A,N/A,1,  157 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,9941,,N/A,N/A,27,"  9,914 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,5673,,N/A,N/A,19,"  5,654 ",Accepted,Not Started,,,,2026
+6/13/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,729,,N/A,N/A,2,  727 ,Accepted,Not Started,,,,2026
+6/13/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,1870,,N/A,N/A,5,"  1,865 ",Accepted,Not Started,,,,2026
+6/15/2026,BAHO,KINAZI,Parch,,FW,A2,,Done,N/A,1635,,N/A,N/A,4,"  1,631 ",Accepted,Not Started,,,,2026
+6/15/2026,BAHO,KINAZI,Parch,,FW,A3,,Done,N/A,"  3,444 ",,N/A,N/A,9,"  3,435 ",Accepted,Not Started,,,,2026
+6/15/2026,BAHO,KINAZI,Parch,,FW,A4,,Done,N/A,"  1,093 ",,N/A,N/A,4,"  1,089 ",Accepted,Not Started,,,,2026
+6/15/2026,BAHO,KINAZI,Parch,,NAT EXT,HG,,Done,N/A,"  3,789 ",,N/A,N/A,9,"  3,780 ",Accepted,Not Started,,,,2026
+6/16/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  10,013 ",,N/A,N/A,23,"  9,990 ",Accepted,Not Started,,,,2026
+6/16/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  9,993 ",,N/A,N/A,23,"  9,970 ",Accepted,Not Started,,,,2026
+6/17/2026,BAHO,GASEKE,Parch,,FW,A1,,Done,N/A,"  6,128 ",,N/A,N/A,15,"  6,113 ",Accepted,Not Started,,,,2026
+6/17/2026,BAHO,GASEKE,Parch,,FW,A2,,Done,N/A,"  1,857 ",,N/A,N/A,5,"  1,852 ",Accepted,Not Started,,,,2026
+6/17/2026,BAHO,GASEKE,Parch,,FW,A3,,Done,N/A,"  1,435 ",,N/A,N/A,4,"  1,431 ",Accepted,Not Started,,,,2026
+6/17/2026,BAHO,GASEKE,Parch,,FW,A4,,Done,N/A,  998 ,,N/A,N/A,4,  994 ,Accepted,Not Started,,,,2026
+6/18/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  10,573 ",,N/A,N/A,27,"  10,546 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  10,017 ",,N/A,N/A,24,"  9,993 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,"  2,459 ",,N/A,N/A,7,"  2,452 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  5,489 ",,N/A,N/A,18,"  5,471 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,  301 ,,N/A,N/A,1,  300 ,Accepted,Not Started,,,,2026
+6/20/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,032 ",,N/A,N/A,28,"  10,004 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,692 ",,N/A,N/A,29,"  10,663 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,FW,A3,,Done,N/A,"  2,248 ",,N/A,N/A,10,"  2,238 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,FW,A2,,Done,N/A,"  2,562 ",,N/A,N/A,7,"  2,555 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,FW DF,A2,,Done,N/A,"  3,870 ",,N/A,N/A,12,"  3,858 ",Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,FW DF,A3,,Done,N/A,  316 ,,N/A,N/A,1,  315 ,Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,WASHED NO1,HG,,Done,N/A,  104 ,,N/A,N/A,0,  104 ,Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,WASHED NO10,HG,,Done,N/A,  167 ,,N/A,N/A,1,  166 ,Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,FW DF,A4,,Done,N/A,  455 ,,N/A,N/A,2,  453 ,Accepted,Not Started,,,,2026
+6/20/2026,BAHO,NGOMA,Parch,,ANAEROBIC W,A2,,Done,N/A,"  1,335 ",,N/A,N/A,4,"  1,331 ",Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,FW,A3,,Done,N/A,"  1,928 ",,N/A,N/A,8,"  1,920 ",Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,FW,A1,,Done,N/A,"  10,695 ",,N/A,N/A,30,"  10,665 ",Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,WASHED NO10,A3,,Done,N/A,  234 ,,N/A,N/A,1,  233 ,Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,WASHED NO1,A3,,Done,N/A,  119 ,,N/A,N/A,1,  118 ,Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,ANAEROBIC W,A3,,Done,N/A,  898 ,,N/A,N/A,4,  894 ,Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,NATURAL N,HG,,Done,N/A,"  1,231 ",,N/A,N/A,3,"  1,228 ",Accepted,Not Started,,,,2026
+6/21/2026,BAHO,NGOMA,Parch,,FW,A2,,Done,N/A,  55 ,,N/A,N/A,0,  55 ,Accepted,Not Started,,,,2026
+6/23/2026,BAHO,BUMBOGO,Parch,,FW,A3,,Done,N/A,"  1,557 ",,N/A,N/A,5,"  1,552 ",Accepted,Not Started,,,,2026
+6/23/2026,BAHO,BUMBOGO,Parch,,FW,A2,,Done,N/A,"  1,299 ",,N/A,N/A,3,"  1,296 ",Accepted,Not Started,,,,2026
+6/23/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  7,545 ",,N/A,N/A,19,"  7,526 ",Accepted,Not Started,,,,2026
+6/23/2026,BAHO,SHARA,Parch,,FW,A1,,Done,N/A,"  7,039 ",,N/A,N/A,17,"  7,022 ",Accepted,Not Started,,,,2026
+6/23/2026,BAHO,SHARA,Parch,,FW,A2,,Done,N/A,"  2,212 ",,N/A,N/A,5,"  2,207 ",Accepted,Not Started,,,,2026
+6/23/2026,BAHO,SHARA,Parch,,NATURAL N,HPC,,Done,N/A,"  1,253 ",,N/A,N/A,3,"  1,250 ",Accepted,Not Started,,,,2026
+6/23/2026,BAHO,SHARA,Parch,,FW,A3,,Done,N/A,"  1,310 ",,N/A,N/A,7,"  1,303 ",Accepted,Not Started,,,,2026
+6/12/2026,PARTNER,AGRINOS LTD,Parch,,FW,A1,,Done,N/A,"  9,987 ",,N/A,N/A,24,"  9,963 ",Accepted,Not Started,,,,2026
+6/12/2026,PARTNER,AGRINOS LTD,Parch,,FW,A1,,Done,N/A,"  10,028 ",,N/A,N/A,24,"  10,004 ",Accepted,Not Started,,,,2026
+6/24/2026,BAHO,AKAGERA,Parch,,NATURAL N,HG,,Done,N/A,"  14,583 ",,N/A,N/A,36.33333333,"  14,547 ",Accepted,Not Started,,,,2026
+6/24/2026,BAHO,AKAGERA,Parch,,NATURAL N,HPC,,Done,N/A,"  7,956 ",,N/A,N/A,23.16666667,"  7,933 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  10,055 ",,N/A,N/A,23.83333333,"  10,031 ",Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,AGRINOS LTD,Parch,,FW,A1,,Done,N/A,"  10,367 ",,N/A,N/A,24.83333333,"  10,342 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,FW,A1,,Done,N/A,"  5,457 ",,N/A,N/A,15.16666667,"  5,442 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,"Natural Ext, 300HRS",HG,,Done,N/A,"  1,733 ",,N/A,N/A,4.833333333,"  1,728 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,Natural 6RB,HG,,Done,N/A,"  1,721 ",,N/A,N/A,286.8333333,"  1,434 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,NATURAL N,HPC,,Done,N/A,"  2,063 ",,N/A,N/A,6.333333333,"  2,057 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,NATURAL EXP,HG,,Done,N/A,  880 ,,N/A,N/A,2.5,  878 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,-,NATURAL N,HG,,Done,N/A,"  1,484 ",,N/A,N/A,4.166666667,"  1,480 ",Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,FW,A3,,Done,N/A,  97 ,,N/A,N/A,0,  97 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,ANAEROBIC W,A2,,Done,N/A,  60 ,,N/A,N/A,0,  60 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,WASHED NO84,A2,,Done,N/A,  182 ,,N/A,N/A,1,  181 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,FW,A2,,Done,N/A,  294 ,,N/A,N/A,1,  293 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,WASHED NO1,A2,,Done,N/A,  59 ,,N/A,N/A,0,  59 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,FW DF,A1,,Done,N/A,  597 ,,N/A,N/A,2,  595 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,WASHED NO10,A1,,Done,N/A,  67 ,,N/A,N/A,0,  67 ,Accepted,Not Started,,,,2026
+6/25/2026,BAHO,NGOMA,Parch,,NATURAL SP,HG,,Done,N/A,  330 ,,N/A,N/A,1,  329 ,Accepted,Not Started,,,,2026
+6/27/2026,BAHO,NGORORERO,Parch,,WASHED HYBRID,HG,,Done,N/A,  406 ,,N/A,N/A,1.166666667,  405 ,Accepted,Not Started,,,,2026
+6/27/2026,BAHO,NGORORERO,Parch,,FW DF,A1,,Done,N/A,  394 ,,N/A,N/A,1,  393 ,Accepted,Not Started,,,,2026
+6/27/2026,BAHO,NGORORERO,Parch,,NATURAL EXP,HG,,Done,N/A,  362 ,,N/A,N/A,1,  361 ,Accepted,Not Started,,,,2026
+6/27/2026,BAHO,NGORORERO,Parch,,SW,A1,,Done,N/A,"  2,096 ",,N/A,N/A,6,"  2,090 ",Accepted,Not Started,,,,2026
+6/29/2026,BAHO,KINAZI,Parch,,LH,A1,,,N/A,"  10,034 ",,N/A,,24,"  10,010 ",,,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST NAT BF1,HG,,Done,N/A,  273 ,,N/A,N/A,1,  272 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST NAT BF2,HG,,Done,N/A,  803 ,,N/A,N/A,2,  801 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,HUMURE,Parch,,FOREST BF4,HG,,Done,N/A,  694 ,,N/A,N/A,2,  692 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF3,A2,,Done,N/A,  20 ,,N/A,N/A,0,  20 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF3,A1,,Done,N/A,  177 ,,N/A,N/A,0,  177 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF3,A3,,Done,N/A,  2 ,,N/A,N/A,0,  2 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST NAT BF5,HG,,Done,N/A,  660 ,,N/A,N/A,1,  659 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF6,A1,,Done,N/A,  107 ,,N/A,N/A,2,  105 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF8,A1,,Done,N/A,  185 ,,N/A,N/A,1,  184 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF8,A2,,Done,N/A,  178 ,,N/A,N/A,0,  178 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST NAT BF7,HG,,Done,N/A,  181 ,,N/A,N/A,1,  180 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF8,HPC,,Done,N/A,  25 ,,N/A,N/A,0,  25 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF8,A3,,Done,N/A,  9 ,,N/A,N/A,0,  9 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,KAMEGERI,Parch,,FOREST WASHED BF6,HPC,,Done,N/A,  7 ,,N/A,N/A,0,  7 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,NATURAL EXP,HG,,Done,N/A,"  2,487 ",,N/A,N/A,7,"  2,480 ",Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,FW,A3,,Done,N/A,  799 ,,N/A,N/A,4,  795 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,SW,A4,,Done,N/A,  186 ,,N/A,N/A,1,  185 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,SW,HG,,Done,N/A,  989 ,,N/A,N/A,3,  986 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,DRY FERMENTATION W,HG,,Done,N/A,  790 ,,N/A,N/A,2,  788 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,FW,A1,,Done,N/A,"  2,767 ",,N/A,N/A,9,"  2,758 ",Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,NATURAL N,HG,,Done,N/A,"  1,384 ",,N/A,N/A,4,"  1,380 ",Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,COLD FERMENTATION,HG,,Done,N/A,  135 ,,N/A,N/A,0,  135 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,ECLIPSE,HG,,Done,N/A,  58 ,,N/A,N/A,0,  58 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,ECLIPSE,HPC,,Done,N/A,  50 ,,N/A,N/A,0,  50 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,NATURAL N,HPC,,Done,N/A,  489 ,,N/A,N/A,2,  487 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,HYBRID,A4,,Done,N/A,  39 ,,N/A,N/A,0,  39 ,Accepted,Not Started,,,,2026
+6/26/2026,PARTNER,NGORORERO,Parch,,DRY FERMENTATION W,A4,,Done,N/A,  124 ,,N/A,N/A,0,  124 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,MUGANZA,Parch,,BF4,HG,,Done,N/A,  819 ,,N/A,N/A,2,  817 ,Accepted,Not Started,,,,2026
+6/30/2026,BAHO,FUGI,Parch,,NATURAL N,HPC,,Done,N/A,"  3,823 ",,N/A,N/A,10,"  3,813 ",Accepted,Not Started,,,,2026
+6/30/2026,BAHO,FUGI,Parch,,BF4,HG,,Done,N/A,"  1,351 ",,N/A,N/A,3,"  1,348 ",Accepted,Not Started,,,,2026
+6/30/2026,BAHO,FUGI,Parch,,BF3,HG,,Done,N/A,  922 ,,N/A,N/A,2,  920 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,NGOMA,Parch,,NATURAL DUAL,HG,,Done,N/A,  584 ,,N/A,N/A,2,  582 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,NGOMA,Parch,,HONEY ANAEROBIC,HG,,Done,N/A,"  1,911 ",,N/A,N/A,5,"  1,906 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,NGOMA,Parch,,ANAEROBIC W,HG,,Done,N/A,"  5,280 ",,N/A,N/A,15,"  5,265 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,SHARA,Parch,,NATURAL DUAL,HG,,Done,N/A,  809 ,,N/A,N/A,4,  805 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,AKAGERA,Parch,,NATURAL DUAL,HG,,Done,N/A,"  1,534 ",,N/A,N/A,7,"  1,527 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,CYABINGO,Parch,,NATURAL BF2,HG,,Done,N/A,"  1,429 ",,N/A,N/A,4,"  1,425 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,CYABINGO,Parch,,NATURAL BF2,HPC,,Done,N/A,  35 ,,N/A,N/A,1,  34 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,CYABINGO,Parch,,BF3 W,HG,,Done,N/A,  229 ,,N/A,N/A,1,  228 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,CYABINGO,Parch,,HONEY BF4,HG,,Done,N/A,  869 ,,N/A,N/A,6,  863 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,MUZO,Parch,,HONEY BF4,HG,,Done,N/A,  130 ,,N/A,N/A,0,  130 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,MUZO,Parch,,HONEY BF4,HPC,,Done,N/A,  27 ,,N/A,N/A,0,  27 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,MUZO,Parch,,MOSTO DF,HG,,Done,N/A,  332 ,,N/A,N/A,1,  331 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,MUZO,Parch,,MOSTO DF,HPC,,Done,N/A,  98 ,,N/A,N/A,0,  98 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,BUHETA,Parch,,NATURAL BF1,HG,,Done,N/A,"  1,395 ",,N/A,N/A,4,"  1,391 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,BUHETA,Parch,,MOSTO DF,HPC,,Done,N/A,  154 ,,N/A,N/A,0,  154 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,BUHETA,Parch,,NATURAL SH,HG,,Done,N/A,  866 ,,N/A,N/A,2,  864 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,BUHETA,Parch,,MOSTO DF,HG,,Done,N/A,"  1,207 ",,N/A,N/A,3,"  1,204 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,BUMBOGO,Parch,,NATURAL BF1,HG,,Done,N/A,"  1,549 ",,N/A,N/A,3,"  1,546 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,BUMBOGO,Parch,,NATURAL BF2,HG,,Done,N/A,  300 ,,N/A,N/A,1,  299 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FOREST NAT,HG,,Done,N/A,  354 ,,N/A,N/A,1,  353 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FW,A2,,Done,N/A,  292 ,,N/A,N/A,1,  291 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,  738 ,,N/A,N/A,2,  736 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FOREST WASHED,A3,,Done,N/A,  190 ,,N/A,N/A,0,  190 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FOREST WASHED,A2,,Done,N/A,  166 ,,N/A,N/A,0,  166 ,Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FOREST WASHED,A1,,Done,N/A,"  7,869 ",,N/A,N/A,19,"  7,850 ",Accepted,Not Started,,,,2026
+7/1/2026,BAHO,GITOKI,Parch,,FOREST NAT,HG,,Done,N/A,"  10,537 ",,N/A,N/A,25,"  10,512 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,BUGOYI,Parch,,NATURAL MARTERA,HG,,Done,N/A,"  6,118 ",,N/A,N/A,17,"  6,101 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,BUGOYI,Parch,,NATURAL MARTERA,HPC,,Done,N/A,  84 ,,N/A,N/A,0,  84 ,Accepted,Not Started,,,,2026
+7/2/2026,BAHO,BUGOYI,Parch,,ANAEROBIC FOREST,HG,,Done,N/A,"  2,200 ",,N/A,N/A,5,"  2,195 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,BUGOYI,Parch,,POROTOCOLE 001,HG,,Done,N/A,"  1,977 ",,N/A,N/A,5,"  1,972 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,BUGOYI,Parch,,POROTOCOLE 001,HPC,,Done,N/A,  69 ,,N/A,N/A,0,  69 ,Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A3,,Done,N/A,"  1,714 ",,N/A,N/A,5,"  1,709 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A1,,Done,N/A,"  3,133 ",,N/A,N/A,7,"  3,126 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A4,,Done,N/A,"  1,573 ",,N/A,N/A,5,"  1,568 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A2,,Done,N/A,"  3,119 ",,N/A,N/A,8,"  3,111 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A1,,Done,N/A,"  10,177 ",,N/A,N/A,24,"  10,153 ",Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A3,,Done,N/A,  298 ,,N/A,N/A,1,  297 ,Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST WASHED ,A4,,Done,N/A,  909 ,,N/A,N/A,3,  906 ,Accepted,Not Started,,,,2026
+7/2/2026,BAHO,HUMURE,Parch,,FOREST NAT,HG,,Done,N/A,"  8,738 ",,N/A,N/A,21,"  8,717 ",Accepted,Not Started,,,,2026
+7/7/2026,PARTNER,IMPORE,Parch,,FW,A1,,Done,N/A,  64 ,,N/A,N/A,0,  64 ,Accepted,Not Started,,,,2026
+7/8/2026,BAHO,MATYAZO,Parch,,HONEY BF3,HG,,Done,N/A,  305 ,,N/A,N/A,1,  304 ,Accepted,Not Started,,,,2026
+7/8/2026,BAHO,MATYAZO,Parch,,HONEY BF4,HG,,Done,N/A,  290 ,,N/A,N/A,1,  289 ,Accepted,Not Started,,,,2026
+7/8/2026,BAHO,MATYAZO,Parch,,NATURAL BF2,HG,,Done,N/A,  560 ,,N/A,N/A,2,  558 ,Accepted,Not Started,,,,2026
+7/8/2026,BAHO,MATYAZO,Parch,,NATURAL BF1,HG,,Done,N/A,"  1,506 ",,N/A,N/A,4,"  1,502 ",Accepted,Not Started,,,,2026
+7/9/2026,BAHO,KINAZI,Parch,,EXT NAT,HG,,Done,N/A,"  2,069 ",,N/A,N/A,5,"  2,064 ",,,,,,
+7/9/2026,BAHO,KINAZI,Parch,,EXT NAT,LG,,Done,N/A,"  2,078 ",,N/A,N/A,7,"  2,071 ",,,,,,
+7/9/2026,BAHO,KINAZI,Parch,,LOW HONEY WASHED ,A3,,Done,N/A,"  1,894 ",,N/A,N/A,6,"  1,888 ",,,,,,
+7/9/2026,BAHO,KINAZI,Parch,,LOW HONEY WASHED ,A2,,Done,N/A,  474 ,,N/A,N/A,1,  473 ,,,,,,
+7/9/2026,BAHO,KINAZI,Parch,,FW,A2,,Done,N/A,  424 ,,N/A,N/A,1,,,,,,,
+7/9/2026,BAHO,KINAZI,Parch,,FW,A3,,Done,N/A,"  1,071 ",,N/A,N/A,3,"  1,068 ",,,,,,
+7/9/2026,BAHO,KINAZI,Parch,,FW,A4,,Done,N/A,  525 ,,N/A,N/A,2,  523 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  10,501 ",,N/A,N/A,25,"  10,476 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,"  4,581 ",,N/A,N/A,15,"  4,566 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,HUMURE,Parch,,WASHED NO3,HG,,Done,N/A,"  1,236 ",,N/A,N/A,3,"  1,233 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,HUMURE,Parch,,NATURAL N,HG,,Done,N/A,"  3,199 ",,N/A,N/A,8,"  3,191 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,  487 ,,N/A,N/A,1,  486 ,Accepted,Not Started,,,,2026
+7/13/2026,PARTNER,KOPAKAMA,Parch,,FW,A1,,Done,N/A,"  10,087 ",,N/A,N/A,24,"  10,063 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,NATURAL N,HG,,Done,N/A,"  8,738 ",,N/A,N/A,21,"  8,717 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,NATURAL EXT 120H,HG,,Done,N/A,  323 ,,N/A,N/A,1,  322 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,NATURAL EXT 140H,HG,,Done,N/A,  123 ,,N/A,N/A,0,  123 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,FW,A1,,Done,N/A,"  1,320 ",,N/A,N/A,3,"  1,317 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,FW,A2,,Done,N/A,  158 ,,N/A,N/A,0,  158 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,FW,A3,,Done,N/A,  53 ,,N/A,N/A,0,  53 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,HONEY,HG,,Done,N/A,  33 ,,N/A,N/A,0,  33 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,NATURAL N,HG,,Done,N/A,"  6,353 ",,N/A,N/A,15,"  6,338 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,NATURAL MARTERA NO1,HG,,Done,N/A,"  2,132 ",,N/A,N/A,5,"  2,127 ",Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,NATURAL MARTERA NO9,HG,,Done,N/A,  343 ,,N/A,N/A,1,  342 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,FW TOP 84H,A1,,Done,N/A,  525 ,,N/A,N/A,2,  523 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,FW TOP 84H,A2,,Done,N/A,  51 ,,N/A,N/A,0,  51 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,FW TOP 84H,A3,,Done,N/A,  49 ,,N/A,N/A,0,  49 ,Accepted,Not Started,,,,2026
+7/13/2026,BAHO,KAMEGERI,Parch,,N NATURAL,HPC,,Done,N/A,326,,N/A,N/A,1,  325 ,,,,,,
+7/13/2026,BAHO,KAMEGERI,Parch,,ANAEROBIC NATURAL,HPC,,Done,N/A,  275 ,,N/A,N/A,1,  274 ,,,,,,
+7/14/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  5,794 ",,N/A,N/A,15,"  5,779 ",Accepted,Not Started,,,,2026
+7/14/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HG,,Done,N/A,"  1,585 ",,N/A,N/A,4,"  1,581 ",Accepted,Not Started,,,,2026
+7/14/2026,BAHO,BUMBOGO,Parch,,FW,A3,,Done,N/A,"  1,603 ",,N/A,N/A,5,"  1,598 ",Accepted,Not Started,,,,2026
+7/14/2026,BAHO,BUMBOGO,Parch,,FW,A2,,Done,N/A,  740 ,,N/A,N/A,2,  738 ,Accepted,Not Started,,,,2026
+7/14/2026,BAHO,BUMBOGO,Parch,,HONEY,HG,,Done,N/A,  600 ,,N/A,N/A,1,  599 ,Accepted,Not Started,,,,2026
+7/14/2026,BAHO,GITOKI,Parch,,HONEY BLACK,HG,,Done,N/A,"  10,479 ",,N/A,N/A,25,"  10,454 ",Accepted,Not Started,,,,2026
+7/14/2026,BAHO,GITOKI,Parch,,HONEY BLACK,HG,,Done,N/A,"  6,993 ",,N/A,N/A,17,"  6,976 ",Accepted,Not Started,,,,2026
+7/14/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,"  3,192 ",,N/A,N/A,7,"  3,185 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HG,,Done,N/A,"  11,086 ",,N/A,N/A,0,"  11,086 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,HUMURE,Parch,,ANAEROBIC W,A1,,Done,N/A,"  9,069 ",,N/A,N/A,22,"  9,047 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,HUMURE,Parch,,ANAEROBIC W,A2,,Done,N/A,"  1,445 ",,N/A,N/A,4,"  1,441 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  10,270 ",,N/A,N/A,29,"  10,241 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,HUMURE,Parch,,NATURAL 48HRS BENI,HG,,Done,N/A,"  3,628 ",,N/A,N/A,8,"  3,620 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,HUMURE,Parch,,NATURAL 72HRS BENI,HG,,Done,N/A,"  3,643 ",,N/A,N/A,8,"  3,635 ",Accepted,Not Started,,,,2026
+7/15/2026,BAHO,HUMURE,Parch,,ANAEROBIC W,A3,,Done,N/A,"  2,879 ",,N/A,N/A,9,"  2,870 ",Accepted,Not Started,,,,2026
+7/16/2026,BAHO,GASEKE,Parch,,ANAEROBIC W,HPC,,Done,N/A,  134 ,,N/A,N/A,0,  134 ,Accepted,Not Started,,,,2026
+7/16/2026,BAHO,GASEKE,Parch,,FW,A2,,Done,N/A,  332 ,,N/A,N/A,1,  331 ,Accepted,Not Started,,,,2026
+7/16/2026,BAHO,GASEKE,Parch,,FW,A3,,Done,N/A,  128 ,,N/A,N/A,0,  128 ,Accepted,Not Started,,,,2026
+7/16/2026,BAHO,GASEKE,Parch,,FW,HPC,,Done,N/A,  301 ,,N/A,N/A,1,  300 ,Accepted,Not Started,,,,2026
+7/16/2026,BAHO,GASEKE,Parch,,FW,A1,,Done,N/A,"  8,857 ",,N/A,N/A,21,"  8,836 ",Accepted,Not Started,,,,2026
+7/16/2026,BAHO,GASEKE,Parch,,FW,A1,,Done,N/A,  720 ,,N/A,N/A,1,  719 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,NATURAL N,HG,,Done,N/A,  265 ,,N/A,N/A,0,  265 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,NATURAL N,HPC,,Done,N/A,"  2,446 ",,N/A,N/A,7,"  2,439 ",Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,NATURAL EXP 36H,HG,,Done,N/A,"  3,122 ",,N/A,N/A,7,"  3,115 ",Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,NATURAL EXP 48H,HG,,Done,N/A,  415 ,,N/A,N/A,1,  414 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,"HONEY, HYBRIDE",HG,,Done,N/A,  451 ,,N/A,N/A,1,  450 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,FW,A2,,Done,N/A,  300 ,,N/A,N/A,1,  299 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,FW TOP 84H,A4,,Done,N/A,  170 ,,N/A,N/A,0,  170 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,WASHED N10,A4,,Done,N/A,  307 ,,N/A,N/A,1,  306 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,WASHED N10,A3,,Done,N/A,  461 ,,N/A,N/A,2,  459 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,WASHED SUPER,HG,,Done,N/A,"  1,026 ",,N/A,N/A,2,"  1,024 ",Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,WASHED SABOM,HG,,Done,N/A,  688 ,,N/A,N/A,2,  686 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MUGANZA,Parch,,ANAEROBIC W 36H,HG,,Done,N/A,  702 ,,N/A,N/A,1,  701 ,Accepted,Not Started,,,,2026
+7/23/2026,BAHO,MATYAZO,Parch,,FW,A1,,Done,N/A,"  10,223 ",,N/A,N/A,25,"  10,198 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW DF,A1,,Done,N/A,"  15,083 ",,N/A,N/A,42,"  15,041 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW DF,A1,,Done,N/A,"  13,846 ",,N/A,N/A,38,"  13,808 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,NATURAL N,HG,,Done,N/A,  198 ,,N/A,N/A,1,  197 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,NATURAL N,HPC,,Done,N/A,  590 ,,N/A,N/A,2,  588 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,ANAEROBIC W ,A2,,Done,N/A,  69 ,,N/A,N/A,0,  69 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW NO1,A2,,Done,N/A,  41 ,,N/A,N/A,0,  41 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,HONEY ANAEROBIC,A1,,Done,N/A,  44 ,,N/A,N/A,0,  44 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,NATURAL N,HG,,Done,N/A,"  1,155 ",,N/A,N/A,3,"  1,152 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,NATURAL BEN ISAMBAZA,HG,,Done,N/A,"  1,331 ",,N/A,N/A,3,"  1,328 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,NATURAL DARK DRY,HG,,Done,N/A,  347 ,,N/A,N/A,1,  346 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,WASHED N10,A1,,Done,N/A,"  1,632 ",,N/A,N/A,5,"  1,627 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW NO1,A1,,Done,N/A,"  1,494 ",,N/A,N/A,4,"  1,490 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW TOP 84H,A1,,Done,N/A,  926 ,,N/A,N/A,3,  923 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,HONEY NO3,A1,,Done,N/A,"  2,268 ",,N/A,N/A,7,"  2,261 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW DF,A1,,Done,N/A,  418 ,,N/A,N/A,1,  417 ,Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,FW,A1,,Done,N/A,"  2,124 ",,N/A,N/A,6,"  2,118 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,HONEY BLACK,HG,,Done,N/A,"  3,309 ",,N/A,N/A,9,"  3,300 ",Accepted,Not Started,,,,2026
+7/25/2026,BAHO,NGOMA,Parch,,CLASS,HG,,Done,N/A,  132 ,,N/A,N/A,0,  132 ,Accepted,Not Started,,,,2026
+7/27/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HG,,Done,N/A,"  4,723 ",,N/A,N/A,12,"  4,711 ",Accepted,Not Started,,,,2026
+7/27/2026,BAHO,BUMBOGO,Parch,,NATURAL N,HPC,,Done,N/A,  793 ,,N/A,N/A,2,  791 ,Accepted,Not Started,,,,2026
+7/27/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  2,877 ",,N/A,N/A,7,"  2,870 ",Accepted,Not Started,,,,2026
+7/27/2026,BAHO,BUMBOGO,Parch,,FW SUPER,A2,,Done,N/A,"  1,460 ",,N/A,N/A,4,"  1,456 ",Accepted,Not Started,,,,2026
+7/27/2026,BAHO,BUMBOGO,Parch,,FW SUPER,A3,,Done,N/A,  939 ,,N/A,N/A,3,  936 ,Accepted,Not Started,,,,2026
+7/29/2026,PARTNER,AGRINOS LTD,Parch,,FW,A1,,Done,N/A,"  10,949 ",,N/A,N/A,32,"  10,917 ",Accepted,Not Started,,,,2026
+7/31/2026,BAHO,MATYAZO,Parch,,FW,HPC,,Done,N/A,"  4,268 ",,N/A,N/A,11,"  4,257 ",Accepted,Not Started,,,,2026
+7/31/2026,BAHO,MATYAZO,Parch,,FW,A2,,Done,N/A,"  1,318 ",,N/A,N/A,3,"  1,315 ",Accepted,Not Started,,,,2026
+7/31/2026,BAHO,MATYAZO,Parch,,FW,A3,,Done,N/A,"  2,089 ",,N/A,N/A,8,"  2,081 ",Accepted,Not Started,,,,2026
+7/31/2026,BAHO,MATYAZO,Parch,,NATURAL N,HPC,,Done,N/A,  625 ,,N/A,N/A,2,  623 ,Accepted,Not Started,,,,2026
+7/31/2026,BAHO,NGORORERO,Parch,,DRY FERMENTATION W,A1,,Done,N/A,  285 ,,N/A,N/A,1,  284 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW,A1,,Done,N/A,"  7,267 ",,N/A,N/A,18,"  7,249 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW SUPER,A1,,Done,N/A,  641 ,,N/A,N/A,1,  640 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW DF,A1,,Done,N/A,"  3,913 ",,N/A,N/A,10,"  3,903 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,HOT SW,A1,,Done,N/A,"  1,604 ",,N/A,N/A,4,"  1,600 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,HOT SW,A2,,Done,N/A,  370 ,,N/A,N/A,1,  369 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,HOT SW HONEY,A1,,Done,N/A,"  1,887 ",,N/A,N/A,4,"  1,883 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW TOP,A1,,Done,N/A,"  1,117 ",,N/A,N/A,3,"  1,114 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW DF,A1,,Done,N/A,  492 ,,N/A,N/A,1,  491 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW TOP,A2,,Done,N/A,  454 ,,N/A,N/A,1,  453 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW,A2,,Done,N/A,"  2,082 ",,N/A,N/A,1,"  2,081 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,SW,A2,,Done,N/A,  507 ,,N/A,N/A,2,  505 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW,A3,,Done,N/A,  561 ,,N/A,N/A,3,  558 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW,A4,,Done,N/A,  160 ,,N/A,N/A,0,  160 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW DF,A2,,Done,N/A,"  1,167 ",,N/A,N/A,3,"  1,164 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW DF,A4,,Done,N/A,  84 ,,N/A,N/A,1,  83 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW DF,A3,,Done,N/A,  207 ,,N/A,N/A,1,  206 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,HOT SW,A3,,Done,N/A,  129 ,,N/A,N/A,0,  129 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,NATURAL N,HPC,,Done,N/A,  211 ,,N/A,N/A,0,  211 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,NATURAL N,HG,,Done,N/A,"  2,228 ",,N/A,N/A,5,"  2,223 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,NATURAL EXP 72H,HG,,Done,N/A,"  3,765 ",,N/A,N/A,9,"  3,756 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,NATURAL MARTERA NO2,HG,,Done,N/A,"  3,386 ",,N/A,N/A,8,"  3,378 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,NATURAL N,HG,,Done,N/A,"  2,485 ",,N/A,N/A,6,"  2,479 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,SHARA,Parch,,FW,A1,,Done,N/A,  19 ,,N/A,N/A,0,  19 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,NATURAL N,HG,,Done,N/A,"  2,522 ",,N/A,N/A,6,"  2,516 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,NATURAL N,HPC,,Done,N/A,  491 ,,N/A,N/A,1,  490 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,FW NO9,HG,,Done,N/A,  275 ,,N/A,N/A,1,  274 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,NATURAL MARTERA NO9,HG,,Done,N/A,  704 ,,N/A,N/A,1,  703 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,HONEY NO3,HG,,Done,N/A,"  2,586 ",,N/A,N/A,6,"  2,580 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,WASHED SUPER,HG,,Done,N/A,  917 ,,N/A,N/A,2,  915 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,GASEKE,Parch,,SW,A3,,Done,N/A,  9 ,,N/A,N/A,1,  8 ,Accepted,Not Started,,,,2026
+8/3/2026,BAHO,KAMEGERI,Parch,,NATURAL N,HG,,Done,N/A,"  3,260 ",,N/A,N/A,8,"  3,252 ",Accepted,Not Started,,,,2026
+8/3/2026,BAHO,KAMEGERI,Parch,,NATURAL N,HPC,,Done,N/A,  6 ,,N/A,N/A,0,  6 ,Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,FW,A3,,Done,N/A,"  2,686 ",,N/A,N/A,9,"  2,677 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,FW,A2,,Done,N/A,"  2,889 ",,N/A,N/A,8,"  2,881 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,NATURAL N,HPC,,Done,N/A,"  2,322 ",,N/A,N/A,6,"  2,316 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,NEW TOP WASHED,HG,,Done,N/A,"  1,317 ",,N/A,N/A,3,"  1,314 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,FW,A4,,Done,N/A,"  1,047 ",,N/A,N/A,3,"  1,044 ",Accepted,Not Started,,,,2026
+8/6/2026,BAHO,KINAZI,Parch,,LH,A1,,Done,N/A,"  9,638 ",,N/A,N/A,23,"  9,615 ",Accepted,Not Started,,,,2026
+8/6/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  9,942 ",,N/A,N/A,26,"  9,916 ",Accepted,Not Started,,,,2026
+8/6/2026,BAHO,KARAMBI,Parch,,FW,A2,,Done,N/A,"  4,681 ",,N/A,N/A,13,"  4,668 ",Accepted,Not Started,,,,2026
+8/6/2026,BAHO,KARAMBI,Parch,,FW,A1,,Done,N/A,"  5,307 ",,N/A,N/A,12,"  5,295 ",Accepted,Not Started,,,,2026
+8/6/2026,BAHO,BUHETA,Parch,,FW,A1,,Done,N/A,"  10,106 ",,N/A,N/A,24,"  10,082 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,NATURAL N,HG,,Done,N/A,"  6,973 ",,N/A,N/A,19,"  6,954 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,FW,A1,,Done,N/A,"  1,757 ",,N/A,N/A,5,"  1,752 ",Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,HONEY ANAEROBIC,HG,,Done,N/A,  289 ,,N/A,N/A,1,  288 ,Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,HONEY,HPC,,Done,N/A,  70 ,,N/A,N/A,0,  70 ,Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,FW,HPC,,Done,N/A,  55 ,,N/A,N/A,0,  55 ,Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,NATURAL N,HPC,,Done,N/A,  29 ,,N/A,N/A,0,  29 ,Accepted,Not Started,,,,2026
+8/5/2026,BAHO,MUKURA,Parch,,FW,A1,,Done,N/A,"  8,962 ",,N/A,N/A,25,"  8,937 ",Accepted,Not Started,,,,2026
+8/8/2026,BAHO,MUGANZA,Parch,,NATURAL NO1,HG,,Done,N/A,"  3,714 ",,N/A,N/A,8,"  3,706 ",Accepted,Not Started,,,,2026
+8/8/2026,BAHO,MUGANZA,Parch,,NATURAL NO1,HG,,Done,N/A,"  3,163 ",,N/A,N/A,7,"  3,156 ",Accepted,Not Started,,,,2026
+8/8/2026,BAHO,MUGANZA,Parch,,NATURAL NO1,HG,,Done,N/A,"  3,469 ",,N/A,N/A,8,"  3,461 ",Accepted,Not Started,,,,2026
+8/8/2026,BAHO,BUGOYI,Parch,,FW,A1,,Done,N/A,"  8,718 ",,N/A,N/A,23,"  8,695 ",Accepted,Not Started,,,,2026
+8/8/2026,BAHO,BUGOYI,Parch,,FW,A3,,Done,N/A,  68 ,,N/A,N/A,0,  68 ,Accepted,Not Started,,,,2026
+8/8/2026,BAHO,BUGOYI,Parch,,FW,A2,,Done,N/A,"  1,005 ",,N/A,N/A,3,"  1,002 ",Accepted,Not Started,,,,2026
+8/8/2026,BAHO,BUGOYI,Parch,,FW,A4,,Done,N/A,  365 ,,N/A,N/A,1,  364 ,Accepted,Not Started,,,,2026
+8/8/2026,BAHO,BUGOYI,Parch,,FW,A1,,Done,N/A,"  10,118 ",,N/A,N/A,26,"  10,092 ",Accepted,Not Started,,,,2026
+8/11/2026,BAHO,KARAMBI,Parch,,FW,A1,,Done,N/A,"  20,366 ",,N/A,N/A,48,"  20,318 ",Accepted,Not Started,,,,2026
+8/14/2026,BAHO,NGORORERO,Parch,,ANAEROBIC NAT,HG,,Done,N/A,"  1,788 ",,N/A,N/A,5,"  1,783 ",Accepted,Not Started,,,,2026
+8/14/2026,BAHO,NGORORERO,Parch,,ECLIPSE NAT ,HG,,Done,N/A,  359 ,,N/A,N/A,1,  358 ,Accepted,Not Started,,,,2026
+8/14/2026,BAHO,NGORORERO,Parch,,SUBMERGED HONEY,HG,,Done,N/A,  239 ,,N/A,N/A,1,  238 ,Accepted,Not Started,,,,2026
+8/17/2026,BAHO,MUGANZA,Parch,,NAT 300 MTC,HG,,Done,N/A,"  1,572 ",,N/A,N/A,3,"  1,569 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,MUGANZA,Parch,,NAT 300 MTC,HG,,Done,N/A,"  1,925 ",,N/A,N/A,4,"  1,921 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,MUGANZA,Parch,,NAT 300 MTC,HG,,Done,N/A,"  2,594 ",,N/A,N/A,6,"  2,588 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,MUGANZA,Parch,,NAT NO 140,HG,,Done,N/A,  404 ,,N/A,N/A,1,  403 ,Accepted,Not Started,,,,2026
+8/17/2026,BAHO,BWEYEYE,Parch,,NAT 168HRS,HG,,Done,N/A,  821 ,,N/A,N/A,2,  819 ,Accepted,Not Started,,,,2026
+8/17/2026,BAHO,BWEYEYE,Parch,,NATURAL N,HG,,Done,N/A,"  1,352 ",,N/A,N/A,3,"  1,349 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,BWEYEYE,Parch,,NATURAL N,HPC,,Done,N/A,"  1,377 ",,N/A,N/A,4,"  1,373 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,KINAZI,Parch,,FW,A3,,Done,N/A,"  4,830 ",,N/A,N/A,16,"  4,814 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,KINAZI,Parch,,FW,A4,,Done,N/A,"  1,353 ",,N/A,N/A,6,"  1,347 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  2,020 ",,N/A,N/A,5,"  2,015 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NATURAL N,HG,,Done,N/A,"  1,817 ",,N/A,N/A,4,"  1,813 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NAT 72HRS,HPC,,Done,N/A,  59 ,,N/A,N/A,0,  59 ,Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NAT 40HRS,HG,,Done,N/A,"  3,499 ",,N/A,N/A,8,"  3,491 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NATURAL N,HPC,,Done,N/A,"  1,649 ",,N/A,N/A,4,"  1,645 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NAT NO 9,HG,,Done,N/A,  649 ,,N/A,N/A,2,  647 ,Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NAT 72HRS IBIDOMORO,HG,,Done,N/A,  362 ,,N/A,N/A,1,  361 ,Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,UBUNTU HYBRID WASHED DARK ROOM,HG,,Done,N/A,"  1,065 ",,N/A,N/A,3,"  1,062 ",Accepted,Not Started,,,,2026
+8/17/2026,BAHO,FUGI,Parch,,NATURAL N,FLOOT,,Done,N/A,"  1,648 ",,N/A,N/A,5,"  1,643 ",Accepted,Not Started,,,,2026
+8/19/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  7,791 ",,N/A,N/A,26,"  7,765 ",Accepted,Not Started,,,,2026
+8/19/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,"  6,662 ",,N/A,N/A,28,"  6,634 ",Accepted,Not Started,,,,2026
+8/19/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,"  6,554 ",,N/A,N/A,27,"  6,527 ",Accepted,Not Started,,,,2026
+8/19/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  8,123 ",,N/A,N/A,27,"  8,096 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 1 MTC LOT2,HG,,Done,N/A,"  3,216 ",,N/A,N/A,7,"  3,209 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 1 MTC LOT3,HG,,Done,N/A,"  3,437 ",,N/A,N/A,7,"  3,430 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 1 MTC LOT4,HG,,Done,N/A,"  3,429 ",,N/A,N/A,8,"  3,421 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 1 MTC LOT5,HG,,Done,N/A,"  3,361 ",,N/A,N/A,7,"  3,354 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 2 MTC LOT3,HG,,Done,N/A,"  1,473 ",,N/A,N/A,3,"  1,470 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 2 MTC LOT4,HG,,Done,N/A,"  1,639 ",,N/A,N/A,3,"  1,636 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 2 MTC LOT6,HG,,Done,N/A,"  1,572 ",,N/A,N/A,3,"  1,569 ",Accepted,Not Started,,,,2026
+8/20/2026,BAHO,MUGANZA,Parch,,NAT NO 2 MTC LOT2,HG,,Done,N/A,"  2,220 ",,N/A,N/A,5,"  2,215 ",Accepted,Not Started,,,,2026
+8/21/2026,BAHO,CYABINGO,Parch,,FW,A1,,Done,N/A,"  10,105 ",,N/A,N/A,28,"  10,077 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,MUZO,Parch,,FW,A1,,Done,N/A,"  10,198 ",,N/A,N/A,24,"  10,174 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,MUZO,Parch,,FW,A1,,Done,N/A,"  1,819 ",,N/A,N/A,4,"  1,815 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,MUZO,Parch,,FW,A2,,Done,N/A,"  2,977 ",,N/A,N/A,7,"  2,970 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,MUZO,Parch,,FW,HC,,Done,N/A,"  4,101 ",,N/A,N/A,13,"  4,088 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,MUZO,Parch,,FW,A3,,Done,N/A,  193 ,,N/A,N/A,1,  192 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,WASHED URWAGWA,HG,,Done,N/A,  649 ,,N/A,N/A,2,  647 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,FW BOR,A1,,Done,N/A,"  1,066 ",,N/A,N/A,3,"  1,063 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,WASHED NO 1,HG,,Done,N/A,"  2,366 ",,N/A,N/A,7,"  2,359 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,HOT SEMI WASHED,HG,,Done,N/A,"  6,707 ",,N/A,N/A,18,"  6,689 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,FW,A3,,Done,N/A,  966 ,,N/A,N/A,4,  962 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,FW,A2,,Done,N/A,  204 ,,N/A,N/A,1,  203 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,FW,A1,,Done,N/A,  200 ,,N/A,N/A,1,  199 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,HONEY BLACK,HG,,Done,N/A,"  1,379 ",,N/A,N/A,4,"  1,375 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,FW BEN,A1,,Done,N/A,  882 ,,N/A,N/A,2,  880 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,HOT SEMI WASHED,A2,,Done,N/A,  180 ,,N/A,N/A,0,  180 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,HOT SEMI WASHED,A4,,Done,N/A,  65 ,,N/A,N/A,0,  65 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,HOT SEMI HONEY,HG,,Done,N/A,"  3,618 ",,N/A,N/A,10,"  3,608 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,SUPER WASHED,A1,,Done,N/A,"  2,656 ",,N/A,N/A,7,"  2,649 ",Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,FW,A4,,Done,N/A,  157 ,,N/A,N/A,1,  156 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,WASHED NO 1,A2,,Done,N/A,  125 ,,N/A,N/A,0,  125 ,Accepted,Not Started,,,,2026
+8/22/2026,BAHO,BUGOYI,Parch,,SEMI WASHED,A4,,Done,N/A,  60 ,,N/A,N/A,0,  60 ,Accepted,Not Started,,,,2026
+8/24/2026,BAHO,HUMURE,Parch,,FW ,A4,,Done,N/A,"  2,644 ",,N/A,N/A,11,"  2,633 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  4,852 ",,N/A,N/A,16,"  4,836 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,FW,A1,,Done,N/A,"  1,521 ",,N/A,N/A,3,"  1,518 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,NATURAL N,HG,,Done,N/A,"  6,243 ",,N/A,N/A,13,"  6,230 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,NATURAL N,HPC,,Done,N/A,"  2,085 ",,N/A,N/A,6,"  2,079 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,FW,A1,,Done,N/A,  551 ,,N/A,N/A,1,  550 ,Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,FW,A2,,Done,N/A,  71 ,,N/A,N/A,0,  71 ,Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,NEW TOP WASHED,HPC,,Done,N/A,  250 ,,N/A,N/A,1,  249 ,Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,NEW TOP WASHED,HG,,Done,N/A,"  3,026 ",,N/A,N/A,7,"  3,019 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,NAT NO 1,HG,,Done,N/A,"  6,143 ",,N/A,N/A,15,"  6,128 ",Accepted,Not Started,,,,2026
+8/24/2026,BAHO,MUZO,Parch,,NAT NO 1,HHPC,,Done,N/A,  139 ,,N/A,N/A,0,  139 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,CYABINGO,Parch,,NATURAL N,FLOOT,,Done,N/A,"  2,379 ",,N/A,N/A,6,"  2,373 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,CYABINGO,Parch,,FW,A2,,Done,N/A,"  1,098 ",,N/A,N/A,3,"  1,095 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,CYABINGO,Parch,,FW,A4,,Done,N/A,"  2,542 ",,N/A,N/A,8,"  2,534 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,CYABINGO,Parch,,FW,A3,,Done,N/A,  531 ,,N/A,N/A,2,  529 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,CYABINGO,Parch,,FW,HPC,,Done,N/A,"  2,020 ",,N/A,N/A,6,"  2,014 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  1,034 ",,N/A,N/A,3,"  1,031 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,BUMBOGO,Parch,,FW,A3,,Done,N/A,"  3,350 ",,N/A,N/A,12,"  3,338 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,BUMBOGO,Parch,,S WASHED,A1,,Done,N/A,"  4,863 ",,N/A,N/A,13,"  4,850 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,NEW TOP WASHED,A1,,Done,N/A,  266 ,,N/A,N/A,1,  265 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,WASED NO 1,HPC,,Done,N/A,  322 ,,N/A,N/A,1,  321 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,WASED NO 1,HG,,Done,N/A,"  2,151 ",,N/A,N/A,5,"  2,146 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,NAT NO 2,HG,,Done,N/A,"  1,840 ",,N/A,N/A,6,"  1,834 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,NAT NO 2,HPC,,Done,N/A,  165 ,,N/A,N/A,1,  164 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,GREEN,,,,,Done,N/A,  37 ,,N/A,N/A,0,  37 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,ANAEROBIC HONEY,HPC,,Done,N/A,  235 ,,N/A,N/A,1,  234 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,ANAEROBIC HONEY,HG,,Done,N/A,"  1,235 ",,N/A,N/A,3,"  1,232 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,WHITE HONEY,HPC,,Done,N/A,  252 ,,N/A,N/A,1,  251 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,NAT NO 9,HG,,Done,N/A,"  1,273 ",,N/A,N/A,3,"  1,270 ",Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,NAT NO 10,HC,,Done,N/A,  133 ,,N/A,N/A,0,  133 ,Accepted,Not Started,,,,2026
+8/25/2026,BAHO,MUZO,Parch,,WHITE HONEY NO1,HG,,Done,N/A,"  1,323 ",,N/A,N/A,3,"  1,320 ",Accepted,Not Started,,,,2026
+8/26/2026,BAHO,AKAGERA,Parch,,NAT 6 RB,HG,,Done,N/A,"  5,724 ",,N/A,N/A,14,"  5,710 ",Accepted,Not Started,,,,2026
+8/26/2026,BAHO,AKAGERA,Parch,,NATURAL N,HG,,Done,N/A,"  6,049 ",,N/A,N/A,14,"  6,035 ",Accepted,Not Started,,,,2026
+8/26/2026,BAHO,AKAGERA,Parch,,NATURAL N,FLOAT,,Done,N/A,"  2,074 ",,N/A,N/A,5,"  2,069 ",Accepted,Not Started,,,,2026
+8/26/2026,BAHO,AKAGERA,Parch,,NATURAL N,HPC,,Done,N/A,  895 ,,N/A,N/A,3,  892 ,Accepted,Not Started,,,,2026
+8/28/2026,BAHO,MUGANZA,Parch,,WASHED NO 10,HG,,Done,N/A,"  3,715 ",,N/A,N/A,9,"  3,706 ",Accepted,Not Started,,,,2026
+8/28/2026,BAHO,MUGANZA,Parch,,NAT 300,HG,,Done,N/A,"  6,607 ",,N/A,N/A,15,"  6,592 ",Accepted,Not Started,,,,2026
+8/28/2026,BAHO,MUGANZA,Parch,,UBUNTU OVERLIP HYBRID HONEY,,,Done,N/A,"  1,029 ",,N/A,N/A,3,"  1,026 ",Accepted,Not Started,,,,2026
+8/28/2026,BAHO,MUGANZA,Parch,,UBUNTU HYBRID HONEY,,,Done,N/A,  830 ,,N/A,N/A,3,  827 ,Accepted,Not Started,,,,2026
+8/28/2026,BAHO,MUGANZA,Parch,,FW SEASON B,A1,,Done,N/A,"  5,862 ",,N/A,N/A,14,"  5,848 ",Accepted,Not Started,,,,2026
+8/28/2026,BAHO,MUGANZA,Parch,,NAT NO 1,HG,,Done,N/A,"  2,305 ",,N/A,N/A,5,"  2,300 ",Accepted,Not Started,,,,
+8/28/2026,BAHO,KINAZI,Parch,,FW SEASON B,A1,,Done,N/A,"  10,010 ",,N/A,N/A,24,"  9,986 ",Accepted,Not Started,,,,
+8/28/2026,BAHO,KINAZI,Parch,,FW SEASON B,A1,,Done,N/A,"  9,968 ",,N/A,N/A,24,"  9,944 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,FW,A3,,Done,N/A,"  1,459 ",,N/A,N/A,5,"  1,454 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,FW,A4,,Done,N/A,  494 ,,N/A,N/A,1,  493 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED 36HRS,A2,,Done,N/A,  199 ,,N/A,N/A,1,  198 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED 72RS,A2,,Done,N/A,  99 ,,N/A,N/A,0,  99 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED 48HRS,A2,,Done,N/A,  98 ,,N/A,N/A,0,  98 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,FW ,A1,,Done,N/A,  831 ,,N/A,N/A,2,  829 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,BEN WASHED 72HRS,A1,,Done,N/A,"  1,249 ",,N/A,N/A,3,"  1,246 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED 48HRS,A1,,Done,N/A,  917 ,,N/A,N/A,2,  915 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED 36HRS,A1,,Done,N/A,"  3,762 ",,N/A,N/A,10,"  3,752 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED NO 10,HG,,Done,N/A,"  2,655 ",,N/A,N/A,6,"  2,649 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,FW,A1,,Done,N/A,  901 ,,N/A,N/A,2,  899 ,Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,WASHED NO 1,HG,,Done,N/A,"  2,658 ",,N/A,N/A,6,"  2,652 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,HONEY NO 3,HG,,Done,N/A,"  3,800 ",,N/A,N/A,10,"  3,790 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,NAT NO 2,HG,,Done,N/A,"  2,306 ",,N/A,N/A,5,"  2,301 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,BEN NAT 72HRS,HG,,Done,N/A,"  3,998 ",,N/A,N/A,10,"  3,988 ",Accepted,Not Started,,,,
+8/29/2026,BAHO,GITOKI,Parch,,NEN NAT 48HRS,HG,,Done,N/A,"  3,505 ",,N/A,N/A,9,"  3,496 ",Accepted,Not Started,,,,
+9/4/2026,BAHO,GASEKE,Parch,,NAT NO2,HG,,Done,N/A,"  1,482 ",,N/A,N/A,3,"  1,479 ",Accepted,Not Started,,,,
+9/4/2026,BAHO,GASEKE,Parch,,NAT NO9,HG,,Done,N/A,"  5,346 ",,N/A,N/A,13,"  5,333 ",Accepted,Not Started,,,,
+9/4/2026,BAHO,GASEKE,Parch,,NATURAL ,HPC,,Done,N/A,  12 ,,N/A,N/A,0,  12 ,Accepted,Not Started,,,,
+8/28/2026,BAHO,KINAZI,Parch,,FW,A2,,Done,N/A,"  8,512 ",,N/A,N/A,32,"  8,480 ",Accepted,Not Started,,,,
+9/8/2026,BAHO,KINAZI,Parch,,FW SEASON B,A1,,Done,N/A,"  10,064 ",,N/A,N/A,24,"  10,040 ",Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,SUPER WASHED,A1,,Done,N/A,  371 ,,N/A,N/A,1,  370 ,Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,ANAEROBIC NAT,HG,,Done,N/A,  189 ,,N/A,N/A,1,  188 ,Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,HYBRID WASHED,A1,,Done,N/A,  445 ,,N/A,N/A,1,  444 ,Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,N NAT ,HG,,Done,N/A,"  1,240 ",,N/A,N/A,3,"  1,237 ",Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,DRY FERM WASHED,A1,,Done,N/A,  153 ,,N/A,N/A,1,  152 ,Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,FW,A1,,Done,N/A,  587 ,,N/A,N/A,2,  585 ,Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,ECLIPSE NAT,HG,,Done,N/A,"  2,254 ",,N/A,N/A,6,"  2,248 ",Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,SUBMERGED F HONEY,HG,,Done,N/A,"  2,094 ",,N/A,N/A,6,"  2,088 ",Accepted,Not Started,,,,
+9/8/2026,BAHO,NGORORERO,Parch,,COLD NAT,HG,,Done,N/A,"  3,075 ",,N/A,N/A,9,"  3,066 ",Accepted,Not Started,,,,
+9/9/2026,BAHO,KINAZI,Parch,,FW SEASON B,A1,,Done,N/A,"  9,881 ",,N/A,N/A,24,"  9,857 ",Accepted,Not Started,,,,
+9/9/2026,BAHO,FUGI,Parch,,WASHED NO 2,HG,,Done,N/A,  484 ,,N/A,N/A,1,  483 ,Accepted,Not Started,,,,
+9/9/2026,BAHO,FUGI,Parch,,WASHED NO 1,HG,,Done,N/A,"  10,749 ",,N/A,N/A,25,"  10,724 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,MATYAZO,Parch,,FW ,A1,,Done,N/A,"  7,544 ",,N/A,N/A,20,"  7,524 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,MATYAZO,Parch,,ECLIPSE NAT,HG,,Done,N/A,"  1,576 ",,N/A,N/A,4,"  1,572 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,HUMURE,Parch,,FW ,A4,,Done,N/A,"  6,746 ",,N/A,N/A,28,"  6,718 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,HUMURE,Parch,,FW,A3,,Done,N/A,"  7,021 ",,N/A,N/A,24,"  6,997 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,  249 ,,N/A,N/A,1,  248 ,Accepted,Not Started,,,,
+9/10/2026,BAHO,HUMURE,Parch,,FW ,A2,,Done,N/A,"  3,134 ",,N/A,N/A,10,"  3,124 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,HUMURE,Parch,,FW,A4,,Done,N/A,"  3,777 ",,N/A,N/A,16,"  3,761 ",Accepted,Not Started,,,,
+9/10/2026,BAHO,HUMURE,Parch,,FW,A4 FERMENT,,Done,N/A,  338 ,,N/A,N/A,1,  337 ,Accepted,Not Started,,,,
+9/11/2026,BAHO,KINAZI,Parch,,FW,A1,,Done,N/A,"  5,754 ",,N/A,N/A,14,"  5,740 ",Accepted,Not Started,,,,
+9/11/2026,BAHO,KINAZI,Parch,,FW,A2,,Done,N/A,"  4,145 ",,N/A,N/A,11,"  4,134 ",Accepted,Not Started,,,,
+9/12/2026,BAHO,KINAZI,Parch,,FW,A3,,Done,N/A,"  12,075 ",,N/A,N/A,37,"  12,038 ",Accepted,Not Started,,,,
+9/12/2026,BAHO,KINAZI,Parch,,FW,A4,,Done,N/A,"  1,903 ",,N/A,N/A,8,"  1,895 ",Accepted,Not Started,,,,
+9/12/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  13,261 ",,N/A,N/A,37,"  13,224 ",Accepted,Not Started,,,,
+9/12/2026,BAHO,HUMURE,Parch,,FW,A2,,Done,N/A,"  5,698 ",,N/A,N/A,19,"  5,679 ",Accepted,Not Started,,,,
+9/13/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  9,885 ",,N/A,N/A,28,"  9,857 ",Accepted,Not Started,,,,
+9/13/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  9,918 ",,N/A,N/A,28,"  9,890 ",Accepted,Not Started,,,,
+9/13/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  9,938 ",,N/A,N/A,28,"  9,910 ",Accepted,Not Started,,,,
+9/13/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  9,984 ",,N/A,N/A,28,"  9,956 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,L H,A1,,Done,N/A,"  2,108 ",,N/A,N/A,5,"  2,103 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,BLACK HONEY,HG,,Done,N/A,"  3,269 ",,N/A,N/A,12,"  3,257 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,FW SEASON B,A2,,Done,N/A,"  1,763 ",,N/A,N/A,5,"  1,758 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,FW SEASON B,A1,,Done,N/A,"  2,813 ",,N/A,N/A,7,"  2,806 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,EXTENDED NATURAL,HG,,Done,N/A,"  5,263 ",,N/A,N/A,13,"  5,250 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,EXTENDED NATURAL,LG,,Done,N/A,"  2,282 ",,N/A,N/A,7,"  2,275 ",Accepted,Not Started,,,,
+9/16/2026,BAHO,KINAZI,Parch,,ANAEROBIC NAT,HG,,Done,N/A,"  1,785 ",,N/A,N/A,4,"  1,781 ",Accepted,Not Started,,,,
+9/16/2026,UBUNTU,NGORORERO,Parch,,ECLIPSE NAT,HG,,Done,N/A,  407 ,,N/A,N/A,1,  406 ,Accepted,Not Started,,,,
+9/16/2026,UBUNTU,NGORORERO,Parch,,ANAEROBIC NAT,HG,,Done,N/A,  90 ,,N/A,N/A,0,  90 ,Accepted,Not Started,,,,
+9/17/2026,BAHO,HUMURE,Parch,,FW SEASON B,A1,,Done,N/A,"  10,304 ",,N/A,N/A,29,"  10,275 ",Accepted,Not Started,,,,
+9/17/2026,BAHO,HUMURE,Parch,,FW SEASON B,A1,,Done,N/A,"  10,254 ",,N/A,N/A,29,"  10,225 ",Accepted,Not Started,,,,
+9/17/2026,BAHO,HUMURE,Parch,,FW SEASON B,A1,,Done,N/A,"  10,327 ",,N/A,N/A,29,"  10,298 ",Accepted,Not Started,,,,
+9/17/2026,BAHO,HUMURE,Parch,,NAT 300,HG,,Done,N/A,"  4,656 ",,N/A,N/A,11,"  4,645 ",Accepted,Not Started,,,,
+9/17/2026,BAHO,HUMURE,Parch,,NAT NO1,HG,,Done,N/A,"  5,683 ",,N/A,N/A,14,"  5,669 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,NAT 140,HG,,Done,N/A,"  1,380 ",,N/A,N/A,3,"  1,377 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,FW KIBUMBWE,HG,,Done,N/A,"  1,037 ",,N/A,N/A,3,"  1,034 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,FW,A1,,Done,N/A,"  4,595 ",,N/A,N/A,12,"  4,583 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,NAT 144,HG,,Done,N/A,"  2,305 ",,N/A,N/A,4,"  2,301 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,HONEY NO 3,HG,,Done,N/A,"  4,147 ",,N/A,N/A,10,"  4,137 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED 1,A3,,Done,N/A,  951 ,,N/A,N/A,3,  948 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED 72RS BEN,A1,,Done,N/A,  536 ,,N/A,N/A,1,  535 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED 72RS BEN,A2,,Done,N/A,  85 ,,N/A,N/A,0,  85 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,NATURAL SLEEING BAG,HG,,Done,N/A,"  3,995 ",,N/A,N/A,10,"  3,985 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 1,A3,,Done,N/A,  274 ,,N/A,N/A,1,  273 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 1,A2,,Done,N/A,  353 ,,N/A,N/A,1,  352 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 10,A3,,Done,N/A,  851 ,,N/A,N/A,3,  848 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,,A1,,Done,N/A,  477 ,,N/A,N/A,1,  476 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 10,HG,,Done,N/A,"  1,942 ",,N/A,N/A,5,"  1,937 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED 48HRS BEN,A2,,Done,N/A,  157 ,,N/A,N/A,1,  156 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 10,A2,,Done,N/A,  404 ,,N/A,N/A,1,  403 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 10,A3,,Done,N/A,  268 ,,N/A,N/A,1,  267 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 1,A1,,Done,N/A,"  4,589 ",,N/A,N/A,11,"  4,578 ",Accepted,Not Started,,,,
+9/18/2026,BAHO,HUMURE,Parch,,WASHED NO 1,A4,,Done,N/A,  25 ,,N/A,N/A,0,  25 ,Accepted,Not Started,,,,
+9/18/2026,BAHO,BUHETA,Parch,,FW,A1,,Done,N/A,"  9,649 ",,N/A,N/A,28,"  9,621 ",Accepted,Not Started,,,,
+9/21/2026,BAHO,FUGI,Parch,,N NAT ,HG,,Done,N/A,"  2,564 ",,N/A,N/A,6,"  2,558 ",Accepted,Not Started,,,,
+9/21/2026,BAHO,FUGI,Parch,,UBUNTU HONEY,HG,,Done,N/A,  638 ,,N/A,N/A,2,  636 ,Accepted,Not Started,,,,
+9/21/2026,BAHO,FUGI,Parch,,UBUNTU HONEY,HG,,Done,N/A,"  4,192 ",,N/A,N/A,2,"  4,190 ",Accepted,Not Started,,,,
+9/21/2026,BAHO,FUGI,Parch,,ANAEROBIC NAT 36HRS,HG,,Done,N/A,  146 ,,N/A,N/A,2,  144 ,Accepted,Not Started,,,,
+9/21/2026,BAHO,FUGI,Parch,,NAT NO 9,HG,,Done,N/A,"  3,474 ",,N/A,N/A,2,"  3,472 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,EXTENDED NATURAL,HG,,Done,N/A,"  3,588 ",,N/A,N/A,9,"  3,579 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,ANAEROBIC NATURAL,HG,,Done,N/A,  831 ,,N/A,N/A,3,  828 ,Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,L H A1,A1,,Done,N/A,"  1,620 ",,N/A,N/A,4,"  1,616 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,HYDRO NAT ANAEROBIC,,,Done,N/A,"  2,633 ",,N/A,N/A,6,"  2,627 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,EXTENDED NATURAL,LG,,Done,N/A,  460 ,,N/A,N/A,0,  460 ,Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,EXP NAT 72HRS,,,Done,N/A,  40 ,,N/A,N/A,,  40 ,Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,ANAEROBIC NAT,HG,,Done,N/A,  837 ,,N/A,N/A,2,  835 ,Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,ANAEROBIC VM NAT 72HRS,,,Done,N/A,"  1,787 ",,N/A,N/A,4,"  1,783 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,NAT L1-PK 72HRS,,,Done,N/A,"  1,188 ",,N/A,N/A,3,"  1,185 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,FW SEASON B,A3,,Done,N/A,"  4,213 ",,N/A,N/A,14,"  4,199 ",Accepted,Not Started,,,,
+9/24/2026,BAHO,KINAZI,Parch,,ANAEROBIC NAT 72HRS,,,Done,N/A,  892 ,,N/A,N/A,2,  890 ,Accepted,Not Started,,,,
+9/29/2026,AGRINOS,KAYENZI,Parch,,FW,A3,,Done,N/A,"  7,792 ",,N/A,N/A,32,"  7,760 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,MUGANZA,Parch,,NAT 300,HG,,Done,N/A,"  2,962 ",,N/A,N/A,7,"  2,955 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,MUGANZA,Parch,,NAT NO 2,HG,,Done,N/A,  357 ,,N/A,N/A,1,  356 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,MUGANZA,Parch,,HYDRO WET ANAE NAT,HG,,Done,N/A,"  1,075 ",,N/A,N/A,2,"  1,073 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,MUGANZA,Parch,,SUBMERGED F HONEY,HG,,Done,N/A,"  2,307 ",,N/A,N/A,6,"  2,301 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,MUGANZA,Parch,,NEW TOP WASHED 84,HG,,Done,N/A,  415 ,,N/A,N/A,1,  414 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,FW SEASON B,A3,,Done,N/A,"  2,778 ",,N/A,N/A,10,"  2,768 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,FW SEASON B FERMENT,A3,,Done,N/A,  339 ,,N/A,N/A,1,  338 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,FW SEASON B,A1,,Done,N/A,  269 ,,N/A,N/A,1,  268 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,FW SEASON B,A4,,Done,N/A,  143 ,,N/A,N/A,1,  142 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,FW SEASON B,A3,,Done,N/A,  181 ,,N/A,N/A,1,  180 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,SEMI WASHED,A1,,Done,N/A,"  1,116 ",,N/A,N/A,4,"  1,112 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,L H  A3,A3,,Done,N/A,  424 ,,N/A,N/A,1,  423 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,KINAZI,Parch,,BLACK HONEY,,,Done,N/A,  69 ,,N/A,N/A,0,  69 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,FUGI,Parch,,N NAT ,HG,,Done,N/A,"  4,968 ",,N/A,N/A,12,"  4,956 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,FUGI,Parch,,FW,A2,,Done,N/A,"  2,346 ",,N/A,N/A,7,"  2,339 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,FUGI,Parch,,FW DARCK ROOM,A2,,Done,N/A,  744 ,,N/A,N/A,2,  742 ,Accepted,Not Started,,,,
+9/30/2026,BAHO,FUGI,Parch,,HONEY NO 3,HG,,Done,N/A,"  2,266 ",,N/A,N/A,5,"  2,261 ",Accepted,Not Started,,,,
+9/30/2026,BAHO,FUGI,Parch,,HONEY ,HG,,Done,N/A,  689 ,,N/A,N/A,2,  687 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  7,262 ",,N/A,N/A,18,"  7,244 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,BUMBOGO,Parch,,FW,A2,,Done,N/A,"  3,287 ",,N/A,N/A,9,"  3,278 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,N NAT ,HPC,,Done,N/A,  375 ,,N/A,N/A,1,  374 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,SUPER WASHED,A4,,Done,N/A,  157 ,,N/A,N/A,0,  157 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,FW,A2,,Done,N/A,  238 ,,N/A,N/A,1,  237 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,FW,COKE,,Done,N/A,  99 ,,N/A,N/A,0,  99 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,NATURAL YEAST,FLOAT,,Done,N/A,  392 ,,N/A,N/A,1,  391 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,N NAT ,FLOAT,,Done,N/A,"  1,305 ",,N/A,N/A,4,"  1,301 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,NGORORERO,Parch,,HYDRO WET ANAE NAT,HG,,Done,N/A,"  1,141 ",,N/A,N/A,3,"  1,138 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,MATYAZO,Parch,,HONEY NO 3,HG,,Done,N/A,"  2,066 ",,N/A,N/A,5,"  2,061 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,MATYAZO,Parch,,SEMI WASHED,A1,,Done,N/A,"  2,357 ",,N/A,N/A,5,"  2,352 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,MATYAZO,Parch,,NEW TOP WASHED 84,A1,,Done,N/A,"  1,251 ",,N/A,N/A,3,"  1,248 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,MATYAZO,Parch,,HYDRO WET NAT LOT 3,HG,,Done,N/A,  277 ,,N/A,N/A,1,  276 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,MATYAZO,Parch,,HYDRO WET NAT 17/6/2026,,,Done,N/A,  597 ,,N/A,N/A,1,  596 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,MATYAZO,Parch,,HYDRO WET NAT 1/20262/6,,,Done,N/A,  207 ,,N/A,N/A,1,  206 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,BUHETA,Parch,,N NAT ,HG,,Done,N/A,"  5,528 ",,N/A,N/A,12,"  5,516 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,BUHETA,Parch,,FW,A2,,Done,N/A,"  3,118 ",,N/A,N/A,8,"  3,110 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,BUHETA,Parch,,WHITE HONEY,HPC,,Done,N/A,  174 ,,N/A,N/A,1,  173 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,BUHETA,Parch,,WHITE HONEY,HG,,Done,N/A,"  1,302 ",,N/A,N/A,4,"  1,298 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,FUGI,Parch,,WASHED NO 1,HG,,Done,N/A,  486 ,,N/A,N/A,1,  485 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,FUGI,Parch,,NAT DARK ROOM,HG,,Done,N/A,"  3,387 ",,N/A,N/A,8,"  3,379 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,FUGI,Parch,,N NAT ,HG,,Done,N/A,"  1,892 ",,N/A,N/A,5,"  1,887 ",Accepted,Not Started,,,,
+10/1/2026,BAHO,FUGI,Parch,,WHITE HONEY,HG,,Done,N/A,  734 ,,N/A,N/A,2,  732 ,Accepted,Not Started,,,,
+10/1/2026,BAHO,FUGI,Parch,,NAT 300,HG,,Done,N/A,"  4,665 ",,N/A,N/A,11,"  4,654 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,FW,A4,,Done,N/A,  152 ,,N/A,N/A,0,  152 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,NAT NO 2,HG,,Done,N/A,"  3,035 ",,N/A,N/A,8,"  3,027 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,NAT 144,HG,,Done,N/A,"  1,486 ",,N/A,N/A,4,"  1,482 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,NAT BEN,HG,,Done,N/A,"  1,973 ",,N/A,N/A,5,"  1,968 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,FW ,A2,,Done,N/A,  408 ,,N/A,N/A,1,  407 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,NAT 140,HG,,Done,N/A,"  1,349 ",,N/A,N/A,4,"  1,345 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,NAT 300,HG,,Done,N/A,  977 ,,N/A,N/A,3,  974 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,FW,A1,,Done,N/A,  499 ,,N/A,N/A,1,  498 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUHETA,Parch,,FW,A3,,Done,N/A,"  1,469 ",,N/A,N/A,6,"  1,463 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,MATYAZO,Parch,,FW,A1,,Done,N/A,"  3,491 ",,N/A,N/A,8,"  3,483 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,MATYAZO,Parch,,NAT,HPC,,Done,N/A,  253 ,,N/A,N/A,1,  252 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,MATYAZO,Parch,,FW,A4,,Done,N/A,"  1,542 ",,N/A,N/A,4,"  1,538 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,MATYAZO,Parch,,FW,A2,,Done,N/A,  609 ,,N/A,N/A,1,  608 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,MATYAZO,Parch,,FW,FOAT&HC,,Done,N/A,  566 ,,N/A,N/A,1,  565 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,MATYAZO,Parch,,HONEY NO 3,HG,,Done,N/A,  311 ,,N/A,N/A,1,  310 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,NAT 300,HG,,Done,N/A,"  2,161 ",,N/A,N/A,5,"  2,156 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,NAT 144,HG,,Done,N/A,"  1,420 ",,N/A,N/A,4,"  1,416 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,NAT 140,HG,,Done,N/A,  766 ,,N/A,N/A,2,  764 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,BEN NAT ,HG,,Done,N/A,"  3,341 ",,N/A,N/A,9,"  3,332 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,N NAT ,HG,,Done,N/A,"  2,495 ",,N/A,N/A,7,"  2,488 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,NAT 140,HG,,Done,N/A,  965 ,,N/A,N/A,2,  963 ,Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,NAT N0 1,HG,,Done,N/A,"  5,208 ",,N/A,N/A,14,"  5,194 ",Accepted,Not Started,,,,
+10/2/2026,BAHO,BUGOYI,Parch,,NAT N0 2,HG,,Done,N/A,"  4,141 ",,N/A,N/A,11,"  4,130 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,"  2,744 ",,N/A,N/A,7,"  2,737 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,BUMBOGO,Parch,,N NAT ,HG,,Done,N/A,  641 ,,N/A,N/A,2,  639 ,Accepted,Not Started,,,,
+10/3/2026,BAHO,BUMBOGO,Parch,,NAT NO 9,HG,,Done,N/A,"  1,309 ",,N/A,N/A,3,"  1,306 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,BUMBOGO,Parch,,NAT 144,HG,,Done,N/A,"  1,566 ",,N/A,N/A,4,"  1,562 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,BUMBOGO,Parch,,NAT NO 2,HG,,Done,N/A,"  3,876 ",,N/A,N/A,10,"  3,866 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,AKAGERA,Parch,,NAT SHED,HG,,Done,N/A,  882 ,,N/A,N/A,2,  880 ,Accepted,Not Started,,,,
+10/3/2026,BAHO,AKAGERA,Parch,,NAT NO 2,HG,,Done,N/A,"  4,500 ",,N/A,N/A,7,"  4,493 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,AKAGERA,Parch,,NAT NO 1,HG,,Done,N/A,"  4,222 ",,N/A,N/A,10,"  4,212 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,AKAGERA,Parch,,NAT 48 HRS,HG,,Done,N/A,"  15,050 ",,N/A,N/A,37,"  15,013 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,SHARA,Parch,,NAT 6RB,HG,,Done,N/A,"  1,134 ",,N/A,N/A,3,"  1,131 ",Accepted,Not Started,,,,
+10/3/2026,BAHO,SHARA,Parch,,FW ,A4,,Done,N/A,  178 ,,N/A,N/A,1,  177 ,Accepted,Not Started,,,,
+10/4/2026,BAHO,MUGANZA,Parch,,FW,A2,,Done,N/A,"  4,345 ",,N/A,N/A,11,"  4,334 ",Accepted,Not Started,,,,
+10/4/2026,BAHO,MUGANZA,Parch,,UBUNTU HYBRID HONEY,HG,,Done,N/A,"  1,860 ",,N/A,N/A,5,"  1,855 ",Accepted,Not Started,,,,
+10/4/2026,BAHO,MUGANZA,Parch,,UBUNTU HYBRID HONEY ORANGE,HG,,Done,N/A,"  1,289 ",,N/A,N/A,3,"  1,286 ",Accepted,Not Started,,,,
+10/4/2026,BAHO,MUGANZA,Parch,,DRY WASHED,HG,,Done,N/A,"  1,419 ",,N/A,N/A,3,"  1,416 ",Accepted,Not Started,,,,
+10/4/2026,BAHO,MUGANZA,Parch,,HYDRO WET ANAE NAT,HG,,Done,N/A,"  1,354 ",,N/A,N/A,3,"  1,351 ",Accepted,Not Started,,,,
+10/4/2026,BAHO,MUGANZA,Parch,,INKUBURANO,,,Done,N/A,  2 ,,N/A,N/A,0,  2 ,Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,UBUNTU,HPC,,Done,N/A,  180 ,,N/A,N/A,0,  180 ,Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,HONEY 3,,,Done,N/A,  103 ,,N/A,N/A,1,  102 ,Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,ANAER NAT 140HRS,HG,,Done,N/A,"  1,067 ",,N/A,N/A,0,"  1,067 ",Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,ANAER NAT 144HRS,,,Done,N/A,"  1,571 ",,N/A,N/A,6,"  1,565 ",Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,NAT NO 1,HG,,Done,N/A,"  2,172 ",,N/A,N/A,7,"  2,165 ",Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,WASHED NO 10,HHG,,Done,N/A,"  2,823 ",,N/A,N/A,7,"  2,816 ",Accepted,Not Started,,,,
+10/12/2026,BAHO,FUGI,Parch,,NAT NO 10,,,Done,N/A,"  2,181 ",,N/A,N/A,5,"  2,176 ",Accepted,Not Started,,,,
+10/13/2026,BAHO,FUGI,Parch,,WASHED NO 1 DARK ROOM,HG,,Done,N/A,"  7,147 ",,N/A,N/A,,"  7,147 ",Accepted,Not Started,,,,
+10/13/2026,BAHO,FUGI,Parch,,NAT N 2,HG,,Done,N/A,"  3,353 ",,N/A,N/A,,"  3,353 ",Accepted,Not Started,,,,
+10/13/2026,BAHO,FUGI,Parch,,NAT N 2,HPC,,Done,N/A,  147 ,,N/A,N/A,,  147 ,Accepted,Not Started,,,,
+10/14/2026,BAHO,MATYAZO,Parch,,BF2,HG,,Done,N/A,  845 ,,N/A,N/A,2,  843 ,Accepted,Not Started,,,,
+10/14/2026,BAHO,MATYAZO,Parch,,NAT NO 9,HG,,Done,N/A,"  2,161 ",,N/A,N/A,5,"  2,156 ",Accepted,Not Started,,,,
+10/14/2026,BAHO,MATYAZO,Parch,,N NATURAL,HG,,Done,N/A,"  6,816 ",,N/A,N/A,16,"  6,800 ",Accepted,Not Started,,,,
+10/14/2026,BAHO,CYABINGO,Parch,,N NAT ,HG,,Done,N/A,"  3,674 ",,N/A,N/A,11,"  3,663 ",Accepted,Not Started,,,,
+10/14/2026,BAHO,CYABINGO,Parch,,NEW TOP WASHED 84,HG,,Done,N/A,"  2,256 ",,N/A,N/A,5,"  2,251 ",Accepted,Not Started,,,,
+10/14/2026,BAHO,CYABINGO,Parch,,WASHED NO 1,HG,,Done,N/A,  997 ,,N/A,N/A,3,  994 ,Accepted,Not Started,,,,
+10/14/2026,BAHO,CYABINGO,Parch,,HONEY 3,HG,,Done,N/A,"  1,100 ",,N/A,N/A,3,"  1,097 ",Accepted,Not Started,,,,
+10/14/2026,BAHO,CYABINGO,Parch,,ANAEROBIC NAT,HG,,Done,N/A,"  1,030 ",,N/A,N/A,3,"  1,027 ",Accepted,Not Started,,,,
+10/15/2026,BAHO,MUGANZA,Parch,,FW,A1,,Done,N/A,"  9,106 ",,N/A,N/A,,"  9,106 ",Accepted,Not Started,,,,
+10/15/2026,BAHO,MUGANZA,Parch,,FW,A4,,Done,N/A,"  1,011 ",,N/A,N/A,,"  1,011 ",Accepted,Not Started,,,,
+10/17/2026,BAHO,BUHETA,Parch,,ANAEROB HONEY,HPC,,Done,N/A,  143 ,,N/A,N/A,1,  142 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUHETA,Parch,,ANAEROB HONEY,HG,,Done,N/A,  890 ,,N/A,N/A,2,  888 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUHETA,Parch,,N NAT ,FLOAT,,Done,N/A,"  1,715 ",,N/A,N/A,5,"  1,710 ",Accepted,Not Started,,,,
+10/17/2026,BAHO,BUHETA,Parch,,WASHED NO 10,A2,,Done,N/A,  346 ,,N/A,N/A,1,  345 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUHETA,Parch,,WASHED NO 10,A1,,Done,N/A,"  1,396 ",,N/A,N/A,3,"  1,393 ",Accepted,Not Started,,,,
+10/17/2026,BAHO,CYABINGO,Parch,,N NAT ,HG,,Done,N/A,"  1,589 ",,N/A,N/A,4,"  1,585 ",Accepted,Not Started,,,,
+10/17/2026,BAHO,CYABINGO,Parch,,N NAT ,HPC,,Done,N/A,  46 ,,N/A,N/A,0,  46 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUGOYI,Parch,,FW,A3,,Done,N/A,  527 ,,N/A,N/A,2,  525 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUGOYI,Parch,,WAHED NO 2,A4,,Done,N/A,  344 ,,N/A,N/A,1,  343 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUGOYI,Parch,,BLACK HONEY,HPC,,Done,N/A,  49 ,,N/A,N/A,0,  49 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,BUGOYI,Parch,,NAT HPC,HPC,,Done,N/A,"  1,136 ",,N/A,N/A,3,"  1,133 ",Accepted,Not Started,,,,
+10/17/2026,BAHO,BUGOYI,Parch,,NAT NO 9,HG,,Done,N/A,"  1,131 ",,N/A,N/A,3,"  1,128 ",Accepted,Not Started,,,,
+10/15/2026,BAHO,MATYAZO,Parch,,FW,A1,,Done,N/A,"  8,855 ",,N/A,N/A,21,"  8,834 ",Accepted,Not Started,,,,
+10/17/2026,BAHO,FUGI,Parch,,FW,A4,,Done,N/A,  77 ,,N/A,N/A,0,  77 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,FUGI,Parch,,BF,A3,,Done,N/A,  70 ,,N/A,N/A,0,  70 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,FUGI,Parch,,LOW HONEY,,,Done,N/A,  17 ,,N/A,N/A,0,  17 ,Accepted,Not Started,,,,
+10/17/2026,BAHO,FUGI,Parch,,N NAT ,FLOAT,,Done,N/A,  29 ,,N/A,N/A,0,  29 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,BF3,A2,,Done,N/A,  50 ,,N/A,N/A,0,  50 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,ANAERO NAT DARK ROOM,,,Done,N/A,"  1,244 ",,N/A,N/A,3,"  1,241 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,ANAERO NAT 120HRS,HG,,Done,N/A,"  3,571 ",,N/A,N/A,8,"  3,563 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,NAT 120HRS DARK ROOM,,,Done,N/A,"  5,616 ",,N/A,N/A,14,"  5,602 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,FW,A4,,Done,N/A,  900 ,,N/A,N/A,3,  897 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 2,A2,,Done,N/A,  185 ,,N/A,N/A,1,  184 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,HYDRO WET ANAE NAT,HG,,Done,N/A,  723 ,,N/A,N/A,2,  721 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 3,A3,,Done,N/A,  54 ,,N/A,N/A,0,  54 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 2,A2,,Done,N/A,"  1,108 ",,N/A,N/A,3,"  1,105 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 1,A4,,Done,N/A,  459 ,,N/A,N/A,1,  458 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED N 9,A2,,Done,N/A,  98 ,,N/A,N/A,0,  98 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 9,HG,,Done,N/A,  648 ,,N/A,N/A,2,  646 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 1,A3,,Done,N/A,  764 ,,N/A,N/A,3,  761 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 1,A2,,Done,N/A,"  2,627 ",,N/A,N/A,7,"  2,620 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 1,A1,,Done,N/A,"  2,560 ",,N/A,N/A,6,"  2,554 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,FW,A4,,Done,N/A,  179 ,,N/A,N/A,1,  178 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED,A1,,Done,N/A,"  2,179 ",,N/A,N/A,5,"  2,174 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 10,A3,,Done,N/A,  136 ,,N/A,N/A,1,  135 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,UBUNTU HONEY,HPC,,Done,N/A,  160 ,,N/A,N/A,1,  159 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,FW,A3,,Done,N/A,  443 ,,N/A,N/A,2,  441 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,WASHED NO 10,A2,,Done,N/A,  601 ,,N/A,N/A,2,  599 ,,,,,,
+10/17/2026,BAHO,FUGI,Parch,,FW,A1,,Done,N/A,"  5,434 ",,N/A,N/A,13,"  5,421 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,FW PARABOLIC,A1,,Done,N/A,"  1,194 ",,N/A,N/A,2,"  1,192 ",,,,,,
+10/17/2026,BAHO,FUGI,Parch,,NAT 40HRS,HG,,Done,N/A,  703 ,,N/A,N/A,2,  701 ,,,,,,
+10/17/2026,BAHO,BUMBOGO,Parch,,FW ,A3,,Done,N/A,  405 ,,N/A,N/A,1,  404 ,,,,,,
+10/17/2026,BAHO,BUMBOGO,Parch,,FW,A1,,Done,N/A,  518 ,,N/A,N/A,1,  517 ,,,,,,
+10/17/2026,BAHO,BUMBOGO,Parch,,FW,A2,,Done,N/A,"  1,315 ",,N/A,N/A,3,"  1,312 ",,,,,,
+10/17/2026,BAHO,BUMBOGO,Parch,,N NATURAL,HG,,Done,N/A,  393 ,,N/A,N/A,1,  392 ,,,,,,
+10/17/2026,BAHO,BUMBOGO,Parch,,NAT 144HRS,HG,,Done,N/A,"  1,328 ",,N/A,N/A,3,"  1,325 ",,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,ANAEROBIC WASHED,HPC,,Done,N/A,  775 ,,N/A,N/A,2,  773 ,,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,FW,A3,,Done,N/A,"  3,232 ",,N/A,N/A,10,"  3,222 ",,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,COLD WASHED,A3,,Done,N/A,  94 ,,N/A,N/A,1,  93 ,,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,FW,A1,,Done,N/A,"  2,074 ",,N/A,N/A,5,"  2,069 ",,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,WASHED 72HRS,A3,,Done,N/A,  183 ,,N/A,N/A,1,  182 ,,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,WASHED 22HRS,HG,,Done,N/A,  34 ,,N/A,N/A,0,  34 ,,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,COLD WASHED SEASONB,HG,,Done,N/A,  488 ,,N/A,N/A,1,  487 ,,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,N NATURAL,HG,,Done,N/A,  271 ,,N/A,N/A,1,  270 ,,,,,,
+11/4/2026,BAHO,MUGANZA,Parch,,N NATURAL,LG,,Done,N/A,"  2,219 ",,N/A,N/A,6,"  2,213 ",,,,,,
+,,,,,,,,,,,,,,,  -   ,,,,,,
+,,,,,,,,,,,,,,,  -   ,,,,,,
+,,,,,,,,,,,,,,,  -   ,,,,,,

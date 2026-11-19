@@ -15,6 +15,8 @@ export interface Facility extends Located {
   facility_type: 'CWS' | 'HQ_DRY_MILL';
   code: string;
   name: string;
+  contact_name: string;
+  contact_phone: string;
   is_active: boolean;
 }
 

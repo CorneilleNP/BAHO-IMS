@@ -64,6 +64,11 @@ export function canWrite(user: CurrentUser | null, area: WriteArea): boolean {
   return user.roles.some((assignment) => WRITE_ROLES[area].includes(assignment.role));
 }
 
+/** Whether the user is one of the super-admins (sees everything, e.g. station registration). */
+export function isAdmin(user: CurrentUser | null): boolean {
+  return user?.roles.some((assignment) => assignment.role === 'ADMIN') ?? false;
+}
+
 /** Which section a URL belongs to (null for shared pages like /dashboard). */
 export function sectionForPath(pathname: string): Section | null {
   if (pathname.startsWith('/drymill/')) return 'drymill';

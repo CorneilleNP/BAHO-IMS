@@ -1,4 +1,5 @@
 import { AppShell, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
+import type { ComponentType } from 'react';
 import {
   IconBuildingWarehouse,
   IconChartBar,
@@ -13,9 +14,10 @@ import {
 } from '@tabler/icons-react';
 import { NavLink as RouterNavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { LoginPage } from './features/auth/LoginPage';
-import { allowedSections, canAccessSection, sectionForPath, type Section } from './lib/access';
+import { allowedSections, canAccessSection, isAdmin, sectionForPath, type Section } from './lib/access';
 import { useAuth } from './lib/authContext';
 import { ProcessOnCwsPage } from './features/cws/ProcessOnCwsPage';
+import { CwsStationsPage } from './features/cws/CwsStationsPage';
 import { CherryReceiptForm } from './features/reception/CherryReceiptForm';
 import { CwsDashboardPage } from './features/reception/CwsDashboardPage';
 import { ProcessingLotForm } from './features/processing/ProcessingLotForm';
@@ -27,7 +29,15 @@ import { ParchProcessingPage } from './features/drymill/ParchProcessingPage';
 import { ExportUpdatesPage } from './features/drymill/ExportUpdatesPage';
 import { CwsTransfersPage } from './features/transfers/CwsTransfersPage';
 
-const navSections = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: ComponentType<{ size?: number }>;
+  /** Only shown to the ADMIN role, e.g. registering a new station. */
+  adminOnly?: boolean;
+}
+
+const navSections: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'Dry Mill',
     items: [
@@ -47,6 +57,7 @@ const navSections = [
       { to: '/cws/lots-report', label: 'Lots Report', icon: IconClipboardList },
       { to: '/cws/transfers', label: 'Transfers to Dry Mill', icon: IconTruckDelivery },
       { to: '/cws/process', label: 'Register Process', icon: IconUsers },
+      { to: '/cws/stations', label: 'Register CWS', icon: IconBuildingWarehouse, adminOnly: true },
     ],
   },
 ];
@@ -207,7 +218,7 @@ function App() {
                 <Text size="xs" fw={700} c="gray.5" tt="uppercase" px="xs" mb={6}>
                   {section.label}
                 </Text>
-                {section.items.map((item) => {
+                {section.items.filter((item) => !item.adminOnly || isAdmin(user)).map((item) => {
                   const isActive = location.pathname === item.to;
                   return (
                     <MantineNavLink
@@ -244,6 +255,7 @@ function App() {
           <Route path="/cws/lots-report" element={<ProcessingLotReportPage />} />
           <Route path="/cws/transfers" element={<CwsTransfersPage />} />
           <Route path="/cws/process" element={<ProcessOnCwsPage />} />
+          <Route path="/cws/stations" element={<CwsStationsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell.Main>
