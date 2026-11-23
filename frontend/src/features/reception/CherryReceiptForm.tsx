@@ -141,7 +141,8 @@ export function CherryReceiptForm() {
           onSaved={(receipt) => {
             setGrnWizard(null);
             receipts.reload();
-            setPrintReceipt(receipt);
+            // Saved offline: the GRN number comes from the server, so print after it syncs.
+            if (!(receipt as { _pending?: boolean })._pending) setPrintReceipt(receipt);
           }}
         />
       )}

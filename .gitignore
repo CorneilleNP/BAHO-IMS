@@ -25,3 +25,6 @@ Thumbs.db
 # Scratch ETL output (review and apply manually, never commit)
 backend/legacy/excel_migration/*.sql
 tools/pw-test/
+
+# --- Database backups on the VPS (never commit) ---
+backups/

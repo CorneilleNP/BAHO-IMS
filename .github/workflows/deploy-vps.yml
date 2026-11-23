@@ -8,8 +8,17 @@ on:
 permissions:
   contents: read
 
+# Never run two deployments at once; a newer push waits for the running one.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: ci
     runs-on: ubuntu-latest
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -38,8 +47,17 @@ jobs:
           --exclude='backend/.venv/'
           --exclude='frontend/node_modules/'
           --exclude='frontend/dist/'
+          --exclude='backups/'
           -e "ssh -p ${VPS_SSH_PORT:-22}"
           ./ "${VPS_USER}@${VPS_HOST}:${VPS_DEPLOY_PATH}/"
+
+      # Migrations run when the new backend starts, so take a dump first.
+      # Aborts the deployment if the database is running but the dump fails.
+      - name: Back up the database before migrating
+        run: >-
+          ssh -p "${VPS_SSH_PORT:-22}"
+          "${VPS_USER}@${VPS_HOST}"
+          "cd '${VPS_DEPLOY_PATH}' && sh deployment/predeploy-backup.sh"
 
       - name: Build and restart application
         run: >-

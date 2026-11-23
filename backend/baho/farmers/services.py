@@ -26,3 +26,26 @@ def register_farmer(*, user, home_facility, **fields) -> Farmer:
         updated_by=user,
         **{**fields, "national_id": national_id},
     )
+
+
+@transaction.atomic
+def update_farmer(*, user, farmer: Farmer, **fields) -> Farmer:
+    """Edit a farmer's details. The farmer code never changes, even when the
+    farmer moves to another station (you need access to both stations)."""
+    farmer = Farmer.objects.select_for_update().get(pk=farmer.pk)
+    ensure_facility_access(user, farmer.home_facility)
+    if "home_facility" in fields:
+        ensure_facility_access(user, fields["home_facility"])
+    if "national_id" in fields:
+        national_id = (fields["national_id"] or "").strip()
+        fields["national_id"] = national_id
+        taken = Farmer.all_objects.filter(national_id=national_id).exclude(pk=farmer.pk)
+        if national_id and taken.exists():
+            raise ValidationError(
+                {"national_id": "A farmer with this national ID is already registered."}
+            )
+    for name, value in fields.items():
+        setattr(farmer, name, value)
+    farmer.updated_by = user
+    farmer.save()
+    return farmer

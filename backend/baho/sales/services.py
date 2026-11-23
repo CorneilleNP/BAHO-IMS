@@ -45,9 +45,61 @@ def green_balance(
     return produced - shipped
 
 
+def lock_export_grades(grade_ids) -> None:
+    """Serialise every write that can move green coffee stock of these grades.
+
+    Shipment lines and dry mill outputs always name an export grade, so two
+    transactions that compete for the same green coffee always share a grade.
+    Locking the grade rows (in a fixed order, so no deadlocks) makes the
+    "is there enough stock?" check and the write that depends on it atomic.
+    """
+    from baho.drymill.models import ExportGrade
+
+    ids = sorted({str(i) for i in grade_ids})
+    if ids:
+        list(ExportGrade.objects.select_for_update().filter(pk__in=ids).order_by("pk"))
+
+
+def _selections(batch):
+    """Every shipment-line selection that would count this batch's green coffee:
+    each combination of its known process / sub-process / source (None = any)."""
+    from itertools import product
+
+    attrs = {
+        "process": batch.process,
+        "sub_process": batch.sub_process,
+        "source_facility": batch.source_facility,
+        "source_supplier": batch.source_supplier,
+    }
+    known = [k for k, v in attrs.items() if v is not None]
+    for picks in product([False, True], repeat=len(known)):
+        yield {k: attrs[k] for k, pick in zip(known, picks, strict=True) if pick}
+
+
+def ensure_batch_output_not_shipped(batch) -> None:
+    """Call inside the transaction that voids `batch` (after it is marked deleted):
+    refuses if green coffee from it has already been shipped."""
+    outputs = list(batch.outputs.select_related("export_grade"))
+    lock_export_grades(o.export_grade_id for o in outputs)
+    for grade in {o.export_grade for o in outputs}:
+        for selection in _selections(batch):
+            available = green_balance(export_grade=grade, **selection)
+            if available < 0:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            f"Green coffee from this batch has already been shipped "
+                            f"({grade.name}: {-available} kg would be missing). "
+                            "Void the shipment first, if it is still planned."
+                        )
+                    }
+                )
+
+
 def _check_green_stock(lines) -> None:
     """Each line can only claim green coffee actually milled for its own
     process / sub-process / source / grade selection - not just any stock of that grade."""
+    lock_export_grades(line["export_grade"].pk for line in lines)
     wanted: dict = {}
     for line in lines:
         key = (

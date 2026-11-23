@@ -1,0 +1,53 @@
+name: Android APK
+
+# Builds the Android app from the same React code as the website.
+# Run it from the Actions tab ("Run workflow"); the APK is attached to the run.
+# Signed release builds need the release key: add the repository secrets
+# ANDROID_KEYSTORE_BASE64 (base64 of baho-release.jks) and ANDROID_KEYSTORE_PASSWORD.
+# Without them a debug APK is built instead (fine for testing, not for handing out).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Release key (if configured)
+        if: env.KEYSTORE_B64 != ''
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/baho-release.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=baho\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/baho-release.jks" "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/keystore.properties
+      - name: Build
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          if [ -f keystore.properties ]; then ./gradlew assembleRelease; else ./gradlew assembleDebug; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baho-ims-apk
+          path: frontend/android/app/build/outputs/apk/**/*.apk

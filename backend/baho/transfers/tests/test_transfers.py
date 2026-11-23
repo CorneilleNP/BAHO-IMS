@@ -33,7 +33,8 @@ def one_line(grade, weighings=None, weight_of_bags_kg="20"):
         "process": str(grade.process_id),
         "grade": str(grade.id),
         "moisture_content_pct": "12.5",
-        "weighings": weighings or [{"bags": 10, "weight_kg": "100"}, {"bags": 10, "weight_kg": "300"}],
+        "weighings": weighings
+        or [{"bags": 10, "weight_kg": "100"}, {"bags": 10, "weight_kg": "300"}],
         "weight_of_bags_kg": weight_of_bags_kg,
     }
 
@@ -59,7 +60,10 @@ def create_and_submit(api, gitoki, lines, note_no="DN-001"):
 def _weigh_line(api, receipt_id, line_id, weight_kg, bags=20, weight_of_bags_kg="20"):
     return api.patch(
         f"{DM}{receipt_id}/lines/{line_id}/",
-        {"weighings": [{"bags": bags, "weight_kg": weight_kg}], "weight_of_bags_kg": weight_of_bags_kg},
+        {
+            "weighings": [{"bags": bags, "weight_kg": weight_kg}],
+            "weight_of_bags_kg": weight_of_bags_kg,
+        },
         format="json",
     )
 
@@ -91,8 +95,14 @@ def test_transfer_can_carry_several_grades_in_one_delivery(api, gitoki_clerk, gi
         new_transfer_body(
             gitoki,
             [
-                one_line(grades["a1"], weighings=[{"bags": 10, "weight_kg": "300"}], weight_of_bags_kg="10"),
-                one_line(grades["a2"], weighings=[{"bags": 5, "weight_kg": "120"}], weight_of_bags_kg="5"),
+                one_line(
+                    grades["a1"],
+                    weighings=[{"bags": 10, "weight_kg": "300"}],
+                    weight_of_bags_kg="10",
+                ),
+                one_line(
+                    grades["a2"], weighings=[{"bags": 5, "weight_kg": "120"}], weight_of_bags_kg="5"
+                ),
             ],
         ),
         format="json",
@@ -120,7 +130,9 @@ def test_submitted_transfer_cannot_be_edited(api, gitoki_clerk, gitoki, grades):
     assert res.status_code == 400
 
 
-def test_dry_mill_cannot_look_up_an_unsubmitted_transfer(api, gitoki_clerk, gitoki, grades, drymill_operator):
+def test_dry_mill_cannot_look_up_an_unsubmitted_transfer(
+    api, gitoki_clerk, gitoki, grades, drymill_operator
+):
     login(api, gitoki_clerk)
     draft = api.post(CWS, new_transfer_body(gitoki, [one_line(grades["a1"])]), format="json").data
 
@@ -129,7 +141,9 @@ def test_dry_mill_cannot_look_up_an_unsubmitted_transfer(api, gitoki_clerk, gito
     assert res.status_code == 400
 
 
-def test_dry_mill_lookup_hides_cws_numbers_until_locked(api, gitoki_clerk, gitoki, grades, drymill_operator):
+def test_dry_mill_lookup_hides_cws_numbers_until_locked(
+    api, gitoki_clerk, gitoki, grades, drymill_operator
+):
     login(api, gitoki_clerk)
     create_and_submit(api, gitoki, [one_line(grades["a1"])])
 
@@ -149,14 +163,20 @@ def test_dry_mill_lookup_hides_cws_numbers_until_locked(api, gitoki_clerk, gitok
     assert line["variance_kg"] is None
 
 
-def test_lock_reveals_per_field_variance_before_any_comment(api, gitoki_clerk, gitoki, grades, drymill_operator):
+def test_lock_reveals_per_field_variance_before_any_comment(
+    api, gitoki_clerk, gitoki, grades, drymill_operator
+):
     login(api, gitoki_clerk)
-    create_and_submit(api, gitoki, [one_line(grades["a1"])])  # CWS: bags 20, gross 400, bags_kg 20, net 380
+    create_and_submit(
+        api, gitoki, [one_line(grades["a1"])]
+    )  # CWS: bags 20, gross 400, bags_kg 20, net 380
 
     login(api, drymill_operator)
     lookup = api.get(f"{DM}lookup/", {"delivery_note_no": "DN-001"}).data
     receipt_id, line_id = lookup["id"], lookup["lines"][0]["id"]
-    _weigh_line(api, receipt_id, line_id, "390", bags=19, weight_of_bags_kg="19")  # ours: bags 19, gross 390, bags_kg 19, net 371
+    _weigh_line(
+        api, receipt_id, line_id, "390", bags=19, weight_of_bags_kg="19"
+    )  # ours: bags 19, gross 390, bags_kg 19, net 371
 
     locked = _lock(api, receipt_id)
     assert locked.status_code == 200, locked.data
@@ -189,7 +209,9 @@ def test_cannot_edit_weighing_once_locked(api, gitoki_clerk, gitoki, grades, dry
     assert blocked.status_code == 403
 
 
-def test_submit_without_locking_first_is_rejected(api, gitoki_clerk, gitoki, grades, drymill_operator):
+def test_submit_without_locking_first_is_rejected(
+    api, gitoki_clerk, gitoki, grades, drymill_operator
+):
     login(api, gitoki_clerk)
     create_and_submit(api, gitoki, [one_line(grades["a1"])])
 
@@ -201,7 +223,9 @@ def test_submit_without_locking_first_is_rejected(api, gitoki_clerk, gitoki, gra
     assert res.status_code == 400
 
 
-def test_submit_match_needs_no_comment_and_creates_stock(api, gitoki_clerk, gitoki, grades, drymill_operator):
+def test_submit_match_needs_no_comment_and_creates_stock(
+    api, gitoki_clerk, gitoki, grades, drymill_operator
+):
     login(api, gitoki_clerk)
     create_and_submit(api, gitoki, [one_line(grades["a1"])])  # CWS: gross 400, bags 20 -> net 380
 
@@ -230,7 +254,9 @@ def test_submit_stock_loss_requires_a_comment(api, gitoki_clerk, gitoki, grades,
     login(api, drymill_operator)
     lookup = api.get(f"{DM}lookup/", {"delivery_note_no": "DN-001"}).data
     receipt_id, line_id = lookup["id"], lookup["lines"][0]["id"]
-    _weigh_line(api, receipt_id, line_id, "390")  # dry mill net 370 < CWS net 380 -> stock loss of 10
+    _weigh_line(
+        api, receipt_id, line_id, "390"
+    )  # dry mill net 370 < CWS net 380 -> stock loss of 10
     _lock(api, receipt_id)
 
     no_comment = _submit(api, receipt_id)
@@ -251,7 +277,9 @@ def test_submit_stock_gain(api, gitoki_clerk, gitoki, grades, drymill_operator):
     login(api, drymill_operator)
     lookup = api.get(f"{DM}lookup/", {"delivery_note_no": "DN-001"}).data
     receipt_id, line_id = lookup["id"], lookup["lines"][0]["id"]
-    _weigh_line(api, receipt_id, line_id, "420")  # dry mill net 400 > CWS net 380 -> stock gain of 20
+    _weigh_line(
+        api, receipt_id, line_id, "420"
+    )  # dry mill net 400 > CWS net 380 -> stock gain of 20
     _lock(api, receipt_id)
 
     submit = _submit(api, receipt_id, "Re-weighed, scale was off at station")
@@ -261,14 +289,20 @@ def test_submit_stock_gain(api, gitoki_clerk, gitoki, grades, drymill_operator):
     assert Decimal(line["variance_kg"]) == Decimal("-20")
 
 
-def test_multi_line_delivery_locks_and_submits_each_line_independently(api, gitoki_clerk, gitoki, grades, drymill_operator):
+def test_multi_line_delivery_locks_and_submits_each_line_independently(
+    api, gitoki_clerk, gitoki, grades, drymill_operator
+):
     login(api, gitoki_clerk)
     create_and_submit(
         api,
         gitoki,
         [
-            one_line(grades["a1"], weighings=[{"bags": 10, "weight_kg": "300"}], weight_of_bags_kg="10"),  # net 290
-            one_line(grades["a2"], weighings=[{"bags": 5, "weight_kg": "120"}], weight_of_bags_kg="5"),  # net 115
+            one_line(
+                grades["a1"], weighings=[{"bags": 10, "weight_kg": "300"}], weight_of_bags_kg="10"
+            ),  # net 290
+            one_line(
+                grades["a2"], weighings=[{"bags": 5, "weight_kg": "120"}], weight_of_bags_kg="5"
+            ),  # net 115
         ],
     )
 
@@ -277,13 +311,19 @@ def test_multi_line_delivery_locks_and_submits_each_line_independently(api, gito
     assert len(lookup["lines"]) == 2
     by_grade = {line["cws_line"]["grade_code"]: line["id"] for line in lookup["lines"]}
 
-    _weigh_line(api, lookup["id"], by_grade["A1"], "300", bags=10, weight_of_bags_kg="10")  # matches: net 290
-    _weigh_line(api, lookup["id"], by_grade["A2"], "130", bags=5, weight_of_bags_kg="5")  # dry mill net 125 > 115 -> gain
+    _weigh_line(
+        api, lookup["id"], by_grade["A1"], "300", bags=10, weight_of_bags_kg="10"
+    )  # matches: net 290
+    _weigh_line(
+        api, lookup["id"], by_grade["A2"], "130", bags=5, weight_of_bags_kg="5"
+    )  # dry mill net 125 > 115 -> gain
     _lock(api, lookup["id"])
 
     submit = _submit(api, lookup["id"], "A2 bags re-weighed heavier")
     assert submit.status_code == 200, submit.data
-    statuses = {line["cws_line"]["grade_code"]: line["variance_status"] for line in submit.data["lines"]}
+    statuses = {
+        line["cws_line"]["grade_code"]: line["variance_status"] for line in submit.data["lines"]
+    }
     assert statuses == {"A1": "MATCH", "A2": "STOCK_GAIN"}
 
 
@@ -319,7 +359,7 @@ def test_confirmed_receipt_is_locked_until_admin_unlocks(
 def test_locked_but_not_yet_submitted_also_blocks_edits_and_needs_admin_to_unlock(
     api, gitoki_clerk, gitoki, grades, drymill_operator, baho_admin
 ):
-    """"Confirmation" (locking) is what freezes the numbers - submitting the
+    """ "Confirmation" (locking) is what freezes the numbers - submitting the
     comment afterwards is a separate, later step."""
     login(api, gitoki_clerk)
     create_and_submit(api, gitoki, [one_line(grades["a1"])])
@@ -337,14 +377,23 @@ def test_locked_but_not_yet_submitted_also_blocks_edits_and_needs_admin_to_unloc
     assert api.post(f"{DM}{receipt_id}/unlock/").status_code == 200
 
 
-def test_other_station_cannot_see_or_submit_my_transfer(api, gitoki_clerk, bugoyi_clerk, gitoki, grades):
+def test_other_station_cannot_see_or_submit_my_transfer(
+    api, gitoki_clerk, bugoyi_clerk, gitoki, grades
+):
     login(api, gitoki_clerk)
     mine = api.post(CWS, new_transfer_body(gitoki, [one_line(grades["a1"])]), format="json").data
 
     login(api, bugoyi_clerk)
     assert api.get(f"{CWS}{mine['id']}/").status_code == 404
     assert api.post(f"{CWS}{mine['id']}/submit/").status_code == 404
-    assert api.post(CWS, new_transfer_body(gitoki, [one_line(grades["a1"])], note_no="DN-999"), format="json").status_code == 403
+    assert (
+        api.post(
+            CWS,
+            new_transfer_body(gitoki, [one_line(grades["a1"])], note_no="DN-999"),
+            format="json",
+        ).status_code
+        == 403
+    )
 
 
 def test_dashboard_totals_and_facility_scoping(

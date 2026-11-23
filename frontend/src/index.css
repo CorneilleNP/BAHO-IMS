@@ -40,3 +40,14 @@ h6,
 .mantine-Badge-root {
   font-family: var(--twentieth-font) !important;
 }
+
+/* Login on phones: the form takes the whole screen, the picture pane is hidden. */
+@media (max-width: 768px) {
+  .login-form-pane {
+    flex: 1 1 100% !important;
+    padding: 24px 20px !important;
+  }
+  .login-art-pane {
+    display: none !important;
+  }
+}

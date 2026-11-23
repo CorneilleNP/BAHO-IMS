@@ -28,16 +28,19 @@ export interface CurrentUser {
   full_name: string;
   phone: string;
   is_global: boolean;
+  /** Set after an admin creates the account or resets its password. */
+  must_change_password: boolean;
   roles: RoleAssignment[];
 }
 
-export type Section = 'cws' | 'drymill';
+export type Section = 'cws' | 'drymill' | 'admin';
 
 // Which roles may open each section of the app. The backend enforces the
 // real data access; this only decides what the menu shows.
 const SECTION_ROLES: Record<Section, RoleCode[]> = {
   cws: ['ADMIN', 'HQ_FINANCE', 'CWS_CLERK', 'CWS_MANAGER'],
   drymill: ['ADMIN', 'HQ_FINANCE', 'HQ_DRY_MILL_OPERATOR', 'HQ_EXPORT_MANAGER'],
+  admin: ['ADMIN'],
 };
 
 export function canAccessSection(user: CurrentUser | null, section: Section): boolean {
@@ -46,16 +49,18 @@ export function canAccessSection(user: CurrentUser | null, section: Section): bo
 }
 
 export function allowedSections(user: CurrentUser | null): Section[] {
-  return (['drymill', 'cws'] as Section[]).filter((section) => canAccessSection(user, section));
+  return (['drymill', 'cws', 'admin'] as Section[]).filter((section) => canAccessSection(user, section));
 }
 
-export type WriteArea = 'cws' | 'drymill' | 'export';
+export type WriteArea = 'cws' | 'drymill' | 'export' | 'cwsManage';
 
 // Mirrors the backend's *_WRITE_ROLES; the server still enforces them.
 const WRITE_ROLES: Record<WriteArea, RoleCode[]> = {
   cws: ['ADMIN', 'CWS_CLERK', 'CWS_MANAGER'],
   drymill: ['ADMIN', 'HQ_DRY_MILL_OPERATOR'],
   export: ['ADMIN', 'HQ_EXPORT_MANAGER'],
+  // Closing labor pay periods and similar station-manager decisions.
+  cwsManage: ['ADMIN', 'CWS_MANAGER'],
 };
 
 /** Whether the user may create/change records in this area (hides buttons for read-only roles). */
@@ -72,6 +77,7 @@ export function isAdmin(user: CurrentUser | null): boolean {
 /** Which section a URL belongs to (null for shared pages like /dashboard). */
 export function sectionForPath(pathname: string): Section | null {
   if (pathname.startsWith('/drymill/')) return 'drymill';
+  if (pathname.startsWith('/admin/')) return 'admin';
   if (pathname.startsWith('/cws/') || pathname === '/reception' || pathname === '/processing') return 'cws';
   return null;
 }

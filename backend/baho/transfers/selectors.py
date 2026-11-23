@@ -8,7 +8,9 @@ def transfers_with_lines():
 
 
 def dry_mill_receipts():
-    return DryMillTransferReceipt.objects.select_related("transfer", "transfer__facility").prefetch_related(
+    return DryMillTransferReceipt.objects.select_related(
+        "transfer", "transfer__facility"
+    ).prefetch_related(
         "lines__cws_line__process",
         "lines__cws_line__sub_process",
         "lines__cws_line__grade",

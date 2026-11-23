@@ -7,6 +7,8 @@ export interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<CurrentUser>;
   logout: () => void;
+  /** Changes the signed-in user's password; other sessions are signed out. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<CurrentUser>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

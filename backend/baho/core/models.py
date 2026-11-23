@@ -80,3 +80,29 @@ class SequenceCounter(models.Model):
 
     def __str__(self):
         return f"{self.key} = {self.value}"
+
+
+class IdempotencyRecord(models.Model):
+    """The stored outcome of one write sent with an `Idempotency-Key` header.
+
+    The mobile app queues writes made offline and replays them when it is back
+    online. If a replay is a repeat (the first attempt reached the server but
+    the answer was lost), the stored response is returned instead of creating
+    the record twice. See baho.core.idempotency.
+    """
+
+    key = models.CharField(max_length=100, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="+"
+    )
+    method = models.CharField(max_length=10)
+    path = models.CharField(max_length=500)
+    request_hash = models.CharField(max_length=64)
+    status_code = models.PositiveSmallIntegerField(null=True, blank=True)
+    response_body = models.TextField(blank=True)
+    content_type = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.method} {self.path} [{self.key}]"

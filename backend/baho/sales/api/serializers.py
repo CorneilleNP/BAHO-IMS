@@ -41,9 +41,7 @@ class ShipmentLineSerializer(serializers.ModelSerializer):
         queryset=SubProcess.objects.all(), required=False, allow_null=True
     )
     process_name = serializers.CharField(source="process.name", read_only=True, default="")
-    sub_process_name = serializers.CharField(
-        source="sub_process.name", read_only=True, default=""
-    )
+    sub_process_name = serializers.CharField(source="sub_process.name", read_only=True, default="")
     source_facility = serializers.PrimaryKeyRelatedField(
         queryset=CWS_FACILITIES, required=False, allow_null=True
     )

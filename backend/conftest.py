@@ -83,3 +83,13 @@ def hq_finance(db):
     user = UserFactory(email="finance@test.local")
     assign(user, "HQ_FINANCE")
     return user
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    """Throttle counters live in the cache; every test starts with a clean slate."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()

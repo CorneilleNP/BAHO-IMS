@@ -295,4 +295,7 @@ class DryMillBatchViewSet(
         serializer.instance = batches_with_totals().get(pk=batch.pk)
 
     def after_void(self, instance):
+        from baho.sales.services import ensure_batch_output_not_shipped
+
+        ensure_batch_output_not_shipped(instance)
         release_batch_stock(instance)

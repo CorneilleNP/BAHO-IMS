@@ -128,3 +128,75 @@ def test_green_stock_is_scoped_by_source(api, export_manager, gitoki, bugoyi, hq
     body = shipment(client_id, ("FW 17+", "17PLUS", "1"), source_facility=gitoki_source)
     res = api.post(SHIPMENTS, body, format="json")
     assert res.status_code == 400
+
+
+def test_batch_with_shipped_green_coffee_cannot_be_voided(api, client_id, drymill_operator):
+    from baho.drymill.models import DryMillBatch
+
+    batch = DryMillBatch.objects.filter(outputs__export_grade__code="15PLUS").get()
+    res = api.post(SHIPMENTS, shipment(client_id, ("FW", "15PLUS", "100")), format="json")
+    assert res.status_code == 201
+    login(api, drymill_operator)
+    res = api.post(f"/api/v1/drymill/batches/{batch.id}/void/", {"reason": "wrong receipt"})
+    assert res.status_code == 400
+    assert "already been shipped" in str(res.data)
+    batch.refresh_from_db()
+    assert batch.is_deleted is False
+
+
+def test_batch_without_shipments_can_still_be_voided(api, client_id, drymill_operator):
+    from baho.drymill.models import DryMillBatch
+
+    batch = DryMillBatch.objects.filter(outputs__export_grade__code="1314").get()
+    login(api, drymill_operator)
+    res = api.post(f"/api/v1/drymill/batches/{batch.id}/void/", {"reason": "wrong receipt"})
+    assert res.status_code == 200
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_shipments_cannot_oversell(export_manager, gitoki, hq):
+    """Two shipments for the last 15 000 kg, saved at the same moment: only one wins.
+
+    Needs real row locks, so it only runs against PostgreSQL (CI)."""
+    import threading
+
+    from django.db import connection
+
+    from baho.sales.models import Client, ExportShipmentLine
+    from baho.sales.services import create_shipment
+
+    if connection.vendor != "postgresql":
+        pytest.skip("row locking needs PostgreSQL")
+
+    produce_green(gitoki, "15PLUS", kg="20000", parch="30000")
+    client = Client.objects.create(name="VOLCAFE")
+    grade = ExportGrade.objects.get(code="15PLUS")
+    barrier = threading.Barrier(2)
+    results = []
+
+    def ship():
+        from datetime import date
+
+        from django.db import connection as conn
+
+        try:
+            barrier.wait()
+            create_shipment(
+                user=export_manager,
+                client=client,
+                delivery_to_naeb_date=date.today(),
+                lines=[{"export_grade": grade, "qty_kg": Decimal("15000")}],
+            )
+            results.append("ok")
+        except Exception as exc:  # noqa: BLE001
+            results.append(type(exc).__name__)
+        finally:
+            conn.close()
+
+    threads = [threading.Thread(target=ship) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert sorted(results) == ["ValidationError", "ok"]
+    assert ExportShipmentLine.objects.count() == 1

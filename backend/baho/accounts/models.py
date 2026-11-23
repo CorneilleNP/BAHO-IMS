@@ -49,6 +49,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False, help_text="Can log into Django admin.")
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text="Set when an admin creates the account or resets the password.",
+    )
     date_joined = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

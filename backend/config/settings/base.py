@@ -26,6 +26,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
@@ -63,6 +64,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
+    # Last, so a replayed write returns before any view work (see baho.core.idempotency).
+    "baho.core.idempotency.IdempotencyMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -122,6 +125,15 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "baho.core.pagination.StandardPagination",
     "PAGE_SIZE": 50,
+    # Login is throttled per client IP and per email (see baho.accounts.throttles).
+    "DEFAULT_THROTTLE_RATES": {
+        "login_ip": env("THROTTLE_LOGIN_IP", default="30/min"),
+        "login_email": env("THROTTLE_LOGIN_EMAIL", default="10/hour"),
+        "password_change": env("THROTTLE_PASSWORD_CHANGE", default="10/hour"),
+    },
+    # How many reverse proxies sit in front of Django (Caddy -> Nginx in production).
+    # Used to read the real client IP from X-Forwarded-For for throttling.
+    "NUM_PROXIES": env.int("DJANGO_NUM_PROXIES", default=None),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -129,6 +141,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
@@ -142,3 +155,84 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+# The Android app (Capacitor) runs on https://localhost and calls the API cross-origin.
+CORS_ALLOWED_ORIGINS += [
+    o
+    for o in env.list("MOBILE_APP_ORIGINS", default=["https://localhost", "capacitor://localhost"])
+    if o not in CORS_ALLOWED_ORIGINS
+]
+CORS_URLS_REGEX = r"^/api/.*$"
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "authorization",
+    "content-type",
+    "idempotency-key",
+    "x-baho-client",
+    "x-requested-with",
+)
+CORS_EXPOSE_HEADERS = ["Idempotent-Replayed"]
+# Writes replayed by the offline queue are recognised for this long.
+IDEMPOTENCY_TTL_DAYS = 30
+
+# --- Refresh-token cookie ------------------------------------------------------
+# The refresh token never reaches JavaScript: it lives in an httpOnly cookie that
+# is only sent to the auth endpoints. The short-lived access token is kept in memory.
+REFRESH_COOKIE_NAME = "baho_refresh"
+REFRESH_COOKIE_PATH = "/api/v1/auth/"
+REFRESH_COOKIE_SECURE = env.bool("REFRESH_COOKIE_SECURE", default=not DEBUG)
+REFRESH_COOKIE_SAMESITE = "Strict"
+
+# --- API docs ---------------------------------------------------------------------
+# Swagger/OpenAPI are only served when enabled (on by default in development) and
+# then only to staff users outside DEBUG.
+API_DOCS_ENABLED = env.bool("API_DOCS_ENABLED", default=DEBUG)
+
+# --- Cache (login throttling) --------------------------------------------------------
+# Shared across Gunicorn workers via the database; created by `createcachetable`.
+CACHES = {
+    "default": {
+        "BACKEND": env("CACHE_BACKEND", default="django.core.cache.backends.db.DatabaseCache"),
+        "LOCATION": env("CACHE_LOCATION", default="baho_cache"),
+    }
+}
+
+# --- Logging ------------------------------------------------------------------------
+# Everything goes to stdout/stderr so `docker compose logs` shows it.
+LOG_LEVEL = env("DJANGO_LOG_LEVEL", default="INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+    },
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "baho": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+    },
+}
+
+# --- Error monitoring (optional) ------------------------------------------------------
+SENTRY_DSN = env("SENTRY_DSN", default="")
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=env("SENTRY_ENVIRONMENT", default="production"),
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0),
+        send_default_pii=False,
+    )
+
+# --- SMS (notifications app) ---------------------------------------------------------
+# "console" logs messages instead of sending; "africastalking" sends through
+# Africa's Talking. Messages are always stored in the outbox first.
+SMS_BACKEND = env("SMS_BACKEND", default="console")
+SMS_SENDER_ID = env("SMS_SENDER_ID", default="")
+AFRICASTALKING_USERNAME = env("AFRICASTALKING_USERNAME", default="")
+AFRICASTALKING_API_KEY = env("AFRICASTALKING_API_KEY", default="")
+AFRICASTALKING_API_URL = env(
+    "AFRICASTALKING_API_URL", default="https://api.africastalking.com/version1/messaging"
+)

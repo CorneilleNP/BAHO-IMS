@@ -107,7 +107,7 @@ export function GrnWizard({ station, receipt, onClose, onSaved }: Props) {
             label="Farmer"
             required
             placeholder={farmers.loading ? 'Loading farmers…' : farmers.items.length ? 'Search by name or code' : 'No farmers yet: register one'}
-            data={farmers.items.map((f) => ({ value: f.id, label: `${f.full_name} (${f.farmer_code})` }))}
+            data={farmers.items.map((f) => ({ value: f.id, label: `${f.full_name} (${f.farmer_code ?? "not synced yet"})` }))}
             value={form.farmer}
             onChange={draft.set('farmer')}
             searchable
@@ -197,7 +197,7 @@ export function GrnWizard({ station, receipt, onClose, onSaved }: Props) {
   const review = (
     <Stack gap="xs">
       <SimpleGrid cols={{ base: 2, sm: 4 }}>
-        <Fig label="Farmer" value={farmer ? `${farmer.full_name} (${farmer.farmer_code})` : ''} />
+        <Fig label="Farmer" value={farmer ? `${farmer.full_name} (${farmer.farmer_code ?? "not synced yet"})` : ''} />
         <Fig label="Received on" value={form.received_on} />
         <Fig label="Quantity" value={`${kg(totalQty)} kg`} />
         <Fig label="Amount" value={rwf(totalAmount)} />

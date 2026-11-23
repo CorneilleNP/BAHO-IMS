@@ -42,7 +42,9 @@ def _validate_catalog(attrs, instance=None):
     sub_process = attrs.get("sub_process", getattr(instance, "sub_process", None))
     grade = attrs.get("grade") or getattr(instance, "grade", None)
     if sub_process and sub_process.process_id and process and sub_process.process_id != process.id:
-        raise serializers.ValidationError({"sub_process": ["Does not belong to the chosen process."]})
+        raise serializers.ValidationError(
+            {"sub_process": ["Does not belong to the chosen process."]}
+        )
     if grade and process and grade.process_id != process.id:
         raise serializers.ValidationError({"grade": ["Does not belong to the chosen process."]})
     return attrs
@@ -156,7 +158,9 @@ class DryMillTransferReceiptLineSerializer(serializers.ModelSerializer):
         return obj.receipt.status != DryMillTransferReceipt.Status.PENDING
 
     def get_cws_line(self, obj):
-        serializer = CwsTransferLineSerializer if self._revealed(obj) else CwsTransferLineBlindSerializer
+        serializer = (
+            CwsTransferLineSerializer if self._revealed(obj) else CwsTransferLineBlindSerializer
+        )
         return serializer(obj.cws_line).data
 
     def get_variance_kg(self, obj):

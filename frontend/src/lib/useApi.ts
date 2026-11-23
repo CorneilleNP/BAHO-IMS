@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api';
+import { onDataSynced } from './offline/store';
 import type { Paginated } from './types';
 
 interface ApiState<T> {
@@ -40,6 +41,9 @@ export function useApi<T>(path: string | null): ApiState<T> {
   }, [path, version]);
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
+
+  // Writes saved offline just reached the server: show the server's version.
+  useEffect(() => onDataSynced(reload), [reload]);
   return { data: path ? data : null, loading: path ? loading : false, error, reload };
 }
 

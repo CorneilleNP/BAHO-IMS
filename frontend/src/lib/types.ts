@@ -32,6 +32,21 @@ export interface Farmer extends Located {
   household_size: number | null;
   land_area_ha: Decimal | null;
   is_active: boolean;
+  /** Totals over the farmer's non-voided GRNs. */
+  grn_count?: number;
+  delivered_kg?: Decimal;
+  last_delivery?: string | null;
+}
+
+export interface FarmerDelivery {
+  id: string;
+  grn_number: string;
+  received_on: string;
+  facility_name: string;
+  payment_status: 'PAID' | 'UNPAID';
+  is_voided: boolean;
+  good_kg: Decimal;
+  float_kg: Decimal;
 }
 
 export type CherryGrade = 'GOOD' | 'FLOAT';
@@ -584,4 +599,76 @@ export interface Located {
   location: string | null;
   location_path: LocationPath;
   location_label: string;
+}
+
+// --- Administration ---------------------------------------------------------
+
+export interface RoleOption {
+  code: import('./access').RoleCode;
+  name: string;
+  description: string;
+  /** HQ roles see every station; station roles need one. */
+  is_global: boolean;
+}
+
+export interface ManagedUser {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  is_active: boolean;
+  must_change_password: boolean;
+  last_login: string | null;
+  date_joined: string;
+  roles: import('./access').RoleAssignment[];
+}
+
+export type SmsStatus = 'QUEUED' | 'SENT' | 'FAILED';
+
+export interface SmsMessage {
+  id: string;
+  to_phone: string;
+  body: string;
+  status: SmsStatus;
+  provider: string;
+  provider_message_id: string;
+  error: string;
+  attempts: number;
+  sent_at: string | null;
+  facility: string | null;
+  facility_name: string | null;
+  reference_type: string;
+  reference_id: string;
+  created_by_email: string | null;
+  created_at: string;
+}
+
+// --- HQ stock ledger ------------------------------------------------------------
+
+export type LedgerMovementType = 'RECEIVED' | 'MILLED' | 'ADJUSTMENT' | 'GREEN_PRODUCED' | 'SHIPPED';
+
+export interface LedgerRow {
+  date: string;
+  item_type: 'PARCH' | 'GREEN';
+  movement_type: LedgerMovementType;
+  movement_label: string;
+  reference: string;
+  reference_id: string;
+  description: string;
+  qty_in: Decimal;
+  qty_out: Decimal;
+  balance: Decimal;
+  process: string;
+  sub_process: string;
+  export_grade: string;
+  source: string;
+}
+
+export interface StockLedger {
+  item_type: 'PARCH' | 'GREEN';
+  opening_balance: Decimal;
+  total_in: Decimal;
+  total_out: Decimal;
+  closing_balance: Decimal;
+  rows: LedgerRow[];
 }

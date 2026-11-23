@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from baho.core.dates import crop_year_for
 from baho.core.numbering import next_sequence
 from baho.core.permissions import ensure_facility_access
+from baho.notifications.services import notify_cherry_receipt
 
 from .models import CherryReceipt, CherryReceiptLine
 
@@ -21,7 +22,9 @@ def create_cherry_receipt(
     payment_method="",
     payment_status=CherryReceipt.PaymentStatus.UNPAID,
     notes="",
+    notify_farmer=True,
 ) -> CherryReceipt:
+    """`notify_farmer=False` skips the SMS, e.g. for historical GRNs loaded by an import."""
     ensure_facility_access(user, facility)
     lines = [line for line in lines if line["quantity_kg"] > 0]
     if not lines:
@@ -49,6 +52,8 @@ def create_cherry_receipt(
     CherryReceiptLine.objects.bulk_create(
         [CherryReceiptLine(receipt=receipt, **line) for line in lines]
     )
+    if notify_farmer:
+        notify_cherry_receipt(receipt, user=user)  # farmer SMS, sent after commit; never raises
     return receipt
 
 

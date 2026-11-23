@@ -7,7 +7,7 @@ and the per-CWS cash/expense ledger, with farmer-to-export traceability.
 ```
 baho IMS/
 ├── backend/     Django 5.2 + Django REST Framework + PostgreSQL (the API)
-├── frontend/    React 19 + TypeScript + Vite + Mantine (the web app)
+├── frontend/    React 19 + TypeScript + Vite + Mantine (the web app; android/ = the APK)
 ├── docs/        notes; docs/legacy holds the superseded Supabase/PowerSync config
 └── scripts/     db.ps1 (local Postgres), dev-env.sh (portable Node/Postgres paths)
 ```
@@ -16,18 +16,22 @@ baho IMS/
 
 | Part | State |
 |---|---|
-| Accounts & organization | Email + JWT login, roles per station, facilities, crop years |
-| Farmers & cherry reception | Register farmers (auto code), record GRNs with Good/Float lines (auto GRN number) |
+| Accounts & organization | Email login (throttled), refresh token in an httpOnly cookie, logout/password change revoke sessions; admins manage users, roles per station and temporary passwords in the app |
+| Farmers & cherry reception | Register, search and edit farmers (auto code, delivery totals and history); record GRNs with Good/Float lines (auto GRN number); SMS to the farmer per GRN |
+| CWS transfers | CWS → dry mill transfers with blind weighing and variance |
+| Casual labor | Laborers per station, pay periods, daily roll call, close (manager) and mark paid (manager/finance) |
 | CWS processing | Register processes with grade estimate ratios; lots with fixed estimates, actuals, out-turn |
 | HQ dry mill | Partner suppliers, stock receipts (pure weight by the DB), parchment → green batches |
 | Export | Clients, shipments with product lines, status |
+| HQ stock ledger | Every parchment / green movement with running balance, calculated from the records (`inventory`) |
 | Dashboards | Stock / processing / export summaries calculated by the server from real records |
-| Not built yet | Cash ledger & expenses (`finance`), casual labor (`labor`), stock ledger (`inventory`), Excel import (`imports`), SMS (`notifications`) |
+| Imports | Dry mill STOCK UPDATE sheet and per-station CHERRY RECEIVED sheets (command or Administration page) |
+| Not built yet | Cash ledger & expenses (`finance`) |
 
 **No mock data.** The frontend reads and writes only through the API. `seed_dev`
 loads configuration only (stations, users, export grades, Gitoki's real Fully
 Washed ratios); every farmer, GRN, lot, stock receipt, batch and shipment is
-registered through the screens. 52 backend tests.
+registered through the screens. 246 backend tests (pytest) and frontend unit tests (`npm test`, Vitest); CI runs all of them before every deployment.
 
 ## Running it locally (Windows, no admin rights needed)
 
@@ -63,6 +67,7 @@ python manage.py runserver
 - API docs (Swagger): http://localhost:8000/api/docs/
 - Django admin: http://localhost:8000/admin/ (`admin@baho.local` / `BahoDev2026!`)
 - Tests: `pytest` · Lint: `ruff check .` · Format: `ruff format .`
+- API docs are on by default only in development (`API_DOCS_ENABLED`).
 - Start over with empty data: `python manage.py reset_dev_data --yes` (dev only:
   deletes all registered records and restarts GRN/lot/batch numbering, keeps users and configuration)
 
@@ -85,7 +90,70 @@ cd frontend
 $env:PATH="$HOME\tools\node;$env:PATH"; $env:NODE_EXTRA_CA_CERTS="$HOME\tools\ca-bundle.pem"
 npm install
 npm run dev          # /api is proxied to the Django server on :8000
+npm test             # Vitest unit/component tests
 ```
+
+## Android app and offline mode
+
+The Android app is the same React app as the website, packaged with
+[Capacitor](https://capacitorjs.com) (`frontend/android/`). Every module is in
+it, and it talks to the same server, so the web and the phones always see the
+same data.
+
+**Offline** (app and website):
+
+- Every list or page opened while online is saved on the device and still opens
+  without a connection. **Sync › Download for offline** saves the main station
+  lists in one go (do it before going to the field).
+- Saving without a connection (new farmer, GRN, attendance, void…) stores the
+  change on the device; the header shows *Offline · N waiting*. Records created
+  offline appear in lists right away, and can be used straight away (e.g. a GRN
+  for a farmer registered offline).
+- When the connection is back the app sends everything, oldest first, by itself
+  (also every minute and when the app is reopened). Each save carries an
+  `Idempotency-Key`, so a save that is sent twice is stored once.
+- If the server refuses a save (e.g. not enough stock anymore), it is shown on
+  the **Sync** screen with the reason, to retry or discard. Nothing is dropped
+  silently.
+- Numbers assigned by the server (GRN number, farmer code) appear after sync;
+  GRN printing waits until then.
+- File uploads (imports), sign-in and password changes need a connection.
+- The app can be closed and reopened offline: it keeps working as the last
+  signed-in user. Signing out clears the saved data (not the waiting saves).
+
+**Server address**: the app connects to `https://baho.izere.work` by default.
+On the login screen, *Server: … Change* points it elsewhere (e.g.
+`http://192.168.1.20:8000`, your PC on the office Wi-Fi, for testing).
+The server must run this version of the backend (mobile sign-in, CORS for
+`https://localhost`, idempotent writes).
+
+### Building the APK (Windows)
+
+Tools (installed once, no admin rights): JDK 21 in `F:\baho-tools\jdk21`, the
+Android SDK in `F:\baho-tools\android-sdk` (a path **without spaces**: the
+Android tools break on `C:\Users\Hani Computer`), Node in `~\tools\node`.
+
+```powershell
+cd frontend
+$env:PATH="$HOME\tools\node;$env:PATH"
+npm run build
+npx cap sync android
+cd android
+$env:JAVA_HOME="F:\baho-tools\jdk21"; $env:ANDROID_HOME="F:\baho-tools\android-sdk"
+.\gradlew.bat assembleRelease      # -> app\build\outputs\apk\release\app-release.apk
+.\gradlew.bat assembleDebug        # -> app\build\outputs\apk\debug\app-debug.apk (testing)
+```
+
+Before handing out a new APK, raise `versionCode` and `versionName` in
+`frontend/android/app/build.gradle`. Install on a phone by copying the APK to it
+(allow "install unknown apps"), or `adb install -r app-release.apk`.
+
+**Release key** (needed for every future update of the app; phones refuse an
+update signed with another key): `%USERPROFILE%\.baho-android\baho-release.jks`
+with its passwords in `keystore.properties` next to it. `frontend/android/keystore.properties`
+(git-ignored) points at it. **Back up that folder somewhere safe.** To build in
+GitHub instead (Actions › *Android APK* › Run workflow), add the secrets
+`ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`.
 
 ## Backend conventions
 
@@ -156,6 +224,25 @@ are ignored (added by mistake); stock is only deducted by dry mill batches /
 the processing report.
 Re-running skips rows already imported. **`reset_dev_data` deletes imported
 receipts too** — re-import afterwards.
+
+### Importing a station's CHERRY RECEIVED sheet
+
+Save the sheet as CSV (UTF-8). Columns are read by position, after 4 title rows
+(`--header-rows` to change): A date, B farmer, C phone, D email, E sector,
+F cell, G village, H GRN, I–L good qty / price / transport / commission,
+M–P the same for float, Q total qty (checked), R total amount (ignored),
+S paid, T not paid.
+
+```powershell
+.venv\Scripts\python.exe manage.py import_cherry_receipts "..\dataset\<file>.csv" --station GITOKI --user admin@baho.local            # dry run + report
+.venv\Scripts\python.exe manage.py import_cherry_receipts "..\dataset\<file>.csv" --station GITOKI --user admin@baho.local --commit
+```
+
+Or use **Administration › Import Cherry Receipts** (dry run, then Import).
+Farmers are matched per station by name + phone (else registered), GRNs get the
+app's own numbers (the sheet's GRN goes into the notes), and re-importing the
+same rows never duplicates them. Imported (historical) GRNs never send an SMS
+to the farmer; only GRNs recorded in the app do.
 
 ## Voiding records
 

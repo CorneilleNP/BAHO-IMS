@@ -738,8 +738,13 @@ def transfer_reconciliation_summary(
     qs = DryMillTransferReceiptLine.objects.filter(
         receipt__status=DryMillTransferReceipt.Status.CONFIRMED
     ).select_related(
-        "receipt", "cws_line", "cws_line__transfer", "cws_line__transfer__facility",
-        "cws_line__process", "cws_line__sub_process", "cws_line__grade",
+        "receipt",
+        "cws_line",
+        "cws_line__transfer",
+        "cws_line__transfer__facility",
+        "cws_line__process",
+        "cws_line__sub_process",
+        "cws_line__grade",
     )
     if facility_ids is not None:
         qs = qs.filter(cws_line__transfer__facility_id__in=facility_ids)

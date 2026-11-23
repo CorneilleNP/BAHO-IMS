@@ -20,13 +20,15 @@ from baho.drymill.models import (
     Supplier,
 )
 from baho.farmers.models import Farmer
+from baho.labor.models import CasualLaborer, LaborAttendance, LaborPayPeriod
+from baho.notifications.models import SmsMessage
 from baho.processing.models import ProcessingLot, ProcessType, SubProcess
 from baho.reception.models import CherryReceipt
 from baho.sales.models import Client, ExportShipment
 
 
 class Command(BaseCommand):
-    help = "Wipe all registered records (receipts, lots, stock, batches, shipments…). DEV ONLY."
+    help = "Wipe all registered records (receipts, lots, stock, labor, SMS…). DEV ONLY."
 
     def add_arguments(self, parser):
         parser.add_argument("--yes", action="store_true", help="Confirm the deletion")
@@ -50,6 +52,10 @@ class Command(BaseCommand):
                 "sub-processes": SubProcess.objects.all().delete()[0],
                 "suppliers": Supplier.objects.all().delete()[0],
                 "processing lots": ProcessingLot.all_objects.all().delete()[0],
+                "labor attendance": LaborAttendance.all_objects.all().delete()[0],
+                "labor pay periods": LaborPayPeriod.all_objects.all().delete()[0],
+                "casual laborers": CasualLaborer.all_objects.all().delete()[0],
+                "sms messages": SmsMessage.objects.all().delete()[0],
                 "cherry receipts": CherryReceipt.all_objects.all().delete()[0],
                 "farmers": Farmer.all_objects.all().delete()[0],
                 "processes": ProcessType.objects.all().delete()[0],

@@ -8,7 +8,13 @@ import {
   IconClipboardList,
   IconCoffee,
   IconDroplet,
+  IconFileImport,
+  IconKey,
+  IconListDetails,
   IconLogout,
+  IconMessage,
+  IconPlant2,
+  IconUserCog,
   IconShip,
   IconSitemap,
   IconTruckDelivery,
@@ -30,6 +36,17 @@ import { StockUpdatePage } from './features/drymill/StockUpdatePage';
 import { ParchProcessingPage } from './features/drymill/ParchProcessingPage';
 import { ExportUpdatesPage } from './features/drymill/ExportUpdatesPage';
 import { CwsTransfersPage } from './features/transfers/CwsTransfersPage';
+import { ChangePasswordPage } from './features/account/ChangePasswordPage';
+import { ImportsPage } from './features/admin/ImportsPage';
+import { SmsOutboxPage } from './features/admin/SmsOutboxPage';
+import { UsersPage } from './features/admin/UsersPage';
+import { StockLedgerPage } from './features/drymill/StockLedgerPage';
+import { LaborPage } from './features/labor/LaborPage';
+import { FarmersPage } from './features/reception/FarmersPage';
+import { SyncPage } from './features/sync/SyncPage';
+import { SyncIndicator } from './components/SyncIndicator';
+import { confirmAction } from './lib/confirm';
+import { getSyncStatus } from './lib/offline/store';
 
 interface NavItem {
   to: string;
@@ -44,6 +61,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
     label: 'Dry Mill',
     items: [
       { to: '/drymill/stock', label: 'Stock Update', icon: IconBuildingWarehouse },
+      { to: '/drymill/ledger', label: 'Stock Ledger', icon: IconListDetails },
       { to: '/drymill/sources', label: 'Suppliers', icon: IconUsers },
       { to: '/drymill/processes', label: 'Processes', icon: IconSitemap },
       { to: '/drymill/processing', label: 'Parchment Processing', icon: IconDroplet },
@@ -55,11 +73,21 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { to: '/cws/dashboard', label: 'Dashboard', icon: IconChartBar },
       { to: '/reception', label: 'Cherry Reception', icon: IconCoffee },
+      { to: '/cws/farmers', label: 'Farmers', icon: IconPlant2 },
       { to: '/processing', label: 'Processing Lots', icon: IconUsers },
       { to: '/cws/lots-report', label: 'Lots Report', icon: IconClipboardList },
       { to: '/cws/transfers', label: 'Transfers to Dry Mill', icon: IconTruckDelivery },
+      { to: '/cws/labor', label: 'Casual Labor', icon: IconUsers },
       { to: '/cws/process', label: 'Register Process', icon: IconUsers },
       { to: '/cws/stations', label: 'Register CWS', icon: IconBuildingWarehouse, adminOnly: true },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to: '/admin/users', label: 'Users', icon: IconUserCog },
+      { to: '/admin/sms', label: 'SMS Outbox', icon: IconMessage },
+      { to: '/admin/imports', label: 'Import Cherry Receipts', icon: IconFileImport },
     ],
   },
 ];
@@ -106,6 +134,18 @@ function DashboardLandingPage() {
           </div>
           )}
 
+          {sections.includes('admin') && (
+          <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
+            <Text fw={700} size="xl" mb="xs">Administration</Text>
+            <Text c="dimmed" size="sm" mb="lg">
+              User accounts and roles, the SMS outbox, and importing old spreadsheets.
+            </Text>
+            <Button onClick={() => navigate('/admin/users')} style={{ background: '#0b5b40', borderRadius: 12 }}>
+              Open Administration
+            </Button>
+          </div>
+          )}
+
           {sections.includes('cws') && (
           <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
             <Text fw={700} size="xl" mb="xs">CWS</Text>
@@ -143,7 +183,11 @@ function App() {
     ? [navSections[0]]
     : currentSection === 'cws'
       ? [navSections[1]]
-      : [];
+      : currentSection === 'admin'
+        ? [navSections[2]]
+        : [];
+  const isAccountPage = location.pathname === '/account/password';
+  const hideNavbar = isDashboardPage || isAccountPage || location.pathname === '/sync';
 
   if (loading) {
     return (
@@ -162,6 +206,11 @@ function App() {
     return <Navigate to="/" replace state={{ from: location.pathname }} />;
   }
 
+  // A temporary password (new account or admin reset) must be replaced before anything else.
+  if (user.must_change_password && !isAccountPage) {
+    return <Navigate to="/account/password" replace />;
+  }
+
   // A user without the role for this section is sent to the section chooser.
   if (currentSection && !canAccessSection(user, currentSection)) {
     return <Navigate to="/dashboard" replace />;
@@ -172,21 +221,31 @@ function App() {
     .map((assignment) => (assignment.facility ? `${assignment.role_name} · ${assignment.facility.name}` : assignment.role_name))
     .join(', ');
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const { pending, failed } = getSyncStatus();
+    if (pending + failed > 0) {
+      const ok = await confirmAction({
+        title: 'Saves are still waiting',
+        message: `${pending + failed} save(s) made on this device have not reached the server yet. They stay on this device and are sent the next time you sign in here. Sign out anyway?`,
+        confirmLabel: 'Sign out',
+        danger: true,
+      });
+      if (ok === null) return;
+    }
     logout();
     navigate('/', { replace: true });
   };
 
   return (
     <AppShell
-      navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: isDashboardPage || !navOpened, desktop: false } }}
+      navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: hideNavbar || !navOpened, desktop: hideNavbar } }}
       header={{ height: 56 }}
       padding="lg"
     >
       <AppShell.Header style={{ background: '#f5f4f1', color: '#1a1a1a', border: 'none', boxShadow: 'none' }}>
         <Group h="100%" px="md" justify="space-between">
           <Group gap={8} align="center">
-            {!isDashboardPage && <Burger opened={navOpened} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle navigation" />}
+            {!hideNavbar && <Burger opened={navOpened} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle navigation" />}
             <img src="/baho-image.jpg" alt="BAHO coffee company" style={{ height: 52, width: 'auto', display: 'block', objectFit: 'contain' }} />
           </Group>
           <Group gap="sm">
@@ -201,17 +260,28 @@ function App() {
                 Back
               </Button>
             )}
-            <Text size="sm" fw={600} c="#3d5140">Crop year 2026</Text>
+            <SyncIndicator />
+            <Text size="sm" fw={600} c="#3d5140" visibleFrom="sm">Crop year 2026</Text>
             <Stack gap={0} align="flex-end" visibleFrom="sm">
               <Text size="sm" fw={700} c="#1a1a1a">{user.full_name}</Text>
               <Text size="xs" c="dimmed" lineClamp={1} maw={320}>{roleSummary || 'No role assigned'}</Text>
             </Stack>
             <Button
               size="compact-sm"
+              variant="subtle"
+              color="dark"
+              leftSection={<IconKey size={14} />}
+              onClick={() => navigate('/account/password')}
+              visibleFrom="sm"
+            >
+              Password
+            </Button>
+            <Button
+              size="compact-sm"
               variant="light"
               color="dark"
               leftSection={<IconLogout size={14} />}
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
             >
               Sign out
             </Button>
@@ -219,7 +289,7 @@ function App() {
         </Group>
       </AppShell.Header>
 
-      {!isDashboardPage && (
+      {!hideNavbar && (
         <AppShell.Navbar style={{ background: '#2a1a12', border: 'none' }} p="sm">
           <ScrollArea>
             {visibleSections.map((section) => (
@@ -253,7 +323,15 @@ function App() {
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/dashboard" element={<DashboardLandingPage />} />
+          <Route path="/account/password" element={<ChangePasswordPage />} />
+          <Route path="/sync" element={<SyncPage />} />
           <Route path="/drymill/stock" element={<StockUpdatePage />} />
+          <Route path="/drymill/ledger" element={<StockLedgerPage />} />
+          <Route path="/cws/farmers" element={<FarmersPage />} />
+          <Route path="/cws/labor" element={<LaborPage />} />
+          <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/admin/sms" element={<SmsOutboxPage />} />
+          <Route path="/admin/imports" element={<ImportsPage />} />
           <Route path="/drymill/sources" element={<SourceRegistryPage />} />
           <Route path="/drymill/processes" element={<ProcessesPage />} />
           <Route path="/drymill/processing" element={<ParchProcessingPage />} />

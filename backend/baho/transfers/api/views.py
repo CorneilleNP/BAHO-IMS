@@ -3,7 +3,13 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from baho.core.access import CWS_READ_ROLES, CWS_WRITE_ROLES, DRYMILL_READ_ROLES, DRYMILL_WRITE_ROLES, RoleCode
+from baho.core.access import (
+    CWS_READ_ROLES,
+    CWS_WRITE_ROLES,
+    DRYMILL_READ_ROLES,
+    DRYMILL_WRITE_ROLES,
+    RoleCode,
+)
 from baho.core.mixins import FacilityScopedViewSetMixin
 from baho.core.permissions import HasAnyRole, RoleAccess
 
@@ -99,7 +105,9 @@ class DryMillTransferReceiptViewSet(
         data = LookupSerializer(data=request.query_params)
         data.is_valid(raise_exception=True)
         receipt = lookup_for_dry_mill(**data.validated_data)
-        return Response(DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data)
+        return Response(
+            DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data
+        )
 
     @action(detail=True, methods=["patch"], url_path=r"lines/(?P<line_id>[0-9a-f-]+)")
     def update_line(self, request, pk=None, line_id=None):
@@ -114,7 +122,9 @@ class DryMillTransferReceiptViewSet(
     def lock(self, request, pk=None):
         """Freeze the weighing and reveal the variance against the station's figures."""
         receipt = lock_dry_mill_receipt(user=request.user, receipt=self.get_object())
-        return Response(DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data)
+        return Response(
+            DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data
+        )
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
@@ -124,9 +134,13 @@ class DryMillTransferReceiptViewSet(
         receipt = submit_dry_mill_receipt(
             user=request.user, receipt=self.get_object(), **data.validated_data
         )
-        return Response(DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data)
+        return Response(
+            DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data
+        )
 
     @action(detail=True, methods=["post"], permission_classes=[HasAnyRole(RoleCode.ADMIN)])
     def unlock(self, request, pk=None):
         receipt = unlock_dry_mill_receipt(user=request.user, receipt=self.get_object())
-        return Response(DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data)
+        return Response(
+            DryMillTransferReceiptSerializer(dry_mill_receipts().get(pk=receipt.pk)).data
+        )

@@ -41,7 +41,9 @@ def _sum_weighings(weighings: list[dict]) -> tuple[int, Decimal]:
 def _check_bags_weight(weight_of_bags_kg, gross: Decimal) -> Decimal:
     weight_of_bags = Decimal(weight_of_bags_kg or 0)
     if weight_of_bags > gross:
-        raise ValidationError({"weight_of_bags_kg": ["Weight of bags cannot exceed the gross weight."]})
+        raise ValidationError(
+            {"weight_of_bags_kg": ["Weight of bags cannot exceed the gross weight."]}
+        )
     return weight_of_bags
 
 
@@ -56,9 +58,19 @@ def _build_lines(lines: list[dict]) -> list[dict]:
         weighings = line.get("weighings") or []
         if not weighings:
             raise ValidationError({"weighings": ["Record at least one weighing for each line."]})
-        key = (line["process"].id, line["sub_process"].id if line.get("sub_process") else None, line["grade"].id)
+        key = (
+            line["process"].id,
+            line["sub_process"].id if line.get("sub_process") else None,
+            line["grade"].id,
+        )
         if key in seen:
-            raise ValidationError({"lines": ["Each process/sub-process/grade can appear only once per delivery note."]})
+            raise ValidationError(
+                {
+                    "lines": [
+                        "Each process/sub-process/grade can appear only once per delivery note."
+                    ]
+                }
+            )
         seen.add(key)
         bags, gross = _sum_weighings(weighings)
         weight_of_bags = _check_bags_weight(line.get("weight_of_bags_kg"), gross)
@@ -83,7 +95,9 @@ def create_transfer(
 ) -> CwsTransfer:
     ensure_facility_access(user, facility)
     if CwsTransfer.objects.filter(delivery_note_no=delivery_note_no).exists():
-        raise ValidationError({"delivery_note_no": ["This delivery note number is already recorded."]})
+        raise ValidationError(
+            {"delivery_note_no": ["This delivery note number is already recorded."]}
+        )
     built = _build_lines(lines)
 
     transfer = CwsTransfer.objects.create(
@@ -99,7 +113,10 @@ def create_transfer(
         weighings = line.pop("weighings")
         row = CwsTransferLine.objects.create(transfer=transfer, **line)
         CwsTransferWeighing.objects.bulk_create(
-            [CwsTransferWeighing(line=row, bags=w["bags"], weight_kg=w["weight_kg"]) for w in weighings]
+            [
+                CwsTransferWeighing(line=row, bags=w["bags"], weight_kg=w["weight_kg"])
+                for w in weighings
+            ]
         )
     return transfer
 
@@ -126,7 +143,10 @@ def update_transfer(*, user, transfer, lines=None, **fields) -> CwsTransfer:
             weighings = line.pop("weighings")
             row = CwsTransferLine.objects.create(transfer=transfer, **line)
             CwsTransferWeighing.objects.bulk_create(
-                [CwsTransferWeighing(line=row, bags=w["bags"], weight_kg=w["weight_kg"]) for w in weighings]
+                [
+                    CwsTransferWeighing(line=row, bags=w["bags"], weight_kg=w["weight_kg"])
+                    for w in weighings
+                ]
             )
     return transfer
 
@@ -153,8 +173,10 @@ def lookup_for_dry_mill(*, delivery_note_no: str) -> DryMillTransferReceipt:
         transfer = CwsTransfer.objects.select_related("facility").get(
             delivery_note_no=delivery_note_no
         )
-    except CwsTransfer.DoesNotExist:
-        raise ValidationError({"delivery_note_no": ["No transfer found with this delivery note number."]})
+    except CwsTransfer.DoesNotExist as exc:
+        raise ValidationError(
+            {"delivery_note_no": ["No transfer found with this delivery note number."]}
+        ) from exc
     if transfer.status == CwsTransfer.Status.DRAFT:
         raise ValidationError(
             {"delivery_note_no": ["The station hasn't submitted this delivery note yet."]}
@@ -195,7 +217,10 @@ def update_dry_mill_line(*, user, line, weighings=None, **fields) -> DryMillTran
     if weighings is not None:
         line.weighings.all().delete()
         DryMillTransferWeighing.objects.bulk_create(
-            [DryMillTransferWeighing(line=line, bags=w["bags"], weight_kg=w["weight_kg"]) for w in weighings]
+            [
+                DryMillTransferWeighing(line=line, bags=w["bags"], weight_kg=w["weight_kg"])
+                for w in weighings
+            ]
         )
     return line
 
@@ -231,7 +256,9 @@ def lock_dry_mill_receipt(*, user, receipt) -> DryMillTransferReceipt:
     if not lines:
         raise ValidationError(["Nothing to lock."])
     if any(not line.weighings.exists() for line in lines):
-        raise ValidationError({"weighings": ["Record at least one weighing for every line before locking."]})
+        raise ValidationError(
+            {"weighings": ["Record at least one weighing for every line before locking."]}
+        )
 
     for line in lines:
         variance = line.cws_line.net_weight_kg - line.net_weight_kg
@@ -246,7 +273,9 @@ def lock_dry_mill_receipt(*, user, receipt) -> DryMillTransferReceipt:
 
 
 @transaction.atomic
-def submit_dry_mill_receipt(*, user, receipt, comment: str = "", arrival_date=None) -> DryMillTransferReceipt:
+def submit_dry_mill_receipt(
+    *, user, receipt, comment: str = "", arrival_date=None
+) -> DryMillTransferReceipt:
     """Attach the comment explaining any mismatch and create the matching HQ
     stock receipts so milling can draw on this parchment. Final: the weighing
     was already locked, and stays locked, unless an admin unlocks it."""
@@ -255,14 +284,22 @@ def submit_dry_mill_receipt(*, user, receipt, comment: str = "", arrival_date=No
         raise ValidationError(["Lock the weighing and review the variance first."])
     lines = list(
         receipt.lines.select_related(
-            "cws_line", "cws_line__process", "cws_line__sub_process", "cws_line__grade", "stock_receipt"
+            "cws_line",
+            "cws_line__process",
+            "cws_line__sub_process",
+            "cws_line__grade",
+            "stock_receipt",
         )
     )
 
     comment = (comment or "").strip()
     if any(_line_mismatched(line) for line in lines) and not comment:
         raise ValidationError(
-            {"comment": ["At least one figure doesn't match the station's - explain the difference."]}
+            {
+                "comment": [
+                    "At least one figure doesn't match the station's - explain the difference."
+                ]
+            }
         )
 
     transfer = receipt.transfer
@@ -289,7 +326,9 @@ def submit_dry_mill_receipt(*, user, receipt, comment: str = "", arrival_date=No
             )
             line.save(update_fields=["stock_receipt"])
         else:
-            drymill_services.update_stock_receipt(user=user, receipt=line.stock_receipt, **stock_fields)
+            drymill_services.update_stock_receipt(
+                user=user, receipt=line.stock_receipt, **stock_fields
+            )
 
     receipt.status = DryMillTransferReceipt.Status.CONFIRMED
     receipt.comment = comment
@@ -317,6 +356,13 @@ def unlock_dry_mill_receipt(*, user, receipt) -> DryMillTransferReceipt:
     receipt.comment = ""
     receipt.updated_by = user
     receipt.save(
-        update_fields=["unlocked_by", "unlocked_at", "status", "comment", "updated_by", "updated_at"]
+        update_fields=[
+            "unlocked_by",
+            "unlocked_at",
+            "status",
+            "comment",
+            "updated_by",
+            "updated_at",
+        ]
     )
     return receipt

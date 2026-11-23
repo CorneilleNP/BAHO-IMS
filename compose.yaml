@@ -18,6 +18,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # Nightly pg_dump into ./backups on the VPS (see deployment/README.md, "Backups").
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    entrypoint: ["sh", "/scripts/backup.sh"]
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-baho_ims}
+      PGUSER: ${POSTGRES_USER:-baho}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the server .env file}
+      TZ: ${BACKUP_TZ:-Africa/Kigali}
+      BACKUP_HOUR: ${BACKUP_HOUR:-1}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./deployment/backup.sh:/scripts/backup.sh:ro
+      - ./backups:/backups
+    networks:
+      - data
+    depends_on:
+      db:
+        condition: service_healthy
+
   backend:
     build:
       context: ./backend
@@ -29,6 +51,14 @@ services:
       DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-baho}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the server .env file}@db:5432/${POSTGRES_DB:-baho_ims}
+      DJANGO_LOG_LEVEL: ${DJANGO_LOG_LEVEL:-INFO}
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      SMS_BACKEND: ${SMS_BACKEND:-console}
+      SMS_SENDER_ID: ${SMS_SENDER_ID:-}
+      AFRICASTALKING_USERNAME: ${AFRICASTALKING_USERNAME:-}
+      AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY:-}
     volumes:
       - static_data:/app/staticfiles
     networks:
@@ -43,6 +73,29 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+
+  # Retries SMS that failed to send (provider down, no network) every 10 minutes.
+  sms-worker:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: ["sh", "-c", "while true; do python manage.py send_pending_sms || true; sleep 600; done"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the server .env file}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in the server .env file}
+      DATABASE_URL: postgres://${POSTGRES_USER:-baho}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the server .env file}@db:5432/${POSTGRES_DB:-baho_ims}
+      DJANGO_LOG_LEVEL: ${DJANGO_LOG_LEVEL:-INFO}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SMS_BACKEND: ${SMS_BACKEND:-console}
+      SMS_SENDER_ID: ${SMS_SENDER_ID:-}
+      AFRICASTALKING_USERNAME: ${AFRICASTALKING_USERNAME:-}
+      AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY:-}
+    networks:
+      - data  # not internal, so the worker can reach the SMS provider
+    depends_on:
+      backend:
+        condition: service_healthy
 
   frontend:
     build:

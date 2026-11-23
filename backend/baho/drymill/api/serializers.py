@@ -307,9 +307,7 @@ class DryMillBatchSerializer(serializers.ModelSerializer):
         queryset=SubProcess.objects.all(), required=False, allow_null=True
     )
     process_name = serializers.CharField(source="process.name", read_only=True, default="")
-    sub_process_name = serializers.CharField(
-        source="sub_process.name", read_only=True, default=""
-    )
+    sub_process_name = serializers.CharField(source="sub_process.name", read_only=True, default="")
     stock_lines = StockLineSerializer(many=True, write_only=True, required=False)
     inputs = DryMillInputSerializer(many=True, required=False)
     outputs = DryMillOutputSerializer(many=True)

@@ -11,6 +11,7 @@ import '@mantine/notifications/styles.css'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './lib/auth'
+import { initPlatform } from './lib/platform'
 
 const theme = createTheme({
   primaryColor: 'coffee',
@@ -25,6 +26,9 @@ const theme = createTheme({
   defaultRadius: 'md',
   fontFamily: 'system-ui, -apple-system, Segoe UI, sans-serif',
 });
+
+// Load the saved server address (Android app) before anything calls the API.
+await initPlatform()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
