@@ -1,11 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// The Android app wraps the same React build as the website (`npm run build` -> dist/).
+// The Android app wraps the same React build as the website (../frontend, `npm run build` -> dist/).
 // It talks to the server chosen on the login screen (default https://baho.izere.work).
 const config: CapacitorConfig = {
   appId: 'rw.baho.ims',
   appName: 'Baho IMS',
-  webDir: 'dist',
+  webDir: '../frontend/dist',
   server: {
     androidScheme: 'https',
     // Lets a tester point the app at a PC on the local Wi-Fi (http://192.168.x.x:8000).

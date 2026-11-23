@@ -7,7 +7,8 @@ and the per-CWS cash/expense ledger, with farmer-to-export traceability.
 ```
 baho IMS/
 ├── backend/     Django 5.2 + Django REST Framework + PostgreSQL (the API)
-├── frontend/    React 19 + TypeScript + Vite + Mantine (the web app; android/ = the APK)
+├── frontend/    React 19 + TypeScript + Vite + Mantine (the web app, also used by the mobile app)
+├── mobile/      Android app (Capacitor): packages frontend/ as an APK, with offline sync
 ├── docs/        notes; docs/legacy holds the superseded Supabase/PowerSync config
 └── scripts/     db.ps1 (local Postgres), dev-env.sh (portable Node/Postgres paths)
 ```
@@ -95,10 +96,12 @@ npm test             # Vitest unit/component tests
 
 ## Android app and offline mode
 
-The Android app is the same React app as the website, packaged with
-[Capacitor](https://capacitorjs.com) (`frontend/android/`). Every module is in
-it, and it talks to the same server, so the web and the phones always see the
-same data.
+The Android app (`mobile/`) is the same React app as the website
+(`frontend/`), packaged with [Capacitor](https://capacitorjs.com). Every module
+is in it, and it talks to the same server, so the web and the phones always see
+the same data. Screens and the offline logic live in `frontend/` only, so every
+change reaches the web and the app together; `mobile/` holds just the Android
+project and its config (see [mobile/README.md](mobile/README.md)).
 
 **Offline** (app and website):
 
@@ -134,10 +137,10 @@ Android SDK in `F:\baho-tools\android-sdk` (a path **without spaces**: the
 Android tools break on `C:\Users\Hani Computer`), Node in `~\tools\node`.
 
 ```powershell
-cd frontend
+cd mobile
 $env:PATH="$HOME\tools\node;$env:PATH"
-npm run build
-npx cap sync android
+npm install                        # first time (also run npm install in ..\frontend)
+npm run prepare-android            # builds ..\frontend and copies it into android\
 cd android
 $env:JAVA_HOME="F:\baho-tools\jdk21"; $env:ANDROID_HOME="F:\baho-tools\android-sdk"
 .\gradlew.bat assembleRelease      # -> app\build\outputs\apk\release\app-release.apk
@@ -145,12 +148,12 @@ $env:JAVA_HOME="F:\baho-tools\jdk21"; $env:ANDROID_HOME="F:\baho-tools\android-s
 ```
 
 Before handing out a new APK, raise `versionCode` and `versionName` in
-`frontend/android/app/build.gradle`. Install on a phone by copying the APK to it
+`mobile/android/app/build.gradle`. Install on a phone by copying the APK to it
 (allow "install unknown apps"), or `adb install -r app-release.apk`.
 
 **Release key** (needed for every future update of the app; phones refuse an
 update signed with another key): `%USERPROFILE%\.baho-android\baho-release.jks`
-with its passwords in `keystore.properties` next to it. `frontend/android/keystore.properties`
+with its passwords in `keystore.properties` next to it. `mobile/android/keystore.properties`
 (git-ignored) points at it. **Back up that folder somewhere safe.** To build in
 GitHub instead (Actions › *Android APK* › Run workflow), add the secrets
 `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`.

@@ -1,0 +1,22 @@
+{
+  "name": "baho-ims-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android app for Baho IMS: the React app in ../frontend, packaged with Capacitor",
+  "scripts": {
+    "web": "npm --prefix ../frontend run build",
+    "sync": "cap sync android",
+    "prepare-android": "npm run web && npm run sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/network": "8.0.1",
+    "@capacitor/preferences": "8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2",
+    "typescript": "~5.9.3"
+  }
+}
