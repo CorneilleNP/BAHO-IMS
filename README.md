@@ -38,6 +38,10 @@ registered through the screens. 246 backend tests (pytest) and frontend unit tes
 
 For containerized VPS deployment, see [deployment/README.md](deployment/README.md).
 
+**One-click demo** (database, backend, website and the Android app in the
+emulator, all connected): `scripts\demo.cmd`. It prints the addresses and the
+sign-in to use; the steps below are what it does, for doing them by hand.
+
 ### 1. Database (portable PostgreSQL 17 in `~/tools`)
 
 Run one command at a time:

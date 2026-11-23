@@ -12,8 +12,11 @@ Rules:
   Requests without the header behave exactly as before.
 - The key belongs to the user who first used it, the method, the path and the
   exact body. Reusing it for anything else is refused (422).
+- Only signed-in requests take part (the key belongs to a user). A request
+  without a valid token just runs; the app renews its session and retries.
 - A response is stored when it is final: success or a 4xx validation answer.
-  Server errors (5xx) are not stored, so a retry runs again.
+  Answers that are not about the request itself are not stored, so a retry
+  runs again: server errors (5xx), not signed in (401), rate limited (429).
 - While the first attempt is still running, a parallel retry gets 409.
 - Records older than IDEMPOTENCY_TTL_DAYS are purged lazily.
 """
@@ -34,6 +37,8 @@ logger = logging.getLogger("baho.idempotency")
 
 HEADER = "HTTP_IDEMPOTENCY_KEY"
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# Not an answer about the request: the same request may well succeed next time.
+NOT_FINAL = {401, 408, 429}
 STALE_AFTER = timedelta(minutes=2)
 
 
@@ -81,7 +86,12 @@ class IdempotencyMiddleware:
         body = request.body  # read once here; Django caches it for the view
         request_hash = hashlib.sha256(body).hexdigest()
         user = _authenticated_user(request)
-        user_id = getattr(user, "pk", None)
+        if user is None:
+            # Expired/missing token (e.g. the app was restarted offline): the view
+            # answers 401, the app renews its session and resends with the same key.
+            # Recording it here would tie the key to "nobody" and refuse that resend.
+            return self.get_response(request)
+        user_id = user.pk
 
         if random.random() < 0.01:  # noqa: S311 - housekeeping, not security
             IdempotencyRecord.objects.filter(created_at__lt=timezone.now() - _ttl()).delete()
@@ -127,7 +137,11 @@ class IdempotencyMiddleware:
             record.delete()
             raise
 
-        if response.status_code >= 500 or getattr(response, "streaming", False):
+        if (
+            response.status_code >= 500
+            or response.status_code in NOT_FINAL
+            or getattr(response, "streaming", False)
+        ):
             record.delete()  # not final: allow the retry to run for real
             return response
 

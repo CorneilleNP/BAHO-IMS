@@ -88,15 +88,10 @@ export function SyncPage() {
         // offline: keep what we have
       }
     }
-    let ok = 0;
-    for (const url of offlineUrls(stations, user.is_global)) {
-      try {
-        await api(url);
-        ok += 1;
-      } catch {
-        // not allowed for this role, or offline: skip
-      }
-    }
+    // In parallel: on a slow connection, one-by-one takes minutes.
+    // Lists a role may not open (403) are simply skipped.
+    const results = await Promise.allSettled(offlineUrls(stations, user.is_global).map((url) => api(url)));
+    const ok = results.filter((r) => r.status === 'fulfilled').length;
     setDownloading(false);
     toast.success(`${ok} lists saved on this device. Screens you open while online are saved too.`, 'Ready for offline');
   };

@@ -121,3 +121,32 @@ def test_mobile_app_origin_is_allowed_by_cors(api):
     )
     assert res["Access-Control-Allow-Origin"] == "https://localhost"
     assert "idempotency-key" in res["Access-Control-Allow-Headers"]
+
+
+def test_resend_after_expired_session_is_not_refused(api, gitoki_clerk, gitoki):
+    """Seen on the Android emulator: the app restarted offline has no access token,
+    so its first resend gets 401; after renewing the session the same key must work."""
+    body = {"full_name": "Offline Farmer", "home_facility": str(gitoki.id)}
+    first = api.post(URL, body, format="json", HTTP_IDEMPOTENCY_KEY="k-1")
+    assert first.status_code == 401
+    assert IdempotencyRecord.objects.count() == 0
+    login(api, gitoki_clerk)
+    second = api.post(URL, body, format="json", HTTP_IDEMPOTENCY_KEY="k-1")
+    assert second.status_code == 201
+    assert Farmer.objects.count() == 1
+
+
+def test_rate_limited_answer_is_not_stored(api, gitoki_clerk, gitoki, monkeypatch):
+    from rest_framework.throttling import BaseThrottle
+
+    from baho.farmers.api.views import FarmerViewSet
+
+    class Always429(BaseThrottle):
+        def allow_request(self, request, view):
+            return False
+
+    login(api, gitoki_clerk)
+    monkeypatch.setattr(FarmerViewSet, "throttle_classes", [Always429])
+    assert post(api, "k-1", home_facility=str(gitoki.id)).status_code == 429
+    monkeypatch.setattr(FarmerViewSet, "throttle_classes", [])
+    assert post(api, "k-1", home_facility=str(gitoki.id)).status_code == 201
