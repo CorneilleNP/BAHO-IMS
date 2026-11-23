@@ -9,7 +9,7 @@
  *   or discards it; the rest of the queue carries on.
  */
 import { Network } from '@capacitor/network';
-import { sendRaw } from '../api';
+import { refreshAccessToken, sendRaw } from '../api';
 import { isNative } from '../platform';
 import {
   mapId,
@@ -20,6 +20,7 @@ import {
   outboxUpdate,
   refreshStatus,
   resolveIds,
+  getSyncStatus,
   updateSyncStatus,
 } from './store';
 
@@ -93,6 +94,19 @@ export async function retryEntry(seq: number) {
 
 let started = false;
 
+/**
+ * Ask the server whether we are really offline. Android's network status can
+ * lag behind (or report "no connection" on networks that work), so the device
+ * flag alone must never keep the app offline: a successful request wins.
+ */
+async function probeServer() {
+  if (getSyncStatus().online) return;
+  if ((await refreshAccessToken()) !== 'offline') {
+    updateSyncStatus({ online: true });
+    void requestSync();
+  }
+}
+
 /** Sync when the connection comes back, when the app returns to the foreground, and every minute. */
 export function startAutoSync() {
   if (started) return;
@@ -104,11 +118,29 @@ export function startAutoSync() {
   window.addEventListener('online', goOnline);
   window.addEventListener('offline', () => updateSyncStatus({ online: false }));
   if (isNative) {
-    void Network.addListener('networkStatusChange', (s) => (s.connected ? goOnline() : updateSyncStatus({ online: false })));
-    void Network.getStatus().then((s) => updateSyncStatus({ online: s.connected }));
+    void Network.addListener('networkStatusChange', (s) => {
+      if (s.connected) goOnline();
+      else {
+        updateSyncStatus({ online: false });
+        // A change of network: check for ourselves shortly after.
+        window.setTimeout(() => void probeServer(), 5_000);
+      }
+    });
+    void Network.getStatus().then((s) => {
+      if (!s.connected) {
+        updateSyncStatus({ online: false });
+        void probeServer();
+      }
+    });
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') void requestSync();
+    if (document.visibilityState === 'visible') {
+      void probeServer();
+      void requestSync();
+    }
   });
-  window.setInterval(() => void requestSync(), 60_000);
+  window.setInterval(() => {
+    void probeServer();
+    void requestSync();
+  }, 60_000);
 }

@@ -104,10 +104,10 @@ export function SyncPage() {
         description="Work saved without a connection waits here and is sent automatically, oldest first, when the device is online."
         actions={
           <>
-            <Button variant="light" leftSection={<IconCloudDownload size={16} />} onClick={download} loading={downloading} disabled={!status.online}>
+            <Button variant="light" leftSection={<IconCloudDownload size={16} />} onClick={download} loading={downloading}>
               Download for offline
             </Button>
-            <Button leftSection={<IconRefresh size={16} />} onClick={() => void requestSync()} loading={status.syncing} disabled={!status.online}>
+            <Button leftSection={<IconRefresh size={16} />} onClick={() => void requestSync()} loading={status.syncing}>
               Sync now
             </Button>
           </>
