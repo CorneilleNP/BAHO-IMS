@@ -158,7 +158,7 @@ export function FarmersPage() {
           </>
         }
       />
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Stack>
           <Group align="flex-end">
             <TextInput label="Search" placeholder="Name, code, phone, ID, village" value={search} onChange={(e) => { setSearch(e.currentTarget.value); setPage(1); }} w={300} />

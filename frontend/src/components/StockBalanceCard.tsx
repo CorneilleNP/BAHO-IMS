@@ -31,7 +31,7 @@ export function StockBalanceCard({ title = 'Received vs stock balance', received
   if (extra) figures.push([extra.label, kgWhole(extra.value)]);
 
   return (
-    <Card withBorder radius="md" p="md">
+    <Card p="md">
       <Group justify="space-between" mb="sm">
         <Group gap={8}>
           <IconPackage size={18} />

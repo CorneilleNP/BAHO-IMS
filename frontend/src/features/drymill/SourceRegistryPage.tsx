@@ -33,7 +33,7 @@ export function SourceRegistryPage() {
         actions={writable && <Button leftSection={<IconBuildingWarehouse size={16} />} onClick={() => setWizard({ supplier: null })}>Register supplier</Button>}
       />
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <DataTable
           rows={sources.data ?? []}
           rowKey={(s) => `${s.origin_type}-${s.id}`}

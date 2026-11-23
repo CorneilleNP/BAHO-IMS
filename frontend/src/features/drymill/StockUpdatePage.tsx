@@ -221,7 +221,7 @@ export function StockUpdatePage() {
         <KpiCard label="Stock gain (kg)" value={kgWhole(transferSummary.data?.stock_gain_kg)} icon={IconTrendingUp} loading={transferSummary.loading && !transferSummary.data} accent="green" />
       </SimpleGrid>
       {(transferSummary.data?.rows.length ?? 0) > 0 && (
-        <Card withBorder radius="md" p="md">
+        <Card p="md">
           <DataTable
             rows={transferSummary.data!.rows}
             rowKey={(r) => `${r.delivery_note_no}-${r.process_name}-${r.sub_process_name}-${r.grade}`}
@@ -253,7 +253,7 @@ export function StockUpdatePage() {
         </Card>
       )}
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Group gap="sm" align="flex-end" wrap="wrap">
           <DateRangeFilter value={filters.range} onChange={(v) => setFilter('range', v)} label="Arrival dates" w={250} />
           <Select label="Source" placeholder="All" data={sourceOptions} value={filters.source} onChange={(v) => setFilter('source', v)} searchable clearable w={180} />
@@ -318,7 +318,7 @@ export function StockUpdatePage() {
         <ChartCard title="In stock now, by grade" rows={s?.balance_by_grade ?? []} loading={kpiLoading} color="teal.6" />
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Group justify="space-between" mb="xs">
           <Text fw={600}>Stock receipts</Text>
           <Text size="sm" c="dimmed">{t ? `${t.receipts.toLocaleString()} receipts match` : ''}</Text>

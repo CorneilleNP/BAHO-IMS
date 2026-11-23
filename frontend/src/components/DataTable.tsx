@@ -204,7 +204,7 @@ export function DataTable<T>({
         <MobileCardList cols={cols} rows={rows} rowKey={rowKey} onRowClick={onRowClick} selection={selection} loading={loading} />
       ) : (
         <Table.ScrollContainer minWidth={minWidth}>
-          <Table striped highlightOnHover verticalSpacing="sm" style={{ opacity: loading ? 0.6 : 1 }}>
+          <Table style={{ opacity: loading ? 0.6 : 1 }}>
             <Table.Thead>
               <Table.Tr>
                 {selection && (

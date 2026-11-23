@@ -200,7 +200,7 @@ function StockPosition({ r }: { r: HqStockReceiptDetail }) {
   const pure = num(r.pure_weight_kg);
   const used = pure - num(r.stock_balance_kg);
   return (
-    <Card withBorder radius="md" p="md">
+    <Card p="md">
       <Group gap="xs" mb="xs">
         <IconScale size={16} />
         <Text fw={600} size="sm">Stock position</Text>
@@ -232,7 +232,7 @@ function AdjustForm({ receiptId, balance, onDone }: { receiptId: string; balance
     onDone();
   }
   return (
-    <Card withBorder radius="md" p="sm" bg="gray.0">
+    <Card p="sm" bg="gray.0">
       <Text fw={600} size="sm" mb="xs">Adjust stock</Text>
       <Group align="flex-end" gap="xs" wrap="wrap">
         <NumberInput label="Quantity (kg)" description={`Balance now ${kg(balance, 2)} kg · negative removes`} value={qty} onChange={(v) => setQty(v === '' ? '' : Number(v))} hideControls w={200} />

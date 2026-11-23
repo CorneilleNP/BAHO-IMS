@@ -50,7 +50,7 @@ export function StockLedgerPage() {
         title="Stock Ledger"
         description="Every movement in and out of HQ stock, oldest first, with the running balance after each one. Voided records are left out."
       />
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Group align="flex-end" gap="md">
           <Stack gap={4}>
             <Text size="sm" fw={500}>Stock</Text>
@@ -82,7 +82,7 @@ export function StockLedgerPage() {
         <KpiCard label="Closing balance" value={`${kg(data?.closing_balance)} kg`} loading={ledger.loading && !data} />
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <DataTable<LedgerRow>
           rows={data?.rows ?? []}
           rowKey={(r) => `${r.movement_type}-${r.reference_id}-${r.date}-${r.export_grade}-${r.qty_in}-${r.qty_out}-${r.description}`}

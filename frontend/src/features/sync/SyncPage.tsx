@@ -129,7 +129,7 @@ export function SyncPage() {
         </Alert>
       )}
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <DataTable<OutboxEntry>
           rows={entries}
           rowKey={(e) => String(e.seq)}

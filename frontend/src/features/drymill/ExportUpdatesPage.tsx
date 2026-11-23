@@ -125,7 +125,7 @@ export function ExportUpdatesPage() {
         <KpiCard label="Stock balance (kg)" value={kg(s?.stock_balance_kg)} icon={IconScale} accent="gray" loading={kpiLoading} />
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">By grade: produced, exported, balance</Text>
         <DataTable
           rows={s?.by_grade ?? []}
@@ -149,7 +149,7 @@ export function ExportUpdatesPage() {
         />
       </Card>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">By process: produced, exported, balance</Text>
         <DataTable
           rows={s?.by_process ?? []}
@@ -173,7 +173,7 @@ export function ExportUpdatesPage() {
         />
       </Card>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">By source: produced, exported, balance</Text>
         <DataTable
           rows={s?.by_source ?? []}
@@ -199,7 +199,7 @@ export function ExportUpdatesPage() {
 
       <ChartCard title="Exported quantity by client" rows={s?.by_client ?? []} loading={kpiLoading} labelWidth={120} />
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">Recent export shipments</Text>
         <DataTable
           rows={shipments.items}

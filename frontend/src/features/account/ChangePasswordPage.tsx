@@ -36,7 +36,7 @@ export function ChangePasswordPage() {
           Your administrator set a temporary password for you. Choose your own password to continue.
         </Alert>
       )}
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <form onSubmit={handleSubmit} noValidate>
           <Stack>
             <ErrorMessage>{submit.error}</ErrorMessage>

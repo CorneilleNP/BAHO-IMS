@@ -31,7 +31,7 @@ export function CwsStationsPage() {
         actions={<Button leftSection={<IconBuildingWarehouse size={16} />} onClick={() => setWizard({ station: null })}>Register CWS</Button>}
       />
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <DataTable
           rows={stations.items}
           rowKey={(f) => f.id}

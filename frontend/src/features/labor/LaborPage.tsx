@@ -242,7 +242,7 @@ function PeriodDrawer({ periodId, laborers, canEdit, canClose, canPay, onClose, 
             </Group>
           </Group>
           {canEdit && period.status === 'OPEN' && (
-            <Card withBorder radius="md" p="md">
+            <Card p="md">
               <Text fw={700} mb="sm">Roll call</Text>
               <RollCall period={period} laborers={laborers} onSaved={() => { detail.reload(); onChanged(); }} />
             </Card>
@@ -311,7 +311,7 @@ export function LaborPage() {
           </>
         }
       />
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Tabs value={tab} onChange={setTab}>
           <Tabs.List mb="md">
             <Tabs.Tab value="periods">Pay periods</Tabs.Tab>

@@ -1,6 +1,9 @@
 :root {
   color-scheme: light;
-  --twentieth-font: "Twentieth Century", "Tw Cen MT", "Futura", "Segoe UI", sans-serif;
+  /* The device's own modern UI font: Roboto on Android, Segoe UI on Windows, SF on Apple. */
+  --twentieth-font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --baho-border: #e6ebe8;
+  --baho-bg: #f4f6f5;
 }
 
 * {
@@ -16,11 +19,17 @@ body,
 }
 
 body {
-  color: #1f1a17;
-  background: #f6f1eb;
+  color: #15211c;
+  background: var(--baho-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Buttons feel pressed when tapped (phones) or clicked. */
+.mantine-Button-root:active:not(:disabled),
+.mantine-ActionIcon-root:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
 }
 
 button,
@@ -51,4 +60,40 @@ h6,
 }
 .page-header-actions-mobile .mantine-Button-root {
   height: 42px;
+}
+
+/* Section chooser tiles lift on hover. */
+.section-card {
+  display: block;
+  border-radius: var(--mantine-radius-lg);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.section-card:hover {
+  transform: translateY(-2px);
+}
+.section-card:hover .mantine-Card-root {
+  box-shadow: var(--mantine-shadow-md);
+}
+
+/* Phones: dashboard figures two per row, compact (any grid of KpiCards). */
+@media (max-width: 48em) {
+  .mantine-SimpleGrid-root:has(> .kpi-card) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .kpi-card {
+    padding: 14px !important;
+  }
+  .kpi-card .kpi-value {
+    font-size: 20px !important;
+  }
+  .kpi-card .kpi-label {
+    font-size: 12px !important;
+  }
+  .kpi-card .kpi-icon {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+  }
 }

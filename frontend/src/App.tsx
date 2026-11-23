@@ -1,8 +1,9 @@
-import { AppShell, Burger, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
+import { AppShell, Burger, Button, Card, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, SimpleGrid, Stack, Text, ThemeIcon, Title, UnstyledButton } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useEffect } from 'react';
 import type { ComponentType } from 'react';
 import {
+  IconArrowRight,
   IconBuildingWarehouse,
   IconChartBar,
   IconClipboardList,
@@ -47,7 +48,7 @@ import { LaborPage } from './features/labor/LaborPage';
 import { FarmersPage } from './features/reception/FarmersPage';
 import { SyncPage } from './features/sync/SyncPage';
 import { SyncIndicator } from './components/SyncIndicator';
-import { MobileAppBar, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
+import { MobileAppBar, MobileMoreSheet, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
 import { confirmAction } from './lib/confirm';
 import { getSyncStatus } from './lib/offline/store';
 
@@ -139,6 +140,12 @@ function mobileTabs(section: Section | null): MobileTab[] {
     .map((item) => ({ to: item.to, label: SHORT_LABELS[item.to] ?? item.label, icon: item.icon }));
 }
 
+const SECTION_CARDS: Array<{ section: Section; title: string; text: string; to: string; icon: ComponentType<{ size?: number }>; color: string }> = [
+  { section: 'cws', title: 'CWS', text: 'Cherry reception, farmers, processing lots, labor and transfers.', to: '/cws/dashboard', icon: IconCoffee, color: 'baho' },
+  { section: 'drymill', title: 'Dry Mill', text: 'HQ stock, parchment milling, stock ledger and export.', to: '/drymill/stock', icon: IconBuildingWarehouse, color: 'coffee' },
+  { section: 'admin', title: 'Administration', text: 'Users and roles, SMS outbox, importing old sheets.', to: '/admin/users', icon: IconUserCog, color: 'gray' },
+];
+
 function DashboardLandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -158,55 +165,38 @@ function DashboardLandingPage() {
     );
   }
 
+  const firstName = user?.full_name.split(' ')[0] ?? '';
   return (
-    <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-      <div style={{ width: '100%', maxWidth: 900 }}>
-        <Text size="sm" tt="uppercase" fw={700} c="dimmed" mb="lg">
-          Access dashboard
-        </Text>
-        <Text size="h2" fw={800} style={{ fontSize: 42, lineHeight: 1.1, marginBottom: 32 }}>
-          Choose your section
-        </Text>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24 }}>
-          {sections.includes('drymill') && (
-          <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
-            <Text fw={700} size="xl" mb="xs">Dry Mill</Text>
-            <Text c="dimmed" size="sm" mb="lg">
-              HQ operations, stock updates, processing, and export tracking.
-            </Text>
-            <Button onClick={() => navigate('/drymill/stock')} style={{ background: '#0b5b40', borderRadius: 12 }}>
-              Open Dry Mill
-            </Button>
-          </div>
-          )}
-
-          {sections.includes('admin') && (
-          <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
-            <Text fw={700} size="xl" mb="xs">Administration</Text>
-            <Text c="dimmed" size="sm" mb="lg">
-              User accounts and roles, the SMS outbox, and importing old spreadsheets.
-            </Text>
-            <Button onClick={() => navigate('/admin/users')} style={{ background: '#0b5b40', borderRadius: 12 }}>
-              Open Administration
-            </Button>
-          </div>
-          )}
-
-          {sections.includes('cws') && (
-          <div style={{ background: '#fff', borderRadius: 18, padding: 24, border: '1px solid #e2e0dc', boxShadow: '0 6px 24px rgba(20, 34, 20, 0.04)' }}>
-            <Text fw={700} size="xl" mb="xs">CWS</Text>
-            <Text c="dimmed" size="sm" mb="lg">
-              Field operations, cherry reception, process registration, and lot processing.
-            </Text>
-            <Button onClick={() => navigate('/cws/dashboard')} style={{ background: '#0b5b40', borderRadius: 12 }}>
-              Open CWS
-            </Button>
-          </div>
-          )}
-        </div>
+    <Stack maw={980} mx="auto" py={{ base: 'md', sm: 48 }} px={{ base: 0, sm: 'md' }} gap="xl">
+      <div>
+        <Text c="baho.7" fw={700} tt="uppercase" size="xs" lts={0.6}>Baho IMS</Text>
+        <Title order={1} fz={{ base: 28, sm: 38 }} lh={1.15}>
+          Hello{firstName ? `, ${firstName}` : ''} 👋
+        </Title>
+        <Text c="dimmed" mt={6}>Where do you want to work today?</Text>
       </div>
-    </div>
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
+        {SECTION_CARDS.filter((card) => sections.includes(card.section)).map((card) => (
+          <UnstyledButton key={card.section} onClick={() => navigate(card.to)} className="section-card">
+            <Card h="100%" padding="xl">
+              <Stack gap="md" h="100%">
+                <ThemeIcon size={52} radius="lg" variant="light" color={card.color}>
+                  <card.icon size={28} />
+                </ThemeIcon>
+                <div style={{ flex: 1 }}>
+                  <Text fw={750} fz={20}>{card.title}</Text>
+                  <Text c="dimmed" size="sm" mt={4}>{card.text}</Text>
+                </div>
+                <Group gap={6} c="baho.7">
+                  <Text fw={650} size="sm">Open</Text>
+                  <IconArrowRight size={16} />
+                </Group>
+              </Stack>
+            </Card>
+          </UnstyledButton>
+        ))}
+      </SimpleGrid>
+    </Stack>
   );
 }
 
@@ -246,7 +236,7 @@ function App() {
   if (loading) {
     return (
       <Center h="100vh">
-        <Loader color="coffee" />
+        <Loader />
       </Center>
     );
   }
@@ -292,17 +282,17 @@ function App() {
 
   return (
     <AppShell
-      navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: hideNavbar || !navOpened, desktop: hideNavbar } }}
+      navbar={{ width: 256, breakpoint: 'sm', collapsed: { mobile: true, desktop: hideNavbar } }}
       header={{ height: isMobile ? 60 : 56 }}
       footer={{ height: 68, collapsed: !isMobile || hideNavbar || tabs.length === 0 }}
       padding={isMobile ? 'sm' : 'lg'}
     >
       <AppShell.Header
         style={{
-          background: isMobile ? '#ffffff' : '#f5f4f1',
-          color: '#1a1a1a',
+          background: '#ffffff',
+          color: '#15211c',
           border: 'none',
-          boxShadow: isMobile ? '0 1px 0 rgba(16, 35, 28, 0.08)' : 'none',
+          borderBottom: '1px solid var(--baho-border)',
         }}
       >
         {isMobile ? (
@@ -361,17 +351,39 @@ function App() {
       </AppShell.Header>
 
       {isMobile && !hideNavbar && tabs.length > 0 && (
-        <AppShell.Footer style={{ background: '#ffffff', borderTop: '1px solid rgba(16, 35, 28, 0.08)' }}>
+        <AppShell.Footer style={{ background: 'rgba(255, 255, 255, 0.96)', backdropFilter: 'blur(10px)', borderTop: '1px solid var(--baho-border)' }}>
           <MobileTabBar tabs={tabs} onMore={toggleNav} />
         </AppShell.Footer>
       )}
 
+      {isMobile && (
+        <MobileMoreSheet
+          opened={navOpened}
+          onClose={closeNav}
+          activePath={location.pathname}
+          onNavigate={(to) => navigate(to)}
+          onSignOut={() => void handleLogout()}
+          groups={visibleSections.map((section) => ({
+            label: section.label,
+            // Screens already on the bottom bar are not repeated here.
+            items: section.items.filter((item) => (!item.adminOnly || isAdmin(user)) && !tabs.some((t) => t.to === item.to)),
+          })).concat(
+            currentSection
+              ? allowedSections(user)
+                  .filter((other) => other !== currentSection)
+                  .map((other) => navSections[SECTION_NAV[other]])
+                  .map((section) => ({ label: section.label, items: section.items.filter((item) => !item.adminOnly || isAdmin(user)) }))
+              : [],
+          )}
+        />
+      )}
+
       {!hideNavbar && (
-        <AppShell.Navbar style={{ background: '#2a1a12', border: 'none' }} p="sm">
+        <AppShell.Navbar style={{ background: '#ffffff', borderRight: '1px solid var(--baho-border)' }} p="sm">
           <ScrollArea>
             {visibleSections.map((section) => (
-              <div key={section.label} style={{ marginBottom: 20 }}>
-                <Text size="xs" fw={700} c="gray.5" tt="uppercase" px="xs" mb={6}>
+              <div key={section.label} style={{ marginBottom: 18 }}>
+                <Text size="11px" fw={700} c="gray.6" tt="uppercase" lts={0.6} px="sm" mb={6} mt={6}>
                   {section.label}
                 </Text>
                 {section.items.filter((item) => !item.adminOnly || isAdmin(user)).map((item) => {
@@ -382,11 +394,11 @@ function App() {
                       component={RouterNavLink}
                       to={item.to}
                       label={item.label}
-                      leftSection={<item.icon size={18} />}
+                      leftSection={<item.icon size={19} />}
                       active={isActive}
-                      variant="filled"
-                      color="coffee"
-                      style={{ borderRadius: 8, marginBottom: 2, color: isActive ? 'white' : '#d9c9bd' }}
+                      variant="light"
+                      color="baho"
+                      style={{ marginBottom: 2, fontWeight: isActive ? 700 : 550, color: isActive ? undefined : '#3b4a44' }}
                     />
                   );
                 })}
@@ -396,7 +408,7 @@ function App() {
         </AppShell.Navbar>
       )}
 
-      <AppShell.Main style={{ background: '#f7f5f3' }}>
+      <AppShell.Main style={{ background: 'var(--baho-bg)' }}>
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/dashboard" element={<DashboardLandingPage />} />

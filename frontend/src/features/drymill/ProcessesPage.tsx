@@ -130,7 +130,7 @@ export function ProcessesPage() {
         ))}
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Tabs value={tab} onChange={(v) => { setTab(v ?? UNASSIGNED); setSelected(new Set()); }}>
           <Tabs.List>
             <Tabs.Tab value={UNASSIGNED} rightSection={<Badge size="xs" color="orange" variant="filled">{unassigned.length}</Badge>}>Not assigned</Tabs.Tab>
@@ -146,7 +146,7 @@ export function ProcessesPage() {
         </Group>
 
         {writable && selected.size > 0 && (
-          <Card withBorder radius="md" p="sm" mb="sm" bg="coffee.0">
+          <Card p="sm" mb="sm" bg="coffee.0">
             <Group gap="sm" wrap="wrap" align="flex-end">
               <Text fw={600} size="sm">{selected.size} selected</Text>
               <Select placeholder="Assign to process…" data={processOptions} value={assignTo} onChange={setAssignTo} w={240} aria-label="Assign to process" />

@@ -298,7 +298,7 @@ function StockLineEditor({
   const over = availableKg !== null && num(line.qty) > availableKg;
 
   return (
-    <Card withBorder radius="md" p="sm">
+    <Card p="sm">
       <Group gap="xs" align="flex-end" wrap="wrap">
         <Select
           label="Process"

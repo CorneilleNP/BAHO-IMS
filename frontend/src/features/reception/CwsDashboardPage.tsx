@@ -50,7 +50,7 @@ export function CwsDashboardPage() {
 
       <ChartCard title="Cherry bought by station (kg)" rows={s?.by_station ?? []} loading={kpiLoading} color="coffee.6" />
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">Recently registered farmers</Text>
         <DataTable
           rows={s?.recent_farmers ?? []}

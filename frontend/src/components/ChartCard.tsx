@@ -18,7 +18,7 @@ interface ChartCardProps {
 export function ChartCard({ title, rows, loading = false, color = 'coffee.6', labelWidth = 110, maxBars = 12 }: ChartCardProps) {
   const data = chartRows(rows.slice(0, maxBars));
   return (
-    <Card withBorder radius="md" p="md">
+    <Card p="md">
       <Text fw={600} mb="sm">
         {title}
       </Text>

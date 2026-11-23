@@ -59,7 +59,7 @@ export function ParchProcessingPage() {
 
       <ErrorMessage>{summary.error}</ErrorMessage>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Group gap="sm" align="flex-end" wrap="wrap">
           <DateRangeFilter value={range} onChange={(v) => { setRange(v); setPage(1); }} label="Processing dates" w={250} />
           <Select label="Source" placeholder="All" data={s?.options.sources ?? []} value={source} onChange={(v) => { setSource(v); setPage(1); }} searchable clearable w={170} />
@@ -124,7 +124,7 @@ export function ParchProcessingPage() {
         <ChartCard title="Parchment milled by origin (Baho / partner)" rows={s?.by_source ?? []} loading={kpiLoading} color="coffee.7" labelWidth={130} />
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">Recent dry mill batches</Text>
         <DataTable
           rows={batches.items}

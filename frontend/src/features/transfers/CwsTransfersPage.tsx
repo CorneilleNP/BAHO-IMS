@@ -62,7 +62,7 @@ export function CwsTransfersPage() {
         }
       />
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Text fw={600} mb="sm">Delivery notes from {station.name}</Text>
         <DataTable
           rows={transfers.items}

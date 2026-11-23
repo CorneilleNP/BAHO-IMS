@@ -80,7 +80,7 @@ export function SmsOutboxPage() {
         description="Farmers get an SMS for every GRN. Failed messages are retried automatically every 10 minutes (up to 5 tries)."
         actions={<Button variant="light" leftSection={<IconMessage size={16} />} onClick={() => setTesting(true)}>Send test SMS</Button>}
       />
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Stack>
           <Group align="flex-end">
             <SegmentedControl

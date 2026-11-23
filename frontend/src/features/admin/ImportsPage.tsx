@@ -66,7 +66,7 @@ export function ImportsPage() {
         title="Import cherry receipts"
         description="Bring a station's old CHERRY RECEIVED sheet into the system. Always check the dry run first; importing the same file twice never duplicates GRNs."
       />
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Stack>
           <ErrorMessage>{submit.error}</ErrorMessage>
           <SimpleGrid cols={{ base: 1, sm: 3 }}>
@@ -115,7 +115,7 @@ export function ImportsPage() {
             {report.rows_read} rows read · {report.already_imported} already imported · {report.skipped_empty} empty · {report.farmers_matched} rows for known farmers
           </Text>
           {report.errors.length > 0 && (
-            <Card withBorder radius="md" p="lg">
+            <Card p="lg">
               <Group mb="sm"><Text fw={700}>Rows not imported</Text><Badge color="red" variant="light">{report.errors.length}</Badge></Group>
               <Table.ScrollContainer minWidth={500}>
                 <Table striped>
@@ -130,7 +130,7 @@ export function ImportsPage() {
             </Card>
           )}
           {report.warnings.length > 0 && (
-            <Card withBorder radius="md" p="lg">
+            <Card p="lg">
               <Group mb="sm"><Text fw={700}>Warnings</Text><Badge color="yellow" variant="light">{report.warnings.length}</Badge></Group>
               <List size="sm" spacing={4}>
                 {report.warnings.map((w) => (

@@ -224,7 +224,7 @@ function LineEditor({
     onChange({ weighings: line.weighings.map((w) => (w.key === key ? { ...w, ...patch } : w)) });
 
   return (
-    <Card withBorder radius="md" p="sm">
+    <Card p="sm">
       <Group justify="space-between" mb="xs">
         <Text fw={600} size="sm">Line {index + 1}</Text>
         {removable && (

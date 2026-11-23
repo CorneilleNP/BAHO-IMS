@@ -39,7 +39,7 @@ export function ProcessOnCwsPage() {
         }
       />
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Text fw={700} size="lg" mb="sm">Processes at {station.name}</Text>
         <DataTable
           rows={processes.data ?? []}

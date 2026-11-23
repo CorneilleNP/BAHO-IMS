@@ -275,7 +275,7 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
               disabled={weightsLocked}
             />
           </SimpleGrid>
-          <Card withBorder radius="md" p="sm" bg="gray.0">
+          <Card p="sm" bg="gray.0">
             <SimpleGrid cols={3}>
               <Figure label="Weight of bags" value={`${kg(bagsKg, 2)} kg`} />
               <Figure label="Pure weight" value={`${kg(pure, 2)} kg`} />
@@ -354,7 +354,7 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
           {dmReceipt.lines.map((line) => {
             const cws = line.cws_line as { process_name?: string; sub_process_name?: string; grade_code?: string; number_of_bags?: number; gross_weight_kg?: string; weight_of_bags_kg?: string; net_weight_kg?: string };
             return (
-              <Card withBorder radius="md" p="sm" key={line.id}>
+              <Card p="sm" key={line.id}>
                 <Group justify="space-between" mb="xs">
                   <Text fw={600} size="sm">
                     {cws.process_name}{cws.sub_process_name ? ` / ${cws.sub_process_name}` : ''} · {cws.grade_code}
@@ -413,7 +413,7 @@ export function StockReceiptWizard({ opened, onClose, receipt, knownGrades = [],
             const setLine = (patch: Partial<{ weighings: WeighingRow[]; weight_of_bags_kg: Num }>) =>
               setLineInputs((prev) => ({ ...prev, [line.id]: { ...input, ...patch } }));
             return (
-              <Card withBorder radius="md" p="sm" key={line.id}>
+              <Card p="sm" key={line.id}>
                 <Text fw={600} size="sm" mb="xs">
                   Line {i + 1}: {cws.process_name}{cws.sub_process_name ? ` / ${cws.sub_process_name}` : ''} · {cws.grade_code}
                 </Text>

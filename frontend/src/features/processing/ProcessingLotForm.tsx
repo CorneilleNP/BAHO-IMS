@@ -60,7 +60,7 @@ export function ProcessingLotForm() {
         }
       />
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Group justify="space-between" align="flex-end" mb="sm">
           <Text fw={600}>Lots at {station.name}</Text>
           <DateRangeFilter value={range} onChange={(v) => { setRange(v); setPage(1); }} label="Lot date" />

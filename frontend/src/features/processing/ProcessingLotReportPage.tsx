@@ -44,7 +44,7 @@ export function ProcessingLotReportPage() {
         {' '}"vs last day" compares the last lot date with actuals to the day before it.
       </Text>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600} mb="sm">By grade: estimated vs actual (kg)</Text>
         <DataTable
           rows={s?.by_grade ?? []}
@@ -66,7 +66,7 @@ export function ProcessingLotReportPage() {
         <ChartCard title="Cherry input by process (kg)" rows={s?.by_process ?? []} loading={kpiLoading} color="green.6" />
       </SimpleGrid>
 
-      <Card withBorder radius="md" p="md">
+      <Card p="md">
         <Text fw={600}>Sorted at the station vs delivered to dry mill</Text>
         <Text size="xs" c="dimmed" mb="sm">
           What each station has sorted into parchment (all-time, not limited by the date filter above) minus what it has already sent to HQ dry mill as stock receipts - the balance is still sitting at the station.

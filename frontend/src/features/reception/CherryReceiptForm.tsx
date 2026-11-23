@@ -59,7 +59,7 @@ export function CherryReceiptForm() {
         }
       />
 
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Group justify="space-between" align="flex-end" mb="sm">
           <Text fw={600}>Receipts at {station.name}</Text>
           <DateRangeFilter value={range} onChange={(v) => { setRange(v); setPage(1); }} label="Received" />

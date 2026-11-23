@@ -187,7 +187,7 @@ export function UsersPage() {
         description="Who can sign in, what they can do and at which stations."
         actions={<Button leftSection={<IconUserPlus size={16} />} onClick={() => setEditing({ user: null })}>New user</Button>}
       />
-      <Card withBorder radius="md" p="lg">
+      <Card p="lg">
         <Stack>
           <Group align="flex-end">
             <TextInput label="Search" placeholder="Name, email or phone" value={search} onChange={(e) => { setSearch(e.currentTarget.value); setPage(1); }} w={280} />
