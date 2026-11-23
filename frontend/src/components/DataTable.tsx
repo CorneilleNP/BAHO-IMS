@@ -6,6 +6,8 @@ import { exportCsv, exportExcel, type ExportColumn } from '../lib/exportTable';
 import { toast } from '../lib/toast';
 import { errorText } from '../lib/useApi';
 import { EmptyState, ErrorMessage } from './Feedback';
+import { MobileCardList } from './mobile/MobileCardList';
+import { useIsMobile } from './mobile/useIsMobile';
 import { TableSkeleton } from './Skeletons';
 
 export interface Column<T> {
@@ -23,6 +25,8 @@ export interface Column<T> {
   footer?: ReactNode;
   /** Hidden until switched on in the column chooser. */
   optional?: boolean;
+  /** Phone card layout: card title / subtitle, or left out. Default: 1st column = title, 2nd = subtitle. */
+  mobile?: 'title' | 'subtitle' | 'hide';
 }
 
 interface DataTableProps<T> {
@@ -80,6 +84,7 @@ export function DataTable<T>({
   columnsKey,
   toolbar,
 }: DataTableProps<T>) {
+  const isMobile = useIsMobile();
   const allCols = columns.filter(Boolean) as Array<Column<T>>;
   const [exporting, setExporting] = useState(false);
   const [hidden, setHidden] = useState<Set<string>>(() => readHidden(columnsKey, allCols as Array<Column<unknown>>));
@@ -195,6 +200,8 @@ export function DataTable<T>({
         <TableSkeleton columns={Math.min(cols.length, 6)} />
       ) : rows.length === 0 ? (
         <EmptyState title={empty.title}>{empty.hint}</EmptyState>
+      ) : isMobile ? (
+        <MobileCardList cols={cols} rows={rows} rowKey={rowKey} onRowClick={onRowClick} selection={selection} loading={loading} />
       ) : (
         <Table.ScrollContainer minWidth={minWidth}>
           <Table striped highlightOnHover verticalSpacing="sm" style={{ opacity: loading ? 0.6 : 1 }}>
@@ -258,12 +265,12 @@ export function DataTable<T>({
       )}
 
       {pagination && pagination.total > pagination.pageSize && (
-        <Group justify="space-between" mt="sm">
+        <Group justify={isMobile ? 'center' : 'space-between'} mt="sm" gap="xs">
           <Text size="xs" c="dimmed">
             {(pagination.page - 1) * pagination.pageSize + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.total)} of{' '}
             {pagination.total.toLocaleString()}
           </Text>
-          <Pagination size="sm" value={pagination.page} onChange={pagination.onChange} total={Math.ceil(pagination.total / pagination.pageSize)} />
+          <Pagination size="sm" siblings={isMobile ? 0 : 1} value={pagination.page} onChange={pagination.onChange} total={Math.ceil(pagination.total / pagination.pageSize)} />
         </Group>
       )}
     </>

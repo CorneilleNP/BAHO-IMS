@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Alert, Button, PasswordInput, Text, TextInput } from '@mantine/core';
+import { IconArrowRight, IconCloudCheck, IconLeaf, IconLock, IconMail, IconRoute, IconServer, IconWifiOff } from '@tabler/icons-react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { allowedSections, canAccessPath, type CurrentUser } from '../../lib/access';
 import { isNative, serverUrl, setServerUrl } from '../../lib/platform';
 import { useAuth } from '../../lib/authContext';
+import './LoginPage.css';
 
 const SECTION_HOME = { drymill: '/drymill/stock', cws: '/cws/process', admin: '/admin/users' } as const;
 
@@ -16,6 +18,17 @@ function landingPath(user: CurrentUser, from?: string): string {
   const sections = allowedSections(user);
   return sections.length === 1 ? SECTION_HOME[sections[0]] : '/dashboard';
 }
+
+const inputStyles = {
+  label: { fontWeight: 600, color: '#2c3d36', marginBottom: 6 },
+  input: {
+    height: 52,
+    borderRadius: 14,
+    background: '#f5f8f6',
+    border: '1px solid #e1e9e4',
+    fontSize: 16, // 16px+ stops phones zooming into the field
+  },
+} as const;
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -45,33 +58,37 @@ export function LoginPage() {
       navigate(me.must_change_password ? '/account/password' : landingPath(me, from), { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Sign in failed.';
-      setError(
-        message === 'No active account found with the given credentials'
-          ? 'Incorrect email or password.'
-          : message,
-      );
+      setError(message === 'No active account found with the given credentials' ? 'Incorrect email or password.' : message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', background: '#f3f3f1', overflow: 'hidden' }}>
-      <div className="login-form-pane" style={{ flex: '0 0 48%', background: '#f4f4f2', padding: '26px 42px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 16, color: '#4a4a4a', marginBottom: 18 }}>
-          <div style={{ width: 12, height: 12, borderRadius: 4, background: '#0b5b40', display: 'inline-block' }} />
-          <div style={{ fontWeight: 700 }}>baho/login</div>
+    <div className="login">
+      <div className="login-hero">
+        <img src="/baho-login-page.jpeg" alt="" />
+        <div className="login-hero-text">
+          <h2>From the farmer's cherry to the export container.</h2>
+          <p>Reception, processing, dry mill and export for every Baho station, in one place.</p>
+          <div className="login-chips">
+            <span><IconWifiOff size={15} /> Works offline</span>
+            <span><IconCloudCheck size={15} /> Syncs automatically</span>
+            <span><IconRoute size={15} /> Farmer-to-export traceability</span>
+          </div>
         </div>
+      </div>
 
-        <div style={{ maxWidth: 500, marginLeft: 4, marginTop: 0 }}>
-          <h1 style={{ fontSize: '2.8rem', lineHeight: 1.08, margin: 0, color: '#0b3c2e', fontWeight: 700 }}>
-            Welcome to BAHO IMS
-          </h1>
-          <Text size="md" c="gray.7" mt="sm" style={{ maxWidth: 420, lineHeight: 1.5 }}>
-            Track coffee receipts, processing, and stock in one place.
-          </Text>
+      <div className="login-sheet">
+        <div className="login-card">
+          <div className="login-logo">
+            <img src="/baho-image.jpg" alt="Baho Coffee" />
+          </div>
 
-          <form onSubmit={handleSubmit} noValidate style={{ marginTop: 28 }}>
+          <h1 className="login-title">Welcome back</h1>
+          <p className="login-subtitle">Sign in to Baho IMS to continue.</p>
+
+          <form onSubmit={handleSubmit} noValidate>
             {error && (
               <Alert color="red" variant="light" radius="md" mb="md" role="alert">
                 {error}
@@ -79,111 +96,55 @@ export function LoginPage() {
             )}
 
             <TextInput
+              label="Email"
               value={email}
               onChange={(event) => setEmail(event.currentTarget.value)}
               type="email"
               name="email"
+              inputMode="email"
               autoComplete="username"
-              placeholder="Email address"
-              aria-label="Email address"
-              autoFocus
+              autoCapitalize="off"
+              placeholder="you@baho.rw"
               disabled={submitting}
-              radius="md"
-              size="lg"
-              leftSection={<span style={{ fontSize: 18 }}>✉</span>}
-              styles={{
-                input: {
-                  background: '#edf3f4',
-                  border: '1px solid #dfe8ea',
-                  color: '#234339',
-                  fontWeight: 600,
-                  height: 50,
-                },
-              }}
+              leftSection={<IconMail size={19} stroke={1.7} />}
+              styles={inputStyles}
             />
 
             <PasswordInput
+              label="Password"
               value={password}
               onChange={(event) => setPassword(event.currentTarget.value)}
               name="password"
               autoComplete="current-password"
-              placeholder="Password"
-              aria-label="Password"
+              placeholder="Your password"
               disabled={submitting}
-              mt="sm"
-              radius="md"
-              size="lg"
-              visibilityToggleIcon={({ reveal }) => (
-                <span style={{ fontSize: 18 }}>{reveal ? '🙈' : '👁'}</span>
-              )}
-              styles={{
-                input: {
-                  background: '#edf3f4',
-                  border: '1px solid #dfe8ea',
-                  color: '#234339',
-                  fontWeight: 600,
-                  height: 50,
-                },
-              }}
+              mt="md"
+              leftSection={<IconLock size={19} stroke={1.7} />}
+              styles={inputStyles}
             />
 
-            <div style={{ textAlign: 'center', marginTop: 14 }}>
-              <button
-                type="button"
-                onClick={() => setShowForgotHelp((shown) => !shown)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#3b5b52',
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
+            <div className="login-row">
+              <button type="button" className="login-link" onClick={() => setShowForgotHelp((shown) => !shown)}>
                 Forgot password?
               </button>
-              {showForgotHelp && (
-                <Text size="sm" c="gray.7" mt={6}>
-                  Accounts are managed by your Baho administrator. Ask them to reset your password.
-                </Text>
-              )}
             </div>
+            {showForgotHelp && (
+              <Text size="sm" c="gray.7" mt={-12} mb="md">
+                Accounts are managed by your Baho administrator. Ask them to reset your password.
+              </Text>
+            )}
 
-            <Button
-              type="submit"
-              fullWidth
-              mt="lg"
-              size="lg"
-              loading={submitting}
-              style={{
-                background: '#0b5b40',
-                minHeight: 50,
-                borderRadius: 14,
-                fontWeight: 700,
-                fontSize: 18,
-              }}
-            >
-              Sign In
+            <Button type="submit" fullWidth className="login-submit" loading={submitting} rightSection={<IconArrowRight size={18} />}>
+              Sign in
             </Button>
           </form>
-          {isNative && <ServerSetting />}
         </div>
-      </div>
 
-      <div className="login-art-pane" style={{ flex: '1 1 52%', position: 'relative', overflow: 'hidden', background: '#0b5b40', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px 0' }}>
-        <div style={{ width: '78%', height: '82%', background: '#0b5b40', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: 'none', border: 'none', borderRadius: 0 }}>
-          <img
-            src="/baho-login-page.jpeg"
-            alt="BAHO coffee"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              objectPosition: 'center center',
-              display: 'block',
-              filter: 'saturate(1.1) contrast(1.05)',
-              background: '#0b5b40',
-            }}
-          />
+        <div className="login-footer">
+          {isNative && <ServerSetting />}
+          <span>
+            <IconLeaf size={12} style={{ verticalAlign: -1 }} /> Baho Coffee Company · Unique in speciality from Rwanda
+          </span>
         </div>
       </div>
     </div>
@@ -211,28 +172,30 @@ function ServerSetting() {
 
   if (!editing) {
     return (
-      <Text size="xs" c="dimmed" mt="md">
-        Server: {current}{' '}
-        <button type="button" onClick={() => setEditing(true)} style={{ background: 'none', border: 'none', padding: 0, color: '#0b5b40', cursor: 'pointer', fontWeight: 600 }}>
+      <div className="login-server">
+        <IconServer size={14} />
+        <span>{current.replace(/^https?:\/\//, '')}</span>
+        <button type="button" className="login-link" onClick={() => setEditing(true)}>
           Change
         </button>
-      </Text>
+      </div>
     );
   }
   return (
-    <div style={{ marginTop: 16 }}>
+    <div>
       <TextInput
         label="Server address"
-        description={current.startsWith('http://') ? 'Not encrypted (http): use only for testing on your own Wi-Fi.' : 'Ask your administrator if unsure.'}
+        description={value.startsWith('http://') ? 'Not encrypted (http): use only for testing on your own Wi-Fi.' : 'Ask your administrator if unsure.'}
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
         error={error}
         autoCapitalize="off"
         autoCorrect="off"
+        styles={inputStyles}
       />
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <Button size="xs" onClick={() => void save()}>Save</Button>
-        <Button size="xs" variant="default" onClick={() => { setEditing(false); setValue(current); }}>Cancel</Button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <Button size="xs" radius="md" color="teal" onClick={() => void save()}>Save</Button>
+        <Button size="xs" radius="md" variant="default" onClick={() => { setEditing(false); setValue(current); }}>Cancel</Button>
       </div>
     </div>
   );

@@ -28,3 +28,7 @@ tools/pw-test/
 
 # --- Database backups on the VPS (never commit) ---
 backups/
+
+# --- Android Studio / IntelliJ project files (per machine) ---
+.idea/
+*.iml

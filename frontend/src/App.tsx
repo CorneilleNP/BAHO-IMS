@@ -7,9 +7,11 @@ import {
   IconChartBar,
   IconClipboardList,
   IconCoffee,
+  IconCloudUpload,
   IconDroplet,
   IconFileImport,
   IconKey,
+  IconLayoutGrid,
   IconListDetails,
   IconLogout,
   IconMessage,
@@ -45,6 +47,7 @@ import { LaborPage } from './features/labor/LaborPage';
 import { FarmersPage } from './features/reception/FarmersPage';
 import { SyncPage } from './features/sync/SyncPage';
 import { SyncIndicator } from './components/SyncIndicator';
+import { MobileAppBar, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
 import { confirmAction } from './lib/confirm';
 import { getSyncStatus } from './lib/offline/store';
 
@@ -91,6 +94,50 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
     ],
   },
 ];
+
+// Shown under every section: offline queue and own account.
+const accountSection: { label: string; items: NavItem[] } = {
+  label: 'This device & account',
+  items: [
+    { to: '/sync', label: 'Sync & offline', icon: IconCloudUpload },
+    { to: '/account/password', label: 'Change password', icon: IconKey },
+  ],
+};
+
+const SECTION_NAV: Record<Section, number> = { drymill: 0, cws: 1, admin: 2 };
+
+// Phone bottom bar: the screens used most in each section (the rest is under "More").
+const MOBILE_TABS: Record<Section, string[]> = {
+  cws: ['/cws/dashboard', '/reception', '/cws/farmers', '/cws/labor'],
+  drymill: ['/drymill/stock', '/drymill/ledger', '/drymill/processing', '/drymill/export'],
+  admin: ['/admin/users', '/admin/sms', '/admin/imports'],
+};
+
+const SHORT_LABELS: Record<string, string> = {
+  '/reception': 'Reception',
+  '/drymill/stock': 'Stock',
+  '/drymill/ledger': 'Ledger',
+  '/drymill/processing': 'Milling',
+  '/drymill/export': 'Export',
+  '/admin/imports': 'Import',
+  '/admin/sms': 'SMS',
+  '/cws/labor': 'Labor',
+};
+
+const ALL_ITEMS: NavItem[] = [...navSections.flatMap((s) => s.items), ...accountSection.items];
+
+function pageTitle(pathname: string): string {
+  if (pathname === '/dashboard') return 'Baho IMS';
+  return ALL_ITEMS.find((item) => item.to === pathname)?.label ?? 'Baho IMS';
+}
+
+function mobileTabs(section: Section | null): MobileTab[] {
+  if (!section) return [];
+  return MOBILE_TABS[section]
+    .map((to) => ALL_ITEMS.find((item) => item.to === to))
+    .filter((item): item is NavItem => Boolean(item))
+    .map((item) => ({ to: item.to, label: SHORT_LABELS[item.to] ?? item.label, icon: item.icon }));
+}
 
 function DashboardLandingPage() {
   const navigate = useNavigate();
@@ -168,6 +215,7 @@ function App() {
   const navigate = useNavigate();
   const { user, loading, logout } = useAuth();
   const [navOpened, { toggle: toggleNav, close: closeNav }] = useDisclosure(false);
+  const isMobile = useIsMobile();
 
   // Tapping a nav link closes the mobile drawer instead of leaving it open over the new page.
   useEffect(() => {
@@ -179,15 +227,21 @@ function App() {
 
   const currentSection: Section | null = sectionForPath(location.pathname);
 
-  const visibleSections = currentSection === 'drymill'
-    ? [navSections[0]]
-    : currentSection === 'cws'
-      ? [navSections[1]]
-      : currentSection === 'admin'
-        ? [navSections[2]]
-        : [];
   const isAccountPage = location.pathname === '/account/password';
-  const hideNavbar = isDashboardPage || isAccountPage || location.pathname === '/sync';
+  // On a section page: that section's menu. On shared pages (Sync, password):
+  // the menus of every section the user may open, so there is always a way back.
+  const sectionMenus = currentSection
+    ? [navSections[SECTION_NAV[currentSection]]]
+    : allowedSections(user).map((section) => navSections[SECTION_NAV[section]]);
+  const severalSections = allowedSections(user).length > 1;
+  const accountMenu: { label: string; items: NavItem[] } = severalSections
+    ? { ...accountSection, items: [{ to: '/dashboard', label: 'All sections', icon: IconLayoutGrid }, ...accountSection.items] }
+    : accountSection;
+  const visibleSections = [...sectionMenus, accountMenu];
+  // Bottom tabs: this section's main screens; on shared pages, the user's first section.
+  const tabs = mobileTabs(currentSection ?? allowedSections(user)[0] ?? null);
+  // Only the section chooser (and the forced first password change) has no menu.
+  const hideNavbar = isDashboardPage || (isAccountPage && Boolean(user?.must_change_password));
 
   if (loading) {
     return (
@@ -239,10 +293,26 @@ function App() {
   return (
     <AppShell
       navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: hideNavbar || !navOpened, desktop: hideNavbar } }}
-      header={{ height: 56 }}
-      padding="lg"
+      header={{ height: isMobile ? 60 : 56 }}
+      footer={{ height: 68, collapsed: !isMobile || hideNavbar || tabs.length === 0 }}
+      padding={isMobile ? 'sm' : 'lg'}
     >
-      <AppShell.Header style={{ background: '#f5f4f1', color: '#1a1a1a', border: 'none', boxShadow: 'none' }}>
+      <AppShell.Header
+        style={{
+          background: isMobile ? '#ffffff' : '#f5f4f1',
+          color: '#1a1a1a',
+          border: 'none',
+          boxShadow: isMobile ? '0 1px 0 rgba(16, 35, 28, 0.08)' : 'none',
+        }}
+      >
+        {isMobile ? (
+          <MobileAppBar
+            title={pageTitle(location.pathname)}
+            user={user}
+            onMenu={hideNavbar ? undefined : toggleNav}
+            onSignOut={() => void handleLogout()}
+          />
+        ) : (
         <Group h="100%" px="md" justify="space-between">
           <Group gap={8} align="center">
             {!hideNavbar && <Burger opened={navOpened} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle navigation" />}
@@ -287,7 +357,14 @@ function App() {
             </Button>
           </Group>
         </Group>
+        )}
       </AppShell.Header>
+
+      {isMobile && !hideNavbar && tabs.length > 0 && (
+        <AppShell.Footer style={{ background: '#ffffff', borderTop: '1px solid rgba(16, 35, 28, 0.08)' }}>
+          <MobileTabBar tabs={tabs} onMore={toggleNav} />
+        </AppShell.Footer>
+      )}
 
       {!hideNavbar && (
         <AppShell.Navbar style={{ background: '#2a1a12', border: 'none' }} p="sm">

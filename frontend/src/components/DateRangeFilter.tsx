@@ -35,7 +35,7 @@ export function DateRangeFilter({ value, onChange, label = 'Dates', w = 160 }: D
   return (
     <Stack gap={4}>
       <Text size="sm" fw={500}>{label}</Text>
-      <Group gap="xs" align="flex-end" wrap="nowrap">
+      <Group gap="xs" align="flex-end" wrap="wrap">
         <DatePickerInput
           aria-label={`${label} from`}
           placeholder="From"

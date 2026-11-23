@@ -3,8 +3,9 @@ import { IconAlertTriangle, IconCloudCheck, IconCloudOff, IconCloudUpload } from
 import { useNavigate } from 'react-router-dom';
 import { useSyncStatus } from '../lib/offline/useSyncStatus';
 
-/** Header badge: offline / N waiting / problems / synced. Opens the Sync screen. */
-export function SyncIndicator() {
+/** Header badge: offline / N waiting / problems / synced. Opens the Sync screen.
+ *  `compact` (phone app bar): icon plus a count, no words. */
+export function SyncIndicator({ compact = false }: { compact?: boolean }) {
   const navigate = useNavigate();
   const { online, syncing, pending, failed } = useSyncStatus();
 
@@ -29,8 +30,10 @@ export function SyncIndicator() {
     hint = 'Sending saves made offline…';
   }
 
+  const short = failed > 0 ? String(failed) : pending > 0 ? String(pending) : !online ? 'Offline' : '';
+
   return (
-    <Tooltip label={hint} multiline w={260} withArrow>
+    <Tooltip label={hint} multiline w={260} withArrow disabled={compact}>
       <Badge
         component="button"
         type="button"
@@ -38,9 +41,11 @@ export function SyncIndicator() {
         color={color}
         variant="light"
         leftSection={icon}
-        style={{ cursor: 'pointer', border: 'none' }}
+        size={compact ? 'lg' : 'md'}
+        style={{ cursor: 'pointer', border: 'none', paddingInline: compact && !short ? 8 : undefined }}
+        aria-label={label}
       >
-        {label}
+        {compact ? short : label}
       </Badge>
     </Tooltip>
   );

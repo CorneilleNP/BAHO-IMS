@@ -191,8 +191,8 @@ export function FarmersPage() {
             onRowClick={setOpen}
             pagination={{ page, pageSize: 50, total: farmers.total, onChange: setPage }}
             columns={[
-              { key: 'code', header: 'Code', mono: true, render: (f) => f.farmer_code },
-              { key: 'name', header: 'Name', render: (f) => f.full_name },
+              { key: 'code', header: 'Code', mono: true, mobile: 'subtitle', render: (f) => f.farmer_code ?? 'not synced yet' },
+              { key: 'name', header: 'Name', mobile: 'title', render: (f) => f.full_name },
               { key: 'phone', header: 'Phone', nowrap: true, render: (f) => f.phone || '—' },
               { key: 'national_id', header: 'National ID', render: (f) => f.national_id || '—', optional: true },
               { key: 'location', header: 'Village', render: (f) => f.location_label || '—' },
