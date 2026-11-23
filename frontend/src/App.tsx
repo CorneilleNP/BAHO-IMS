@@ -1,4 +1,6 @@
-import { AppShell, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
+import { AppShell, Burger, Button, Center, Group, Loader, NavLink as MantineNavLink, ScrollArea, Stack, Text } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { useEffect } from 'react';
 import type { ComponentType } from 'react';
 import {
   IconBuildingWarehouse,
@@ -125,6 +127,12 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading, logout } = useAuth();
+  const [navOpened, { toggle: toggleNav, close: closeNav }] = useDisclosure(false);
+
+  // Tapping a nav link closes the mobile drawer instead of leaving it open over the new page.
+  useEffect(() => {
+    closeNav();
+  }, [location.pathname, closeNav]);
 
   const isLoginPage = location.pathname === '/';
   const isDashboardPage = location.pathname === '/dashboard';
@@ -171,13 +179,14 @@ function App() {
 
   return (
     <AppShell
-      navbar={{ width: 250, breakpoint: 'sm' }}
+      navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: isDashboardPage || !navOpened, desktop: false } }}
       header={{ height: 56 }}
       padding="lg"
     >
       <AppShell.Header style={{ background: '#f5f4f1', color: '#1a1a1a', border: 'none', boxShadow: 'none' }}>
         <Group h="100%" px="md" justify="space-between">
           <Group gap={8} align="center">
+            {!isDashboardPage && <Burger opened={navOpened} onClick={toggleNav} hiddenFrom="sm" size="sm" aria-label="Toggle navigation" />}
             <img src="/baho-image.jpg" alt="BAHO coffee company" style={{ height: 52, width: 'auto', display: 'block', objectFit: 'contain' }} />
           </Group>
           <Group gap="sm">
