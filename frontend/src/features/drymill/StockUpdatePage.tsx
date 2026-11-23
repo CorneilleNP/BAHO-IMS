@@ -224,7 +224,7 @@ export function StockUpdatePage() {
         <Card withBorder radius="md" p="md">
           <DataTable
             rows={transferSummary.data!.rows}
-            rowKey={(r) => `${r.delivery_note_no}-${r.grade}`}
+            rowKey={(r) => `${r.delivery_note_no}-${r.process_name}-${r.sub_process_name}-${r.grade}`}
             minWidth={900}
             empty={{ title: 'No transfer variance data available' }}
             columns={[
