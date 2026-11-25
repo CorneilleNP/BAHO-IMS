@@ -151,13 +151,22 @@ class CwsSummaryView(APIView):
         parameters=[
             OpenApiParameter("date_from", OpenApiTypes.DATE),
             OpenApiParameter("date_to", OpenApiTypes.DATE),
+            OpenApiParameter("station", OpenApiTypes.UUID, description="Only this CWS"),
         ],
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request):
         f = _filters(request)
+        params = _LotFilters(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        station = params.validated_data.get("station")
         access = get_user_access(request.user)
         facility_ids = None if access.is_global else access.facility_ids
+        if station:
+            # The station filter only narrows what the user may already see.
+            facility_ids = (
+                frozenset({station}) if facility_ids is None else facility_ids & {station}
+            )
         summary = cherry_summary(
             facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
         )

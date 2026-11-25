@@ -95,3 +95,40 @@ def test_household_and_land_area_are_optional(api, gitoki_clerk, gitoki):
     farmer = Farmer.objects.get(pk=farmer_id)
     assert farmer.household_size is None
     assert farmer.land_area_ha is None
+
+
+def test_station_filter_narrows_everything(
+    api, baho_admin, gitoki, bugoyi, gitoki_clerk, bugoyi_clerk
+):
+    from datetime import date
+    from decimal import Decimal
+
+    from baho.farmers.services import register_farmer
+    from baho.reception.services import create_cherry_receipt
+
+    for clerk, station, kg in ((gitoki_clerk, gitoki, "100"), (bugoyi_clerk, bugoyi, "40")):
+        farmer = register_farmer(
+            user=clerk, home_facility=station, full_name=f"Farmer {station.code}"
+        )
+        create_cherry_receipt(
+            user=clerk,
+            facility=station,
+            farmer=farmer,
+            received_on=date.today(),
+            lines=[
+                {"cherry_grade": "GOOD", "quantity_kg": Decimal(kg), "price_per_kg": Decimal("500")}
+            ],
+        )
+    login(api, baho_admin)
+    all_ = api.get("/api/v1/reporting/cws/").data
+    only = api.get("/api/v1/reporting/cws/", {"station": str(bugoyi.id)}).data
+    assert Decimal(all_["total_kg"]) == Decimal("140")
+    assert Decimal(only["total_kg"]) == Decimal("40")
+    assert [r["label"] for r in only["by_station"]] == [bugoyi.name]
+    assert [f["home_facility_name"] for f in only["recent_farmers"]] == [bugoyi.name]
+
+    # A station clerk cannot widen their view with the filter.
+    login(api, gitoki_clerk)
+    other = api.get("/api/v1/reporting/cws/", {"station": str(bugoyi.id)}).data
+    assert Decimal(other["total_kg"]) == Decimal("0")
+    assert other["recent_farmers"] == []

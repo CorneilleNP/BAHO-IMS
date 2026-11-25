@@ -193,6 +193,65 @@ export function StockUpdatePage() {
       />
       <ErrorMessage>{summary.error}</ErrorMessage>
 
+      {/* Filters first: they apply to every figure, chart and table below. */}
+      <Card p="md">
+        <Group gap="sm" align="flex-end" wrap="wrap">
+          <DateRangeFilter value={filters.range} onChange={(v) => setFilter('range', v)} label="Arrival dates" w={250} />
+          <Select label="Source" placeholder="All" data={sourceOptions} value={filters.source} onChange={(v) => setFilter('source', v)} searchable clearable w={180} />
+          <Select
+            label="Process"
+            placeholder="All"
+            data={[{ value: UNASSIGNED, label: '⚠ Not assigned yet' }, ...(s?.options.processes ?? []).map((p) => ({ value: p.id, label: p.name }))]}
+            value={filters.process}
+            onChange={(v) => setFilter('process', v)}
+            clearable
+            w={220}
+          />
+          <Select
+            label="Sub-process"
+            placeholder={filters.process && filters.process !== UNASSIGNED ? 'All' : 'Choose process'}
+            data={(subProcesses.data ?? []).map((sp) => ({ value: sp.id, label: sp.name }))}
+            value={filters.sub_process}
+            onChange={(v) => setFilter('sub_process', v)}
+            disabled={!filters.process || filters.process === UNASSIGNED}
+            searchable
+            clearable
+            w={200}
+          />
+          <Select label="Grade" placeholder="All" data={s?.options.grades ?? []} value={filters.grade} onChange={(v) => setFilter('grade', v)} clearable searchable w={110} />
+          <Select
+            label="Quality"
+            placeholder="All"
+            data={Object.entries(qualityLabel).map(([value, label]) => ({ value, label }))}
+            value={filters.quality_status}
+            onChange={(v) => setFilter('quality_status', v)}
+            clearable
+            w={130}
+          />
+          <Select
+            label="Processing"
+            placeholder="All"
+            data={Object.entries(processingLabel).map(([value, label]) => ({ value, label }))}
+            value={filters.processing_status}
+            onChange={(v) => setFilter('processing_status', v)}
+            clearable
+            w={170}
+          />
+          <TextInput
+            label="Search"
+            placeholder="Receipt, lot, DN, WRN…"
+            leftSection={<IconSearch size={14} />}
+            value={filters.search}
+            onChange={(e) => setFilter('search', e.currentTarget.value)}
+            w={200}
+          />
+          <TextInput label="KPI day" type="date" value={day || s?.date || ''} onChange={(e) => setDay(e.currentTarget.value)} w={150} />
+          {JSON.stringify(filters) !== JSON.stringify(NO_FILTERS) && (
+            <Button variant="subtle" leftSection={<IconX size={14} />} onClick={() => { setFilters(NO_FILTERS); setPage(1); }}>Clear</Button>
+          )}
+        </Group>
+      </Card>
+
       {/* Same three figures as the Power BI "Baho Dry Mill Stock Update" page, for the current filters. */}
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
         <KpiCard label="Net weight (kg)" value={kgWhole(s?.season.net_weight_kg)} icon={IconScale} loading={kpiLoading} />
@@ -253,63 +312,6 @@ export function StockUpdatePage() {
         </Card>
       )}
 
-      <Card p="md">
-        <Group gap="sm" align="flex-end" wrap="wrap">
-          <DateRangeFilter value={filters.range} onChange={(v) => setFilter('range', v)} label="Arrival dates" w={250} />
-          <Select label="Source" placeholder="All" data={sourceOptions} value={filters.source} onChange={(v) => setFilter('source', v)} searchable clearable w={180} />
-          <Select
-            label="Process"
-            placeholder="All"
-            data={[{ value: UNASSIGNED, label: '⚠ Not assigned yet' }, ...(s?.options.processes ?? []).map((p) => ({ value: p.id, label: p.name }))]}
-            value={filters.process}
-            onChange={(v) => setFilter('process', v)}
-            clearable
-            w={220}
-          />
-          <Select
-            label="Sub-process"
-            placeholder={filters.process && filters.process !== UNASSIGNED ? 'All' : 'Choose process'}
-            data={(subProcesses.data ?? []).map((sp) => ({ value: sp.id, label: sp.name }))}
-            value={filters.sub_process}
-            onChange={(v) => setFilter('sub_process', v)}
-            disabled={!filters.process || filters.process === UNASSIGNED}
-            searchable
-            clearable
-            w={200}
-          />
-          <Select label="Grade" placeholder="All" data={s?.options.grades ?? []} value={filters.grade} onChange={(v) => setFilter('grade', v)} clearable searchable w={110} />
-          <Select
-            label="Quality"
-            placeholder="All"
-            data={Object.entries(qualityLabel).map(([value, label]) => ({ value, label }))}
-            value={filters.quality_status}
-            onChange={(v) => setFilter('quality_status', v)}
-            clearable
-            w={130}
-          />
-          <Select
-            label="Processing"
-            placeholder="All"
-            data={Object.entries(processingLabel).map(([value, label]) => ({ value, label }))}
-            value={filters.processing_status}
-            onChange={(v) => setFilter('processing_status', v)}
-            clearable
-            w={170}
-          />
-          <TextInput
-            label="Search"
-            placeholder="Receipt, lot, DN, WRN…"
-            leftSection={<IconSearch size={14} />}
-            value={filters.search}
-            onChange={(e) => setFilter('search', e.currentTarget.value)}
-            w={200}
-          />
-          <TextInput label="KPI day" type="date" value={day || s?.date || ''} onChange={(e) => setDay(e.currentTarget.value)} w={150} />
-          {JSON.stringify(filters) !== JSON.stringify(NO_FILTERS) && (
-            <Button variant="subtle" leftSection={<IconX size={14} />} onClick={() => { setFilters(NO_FILTERS); setPage(1); }}>Clear</Button>
-          )}
-        </Group>
-      </Card>
 
       <SimpleGrid cols={{ base: 1, lg: 2 }}>
         <ChartCard title="Net weight by process" rows={s?.by_process ?? []} loading={kpiLoading} labelWidth={170} />

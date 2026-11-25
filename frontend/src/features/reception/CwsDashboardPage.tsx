@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Card, Group, Select, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconCoffee, IconDroplet, IconScale, IconUserPlus } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
@@ -8,6 +8,7 @@ import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
 import { ANY_DATE, kgWhole, rwf, type DateRange } from '../../lib/format';
+import { useMyStations } from '../../lib/stations';
 import type { CwsSummary } from '../../lib/types';
 import { query, useApi } from '../../lib/useApi';
 
@@ -19,7 +20,9 @@ import { query, useApi } from '../../lib/useApi';
  */
 export function CwsDashboardPage() {
   const [range, setRange] = useState<DateRange>(ANY_DATE);
-  const summary = useApi<CwsSummary>(`/reporting/cws/${query({ date_from: range[0], date_to: range[1] })}`);
+  const [station, setStation] = useState<string | null>(null);
+  const myStations = useMyStations();
+  const summary = useApi<CwsSummary>(`/reporting/cws/${query({ date_from: range[0], date_to: range[1], station })}`);
   const s = summary.data;
   const kpiLoading = summary.loading && !s;
 
@@ -28,8 +31,24 @@ export function CwsDashboardPage() {
       <PageHeader
         title="CWS Dashboard"
         description="Cherry bought across stations: good vs float, price paid, and recent registrations"
-        actions={<DateRangeFilter value={range} onChange={setRange} label="Received" />}
       />
+
+      {/* Filters first: they apply to every figure, chart and table below. */}
+      <Card padding="md">
+        <Group align="flex-end" gap="md">
+          <Select
+            label="CWS station"
+            placeholder={myStations.stations.length > 1 ? 'All stations' : 'My station'}
+            data={myStations.options}
+            value={station}
+            onChange={setStation}
+            clearable
+            searchable
+            w={{ base: '100%', sm: 260 }}
+          />
+          <DateRangeFilter value={range} onChange={setRange} label="Received" />
+        </Group>
+      </Card>
 
       <ErrorMessage>{summary.error}</ErrorMessage>
 
