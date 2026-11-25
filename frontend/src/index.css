@@ -97,3 +97,42 @@ h6,
     min-height: 32px !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Nothing is ever cut off: content wider than the screen scrolls sideways.
+   (Phones especially: wide tables in forms, long codes, wide rows of fields.)
+   Up/down scrolling stays the normal page scroll.
+   --------------------------------------------------------------------------- */
+
+/* Mantine cards clip their content (overflow: hidden): let them scroll instead. */
+.mantine-Card-root {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Long unbroken text (codes, emails, references) wraps instead of widening the page. */
+body {
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 62em) {
+  /* Any table not already in a scroll area becomes swipeable left/right. */
+  .mantine-Table-table:not(.mantine-Table-scrollContainer .mantine-Table-table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Last resort for anything else too wide: the page area itself scrolls sideways. */
+  .mantine-AppShell-main {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Pop-ups (forms/wizards) scroll both ways inside. */
+  .mantine-Modal-body,
+  .mantine-Drawer-body {
+    overflow-x: auto;
+  }
+}
