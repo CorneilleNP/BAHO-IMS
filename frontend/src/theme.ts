@@ -18,6 +18,7 @@ import {
   Notification,
   Paper,
   Pagination,
+  Popover,
   SegmentedControl,
   Table,
   Tabs,
@@ -51,6 +52,11 @@ const inputStyles = {
 };
 
 const inputDefaults = { radius: 'md', size: 'sm' } as const;
+
+// Dropdowns of selects. hideDetached is off: inside a full-screen form on a phone,
+// Mantine wrongly thought the field was off-screen and kept the list hidden, so
+// tapping a select (e.g. the GRN farmer) did nothing.
+const DROPDOWN = { radius: 'md', shadow: 'md', hideDetached: false } as const;
 
 export const theme = createTheme({
   primaryColor: 'baho',
@@ -90,8 +96,8 @@ export const theme = createTheme({
     PasswordInput: { defaultProps: inputDefaults, styles: inputStyles },
     NumberInput: { defaultProps: inputDefaults, styles: inputStyles },
     Textarea: { defaultProps: inputDefaults, styles: inputStyles },
-    Select: { defaultProps: { ...inputDefaults, comboboxProps: { radius: 'md', shadow: 'md' } }, styles: inputStyles },
-    MultiSelect: { defaultProps: { ...inputDefaults, comboboxProps: { radius: 'md', shadow: 'md' } }, styles: inputStyles },
+    Select: { defaultProps: { ...inputDefaults, comboboxProps: DROPDOWN }, styles: inputStyles },
+    MultiSelect: { defaultProps: { ...inputDefaults, comboboxProps: DROPDOWN }, styles: inputStyles },
     FileInput: { defaultProps: inputDefaults, styles: inputStyles },
     DatePickerInput: { defaultProps: inputDefaults, styles: inputStyles },
     Checkbox: Checkbox.extend({ defaultProps: { radius: 'sm' } }),
@@ -121,6 +127,9 @@ export const theme = createTheme({
       styles: { title: { fontWeight: 700, fontSize: 18 } },
     }),
     Menu: Menu.extend({ defaultProps: { radius: 'md', shadow: 'md' } }),
+    Popover: Popover.extend({ defaultProps: { hideDetached: false } }),
+    Autocomplete: { defaultProps: { comboboxProps: DROPDOWN } },
+    TagsInput: { defaultProps: { comboboxProps: DROPDOWN } },
     Tooltip: Tooltip.extend({ defaultProps: { radius: 'md' } }),
     NavLink: NavLink.extend({ styles: { root: { borderRadius: 10 }, label: { fontWeight: 550 } } }),
     Notification: Notification.extend({ defaultProps: { radius: 'lg' } }),
