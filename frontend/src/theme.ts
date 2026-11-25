@@ -118,12 +118,19 @@ export const theme = createTheme({
         td: { borderBottom: '1px solid #f0f2f1' },
       },
     }),
+    // removeScrollProps.allowPinchZoom: pop-up forms lock the page behind them;
+    // without this, that lock also blocked two-finger zoom inside the form (iPhone).
     Modal: Modal.extend({
-      defaultProps: { radius: 'lg', centered: true, overlayProps: { backgroundOpacity: 0.35, blur: 3 } },
+      defaultProps: {
+        radius: 'lg',
+        centered: true,
+        overlayProps: { backgroundOpacity: 0.35, blur: 3 },
+        removeScrollProps: { allowPinchZoom: true },
+      },
       styles: { title: { fontWeight: 700, fontSize: 18 } },
     }),
     Drawer: Drawer.extend({
-      defaultProps: { overlayProps: { backgroundOpacity: 0.35, blur: 3 } },
+      defaultProps: { overlayProps: { backgroundOpacity: 0.35, blur: 3 }, removeScrollProps: { allowPinchZoom: true } },
       styles: { title: { fontWeight: 700, fontSize: 18 } },
     }),
     Menu: Menu.extend({ defaultProps: { radius: 'md', shadow: 'md' } }),

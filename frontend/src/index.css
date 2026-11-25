@@ -130,12 +130,12 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Pop-up forms never slide sideways as a whole (on iPhone that left the form
-     stuck half off-screen): their content fits the screen, and only wide tables
-     inside scroll sideways, in their own box. */
+  /* Pop-up forms (and side panels) scroll in every direction: if something is
+     wider or taller than the phone screen, slide to it. */
   .mantine-Modal-content,
   .mantine-Drawer-content {
-    overflow-x: hidden;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .mantine-Modal-body .mantine-SimpleGrid-root > *,
   .mantine-Drawer-body .mantine-SimpleGrid-root > *,
@@ -143,4 +143,15 @@ body {
   .mantine-Drawer-body .mantine-Group-root > * {
     min-width: 0;
   }
+}
+
+/* Touch: slide in every direction and pinch-zoom everywhere (pages and pop-ups). */
+html,
+body,
+.mantine-AppShell-main,
+.mantine-Modal-content,
+.mantine-Drawer-content,
+.mantine-Card-root,
+.mantine-Table-scrollContainer {
+  touch-action: pan-x pan-y pinch-zoom;
 }
