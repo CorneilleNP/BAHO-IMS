@@ -3,7 +3,7 @@
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Count, F, Q, Sum, Value
+from django.db.models import Count, F, Min, Q, Sum, Value
 from django.db.models.functions import Coalesce, NullIf
 
 from baho.drymill.models import (
@@ -564,41 +564,84 @@ def recent_farmers(*, facility_ids: frozenset | None = None, limit: int = 10) ->
     ]
 
 
+def _lot_scope(
+    lots,
+    *,
+    facility_ids: frozenset | None = None,
+    station: str = "",
+    process: str = "",
+    sub_process: str = "",
+):
+    """Narrow processing lots to the user's stations, then to the chosen
+    station / process / sub-process. The station filter never widens a clerk's
+    access: it only intersects it."""
+    if facility_ids is not None:
+        lots = lots.filter(facility_id__in=facility_ids)
+    if station:
+        lots = lots.filter(facility_id=station)
+    if process:
+        lots = lots.filter(process_type__process_id=process)
+    if sub_process:
+        lots = lots.filter(process_type__sub_process_ref_id=sub_process)
+    return lots
+
+
+def _variance(estimated_kg, actual_kg) -> dict:
+    variance_kg = actual_kg - estimated_kg
+    return {
+        "variance_kg": variance_kg,
+        "variance_pct": _pct(variance_kg, estimated_kg) if estimated_kg else None,
+    }
+
+
 def lot_summary(
     *,
     facility_ids: frozenset | None = None,
+    station: str = "",
+    process: str = "",
+    sub_process: str = "",
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> dict:
     """Processing Lots dashboard: cherry input, estimated vs actual sorted kg,
     out-turn %, by grade / station / process. Admin/HQ roles see every station's
-    lots; a CWS clerk sees their own (`facility_ids=None` means every station)."""
-    lots = ProcessingLot.objects.all()
-    if facility_ids is not None:
-        lots = lots.filter(facility_id__in=facility_ids)
+    lots; a CWS clerk sees their own (`facility_ids=None` means every station).
+    `station` / `process` / `sub_process` (ids) narrow every figure on the page.
+
+    Variance compares actuals with the estimates of the same grade results only
+    (`compared_estimated_kg`), so lots still awaiting actuals don't show as losses."""
+    scope = {
+        "facility_ids": facility_ids,
+        "station": station,
+        "process": process,
+        "sub_process": sub_process,
+    }
+    lots = _lot_scope(ProcessingLot.objects.all(), **scope)
     lots = _in_range(lots, "lot_date", date_from, date_to)
     results = LotGradeResult.objects.filter(lot__in=lots)
+    measured = Q(actual_kg__isnull=False)
 
     input_kg = lots.aggregate(v=Coalesce(Sum("cherry_input_kg"), ZERO))["v"]
-    result_totals = results.aggregate(
-        estimated_kg=Coalesce(Sum("estimated_kg"), ZERO),
-        actual_kg=Coalesce(Sum("actual_kg"), ZERO),
-    )
-    actual_kg = result_totals["actual_kg"]
+    totals = {
+        "est": Coalesce(Sum("estimated_kg"), ZERO),
+        "act": Coalesce(Sum("actual_kg"), ZERO),
+        "cmp": Coalesce(Sum("estimated_kg", filter=measured), ZERO),
+    }
+    result_totals = results.aggregate(**totals)
+    actual_kg = result_totals["act"]
 
     by_grade = [
         {
             "code": row["grade__code"],
             "name": row["grade__name"],
-            "estimated_kg": row["estimated_kg"],
-            "actual_kg": row["actual_kg"],
+            "estimated_kg": row["est"],
+            "actual_kg": row["act"],
+            "compared_estimated_kg": row["cmp"],
+            **_variance(row["cmp"], row["act"]),
         }
         for row in results.values("grade__code", "grade__name")
-        .annotate(
-            estimated_kg=Coalesce(Sum("estimated_kg"), ZERO),
-            actual_kg=Coalesce(Sum("actual_kg"), ZERO),
-        )
-        .order_by("grade__display_order")
+        .annotate(**totals, order=Min("grade__display_order"))
+        .order_by("order", "grade__code")
     ]
 
     by_station = _ranked(
@@ -627,27 +670,40 @@ def lot_summary(
         "lots": lots.count(),
         "open_lots": lots.filter(status=ProcessingLot.Status.IN_PROGRESS).count(),
         "cherry_input_kg": input_kg,
-        "estimated_kg": result_totals["estimated_kg"],
+        "estimated_kg": result_totals["est"],
         "actual_kg": actual_kg,
+        "compared_estimated_kg": result_totals["cmp"],
+        **_variance(result_totals["cmp"], actual_kg),
         "outturn_pct": _pct(actual_kg, input_kg),
         "change_vs_previous_day_pct": change,
         "last_day": per_day[0]["lot__lot_date"] if per_day else None,
         "by_grade": by_grade,
         "by_station": by_station,
         "by_process": by_process,
-        "cws_stock": cws_stock_balance(facility_ids=facility_ids),
+        "cws_stock": cws_stock_balance(**scope),
     }
 
 
-def cws_stock_balance(*, facility_ids: frozenset | None = None) -> list[dict]:
+def cws_stock_balance(
+    *,
+    facility_ids: frozenset | None = None,
+    station: str = "",
+    process: str = "",
+    sub_process: str = "",
+) -> list[dict]:
     """How much sorted parchment each CWS has processed (actual kg from its
     lots) vs how much it has already delivered to HQ dry mill (parchment stock
     receipts sourced from it) - the balance still sitting at the station,
     awaiting delivery. Always all-time: a stock position, not a period total,
-    same as the other stock balances in this app."""
-    lots = ProcessingLot.objects.all()
-    if facility_ids is not None:
-        lots = lots.filter(facility_id__in=facility_ids)
+    same as the other stock balances in this app. `station` / `process` /
+    `sub_process` (ids) narrow it like the rest of the lots report."""
+    lots = _lot_scope(
+        ProcessingLot.objects.all(),
+        facility_ids=facility_ids,
+        station=station,
+        process=process,
+        sub_process=sub_process,
+    )
     processed_rows = (
         LotGradeResult.objects.filter(lot__in=lots, actual_kg__isnull=False)
         .values(
@@ -665,6 +721,12 @@ def cws_stock_balance(*, facility_ids: frozenset | None = None) -> list[dict]:
     receipts = HqStockReceipt.objects.filter(item_type="PARCH", source_facility__isnull=False)
     if facility_ids is not None:
         receipts = receipts.filter(source_facility_id__in=facility_ids)
+    if station:
+        receipts = receipts.filter(source_facility_id=station)
+    if process:
+        receipts = receipts.filter(process_id=process)
+    if sub_process:
+        receipts = receipts.filter(sub_process_id=sub_process)
     delivered_rows = receipts.values(
         "source_facility_id",
         "source_facility__name",

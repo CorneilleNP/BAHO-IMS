@@ -173,6 +173,8 @@ CORS_ALLOW_HEADERS = (
 CORS_EXPOSE_HEADERS = ["Idempotent-Replayed"]
 # Writes replayed by the offline queue are recognised for this long.
 IDEMPOTENCY_TTL_DAYS = 30
+# Deleted records stay in the Trash this long, then `purge_trash` removes them for good.
+TRASH_RETENTION_HOURS = env.int("TRASH_RETENTION_HOURS", default=24)
 
 # --- Refresh-token cookie ------------------------------------------------------
 # The refresh token never reaches JavaScript: it lives in an httpOnly cookie that

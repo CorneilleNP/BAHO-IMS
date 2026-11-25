@@ -6,20 +6,22 @@ interface ConfirmOptions {
   title: string;
   message: string;
   confirmLabel?: string;
-  /** Red confirm button for destructive actions (void, delete). */
+  /** Red confirm button for destructive actions (delete). */
   danger?: boolean;
-  /** Ask for a reason (required, min 3 characters), e.g. why a GRN is voided. */
+  /** Ask for a reason (required, min 3 characters), e.g. why a GRN is deleted. */
   requireReason?: boolean;
+  /** Label of the reason box (default "Reason"). */
+  reasonLabel?: string;
 }
 
 /**
  * Ask the user to confirm. Resolves with the reason ('' when no reason was
  * asked) or null if they cancelled.
  *
- *   const reason = await confirmAction({ title: 'Void GRN?', message: '…', danger: true, requireReason: true });
+ *   const reason = await confirmAction({ title: 'Delete GRN?', message: '…', danger: true, requireReason: true });
  *   if (reason === null) return;
  */
-export function confirmAction({ title, message, confirmLabel = 'Confirm', danger = false, requireReason = false }: ConfirmOptions): Promise<string | null> {
+export function confirmAction({ title, message, confirmLabel = 'Confirm', danger = false, requireReason = false, reasonLabel }: ConfirmOptions): Promise<string | null> {
   return new Promise((resolve) => {
     let reason = '';
     let showError = () => {};
@@ -41,6 +43,7 @@ export function confirmAction({ title, message, confirmLabel = 'Confirm', danger
           <Text size="sm">{message}</Text>
           {requireReason && (
             <ReasonField
+              label={reasonLabel}
               onChange={(next) => {
                 reason = next;
               }}

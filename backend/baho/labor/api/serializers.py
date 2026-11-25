@@ -2,12 +2,16 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from baho.core.fields import ActiveFlagField
+from baho.core.names import PersonNameSerializerMixin
+from baho.organization.api.serializers import LocationFieldsMixin
 
 from ..models import CasualLaborer, LaborAttendance, LaborPayPeriod
 from ..selectors import pay_period_summary
 
 
-class CasualLaborerSerializer(serializers.ModelSerializer):
+class CasualLaborerSerializer(
+    PersonNameSerializerMixin, LocationFieldsMixin, serializers.ModelSerializer
+):
     is_active = ActiveFlagField()
     facility_name = serializers.CharField(source="facility.name", read_only=True)
 
@@ -17,15 +21,19 @@ class CasualLaborerSerializer(serializers.ModelSerializer):
             "id",
             "facility",
             "facility_name",
+            "first_name",
+            "last_name",
             "full_name",
             "national_id",
             "phone",
+            *LocationFieldsMixin.LOCATION_FIELDS,
             "daily_rate",
             "is_active",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
+        extra_kwargs = {"full_name": {"required": False}}
 
     def validate_daily_rate(self, value):
         if value < 0:
@@ -33,6 +41,7 @@ class CasualLaborerSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        attrs = super().validate(attrs)
         if self.instance is not None and "facility" in attrs:
             if attrs["facility"] != self.instance.facility:
                 raise serializers.ValidationError(

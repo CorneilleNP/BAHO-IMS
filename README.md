@@ -253,11 +253,15 @@ to the farmer; only GRNs recorded in the app do.
 
 ## Voiding records
 
-GRNs, processing lots (unless closed), stock receipts, dry mill batches and
-planned shipments can be **voided** with a mandatory reason
-(`POST …/<id>/void/`). Voiding is a soft delete: the record leaves lists and
-dashboard totals, stays in the database with `void_reason` for audit, and its
-number is never reused. Nothing is ever hard-deleted from the app.
+GRNs, processing lots (unless closed), stock receipts, dry mill batches,
+planned shipments and open labor pay periods can be **deleted** (the UI's
+Delete button) with a mandatory reason (`POST …/<id>/void/`). The record
+leaves lists and dashboard totals and goes to the **Trash**
+(`GET /api/v1/core/trash/?type=&facility=`, page `/trash`), where it is kept
+with `void_reason` for `TRASH_RETENTION_HOURS` (default 24). The `purge_trash`
+management command then removes it permanently (skipping records still
+referenced by live data and GRNs that came from a workbook import). Document
+numbers are never reused: sequence counters are not touched by a purge.
 
 ## Frontend shared components (`frontend/src/components`, `frontend/src/lib`)
 

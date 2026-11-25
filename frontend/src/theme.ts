@@ -38,6 +38,12 @@ const coffee: MantineColorsTuple = [
   '#c4682f', '#a8502a', '#8a4b2e', '#6e3a24', '#532a1a',
 ];
 
+// Twentieth Century wherever it is installed (Windows PCs with Office); otherwise
+// Jost, a free font in the same geometric style, bundled in the app (works offline,
+// same look on Android). Tw Cen MT's licence doesn't allow shipping it inside the app.
+export const FONT_STACK =
+  '"Twentieth Century", "Tw Cen MT", "Jost Variable", Jost, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
 const inputStyles = {
   label: { fontWeight: 600, marginBottom: 6, color: 'var(--mantine-color-dark-6)' },
   input: { borderColor: 'var(--baho-border)', backgroundColor: '#fff' },
@@ -51,9 +57,9 @@ export const theme = createTheme({
   primaryShade: 7,
   colors: { baho, coffee },
   defaultRadius: 'md',
-  fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fontFamily: FONT_STACK,
   headings: {
-    fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: FONT_STACK,
     fontWeight: '750',
   },
   shadows: {

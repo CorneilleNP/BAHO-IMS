@@ -76,7 +76,7 @@ export function ExportUpdatesPage() {
   async function setStatus(shipment: ExportShipment, status: ExportShipment['status']) {
     const confirmed = await confirmAction({
       title: `Mark ${shipment.shipment_no} as ${status.toLowerCase()}?`,
-      message: `${shipment.client_name} · ${kg(shipment.total_qty_kg)} kg. Only planned shipments can be voided afterwards.`,
+      message: `${shipment.client_name} · ${kg(shipment.total_qty_kg)} kg. Only planned shipments can be deleted afterwards.`,
       confirmLabel: `Mark ${status.toLowerCase()}`,
     });
     if (confirmed === null) return;

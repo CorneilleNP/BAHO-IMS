@@ -90,7 +90,7 @@ def ensure_batch_output_not_shipped(batch) -> None:
                         "detail": (
                             f"Green coffee from this batch has already been shipped "
                             f"({grade.name}: {-available} kg would be missing). "
-                            "Void the shipment first, if it is still planned."
+                            "Delete the shipment first, if it is still planned."
                         )
                     }
                 )

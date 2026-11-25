@@ -91,7 +91,8 @@ function rolesPayload(rows: RoleRow[]): string | Array<{ role: string; facility:
 function UserModal({ user, roles, stations, onClose, onSaved }: { user: ManagedUser | null; roles: RoleOption[]; stations: Facility[]; onClose: () => void; onSaved: () => void }) {
   const submit = useSubmit();
   const [email, setEmail] = useState(user?.email ?? '');
-  const [fullName, setFullName] = useState(user?.full_name ?? '');
+  const [firstName, setFirstName] = useState(user?.first_name ?? '');
+  const [lastName, setLastName] = useState(user?.last_name ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [password, setPassword] = useState('');
   const [active, setActive] = useState(user?.is_active ?? true);
@@ -101,7 +102,7 @@ function UserModal({ user, roles, stations, onClose, onSaved }: { user: ManagedU
   const [resetPassword, setResetPassword] = useState('');
 
   const save = async () => {
-    if (!fullName.trim()) return submit.fail('Enter the full name.');
+    if (!firstName.trim() && !lastName.trim()) return submit.fail('Enter a first name or a last name (at least one).');
     const rolesBody = rolesPayload(roleRows);
     if (typeof rolesBody === 'string') return submit.fail(rolesBody);
     const missingStation = rolesBody.some((r) => !roles.find((o) => o.code === r.role)?.is_global && !r.facility);
@@ -112,8 +113,8 @@ function UserModal({ user, roles, stations, onClose, onSaved }: { user: ManagedU
     }
     const saved = await submit.run(() =>
       user
-        ? api(`${URL}${user.id}/`, { method: 'PATCH', body: { full_name: fullName, phone, is_active: active, roles: rolesBody } })
-        : api(URL, { method: 'POST', body: { email, full_name: fullName, phone, password, roles: rolesBody } }),
+        ? api(`${URL}${user.id}/`, { method: 'PATCH', body: { first_name: firstName, last_name: lastName, phone, is_active: active, roles: rolesBody } })
+        : api(URL, { method: 'POST', body: { email, first_name: firstName, last_name: lastName, phone, password, roles: rolesBody } }),
     );
     if (saved === undefined) return;
     toast.success(user ? 'User updated.' : 'User created. Give them the temporary password; they must change it when they sign in.');
@@ -136,7 +137,8 @@ function UserModal({ user, roles, stations, onClose, onSaved }: { user: ManagedU
         <ErrorMessage>{submit.error}</ErrorMessage>
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
           <TextInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.currentTarget.value)} disabled={Boolean(user)} required data-autofocus={!user} />
-          <TextInput label="Full name" value={fullName} onChange={(e) => setFullName(e.currentTarget.value)} required />
+          <TextInput label="First name" value={firstName} onChange={(e) => setFirstName(e.currentTarget.value)} />
+          <TextInput label="Last name" value={lastName} onChange={(e) => setLastName(e.currentTarget.value)} />
           <TextInput label="Phone" placeholder="07…" value={phone} onChange={(e) => setPhone(e.currentTarget.value)} />
           {!user && (
             <PasswordInput label="Temporary password" description="They choose their own at first sign-in." value={password} onChange={(e) => setPassword(e.currentTarget.value)} required />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Card, Group, Select, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconClipboardList, IconDroplet, IconPercentage, IconScale } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
@@ -7,9 +7,19 @@ import { DateRangeFilter } from '../../components/DateRangeFilter';
 import { ErrorMessage } from '../../components/Feedback';
 import { KpiCard } from '../../components/KpiCard';
 import { PageHeader } from '../../components/PageHeader';
+import { ProcessPicker } from '../../components/ProcessPicker';
 import { ANY_DATE, changeLabel, kgWhole, num, pct, type DateRange } from '../../lib/format';
-import type { LotSummary } from '../../lib/types';
+import { useMyStations } from '../../lib/stations';
+import type { Decimal, LotSummary } from '../../lib/types';
 import { query, useApi } from '../../lib/useApi';
+import { VarianceKg, VariancePct, type Variance } from './variance';
+
+/** Estimate vs actual compares only grade results with an actual recorded (`compared_estimated_kg`). */
+type GradeVariance = Variance & { compared_estimated_kg: Decimal };
+type LotReport = Omit<LotSummary, 'by_grade'> &
+  GradeVariance & {
+    by_grade: Array<LotSummary['by_grade'][number] & GradeVariance>;
+  };
 
 /**
  * Processing Lots dashboard: cherry input, estimated vs actual sorted kg,
@@ -18,7 +28,19 @@ import { query, useApi } from '../../lib/useApi';
  */
 export function ProcessingLotReportPage() {
   const [range, setRange] = useState<DateRange>(ANY_DATE);
-  const summary = useApi<LotSummary>(`/reporting/cws/lots/${query({ date_from: range[0], date_to: range[1] })}`);
+  // A clerk's list only holds their own stations; the server scopes the figures either way.
+  const stations = useMyStations();
+  const [station, setStation] = useState<string | null>(null);
+  const [process, setProcess] = useState<{ process: string | null; subProcess: string | null }>({ process: null, subProcess: null });
+  const summary = useApi<LotReport>(
+    `/reporting/cws/lots/${query({
+      date_from: range[0],
+      date_to: range[1],
+      station,
+      process: process.process,
+      sub_process: process.subProcess,
+    })}`,
+  );
   const s = summary.data;
   const kpiLoading = summary.loading && !s;
 
@@ -27,8 +49,24 @@ export function ProcessingLotReportPage() {
       <PageHeader
         title="Processing Lots Report"
         description="Cherry sorted into grades across stations: estimated vs actual, and out-turn"
-        actions={<DateRangeFilter value={range} onChange={setRange} label="Lot date" />}
       />
+
+      <Card p="md">
+        <Group align="flex-end" gap="sm" wrap="wrap">
+          <Select
+            label="CWS station"
+            placeholder={stations.loading ? 'Loading…' : stations.options.length > 1 ? 'All stations' : 'My station'}
+            data={stations.options}
+            value={station}
+            onChange={setStation}
+            clearable
+            searchable
+            w={220}
+          />
+          <ProcessPicker process={process.process} subProcess={process.subProcess} onChange={setProcess} required={false} />
+          <DateRangeFilter value={range} onChange={setRange} label="Lot date" />
+        </Group>
+      </Card>
 
       <ErrorMessage>{summary.error}</ErrorMessage>
 
@@ -45,18 +83,45 @@ export function ProcessingLotReportPage() {
       </Text>
 
       <Card p="md">
-        <Text fw={600} mb="sm">By grade: estimated vs actual (kg)</Text>
+        <Text fw={600}>By grade: estimated vs actual (kg)</Text>
+        <Text size="xs" c="dimmed" mb="sm">
+          Variance = actual − estimate of the same lots' grades that have an actual recorded (lots still awaiting actuals don't count as a loss). Green is a gain, red a loss.
+        </Text>
         <DataTable
           rows={s?.by_grade ?? []}
           rowKey={(g) => g.code}
           loading={summary.loading}
-          minWidth={480}
+          minWidth={720}
           empty={{ title: 'No grades configured' }}
           exportName="lots-by-grade"
           columns={[
-            { key: 'grade', header: 'Grade', render: (g) => <Text fw={600} size="sm">{g.name}</Text>, exportValue: (g) => g.name },
-            { key: 'est', header: 'Estimated (kg)', align: 'right', render: (g) => kgWhole(g.estimated_kg), exportValue: (g) => g.estimated_kg },
-            { key: 'act', header: 'Actual (kg)', align: 'right', render: (g) => kgWhole(g.actual_kg), exportValue: (g) => g.actual_kg },
+            { key: 'grade', header: 'Grade', render: (g) => <Text fw={600} size="sm">{g.name}</Text>, exportValue: (g) => g.name, footer: 'Total' },
+            { key: 'est', header: 'Estimated (kg)', align: 'right', render: (g) => kgWhole(g.estimated_kg), exportValue: (g) => g.estimated_kg, footer: s ? kgWhole(s.estimated_kg) : undefined },
+            { key: 'act', header: 'Actual (kg)', align: 'right', render: (g) => kgWhole(g.actual_kg), exportValue: (g) => g.actual_kg, footer: s ? kgWhole(s.actual_kg) : undefined },
+            {
+              key: 'cmp',
+              header: 'Estimate with actuals (kg)',
+              align: 'right',
+              render: (g) => kgWhole(g.compared_estimated_kg),
+              exportValue: (g) => g.compared_estimated_kg,
+              footer: s ? kgWhole(s.compared_estimated_kg) : undefined,
+            },
+            {
+              key: 'var',
+              header: 'Variance (kg)',
+              align: 'right',
+              render: (g) => <VarianceKg value={num(g.compared_estimated_kg) === 0 && num(g.actual_kg) === 0 ? null : g.variance_kg} />,
+              exportValue: (g) => g.variance_kg,
+              footer: s ? <VarianceKg value={s.variance_kg} fw={700} /> : undefined,
+            },
+            {
+              key: 'varpct',
+              header: 'Variance %',
+              align: 'right',
+              render: (g) => <VariancePct value={g.variance_pct} />,
+              exportValue: (g) => g.variance_pct,
+              footer: s ? <VariancePct value={s.variance_pct} fw={700} /> : undefined,
+            },
           ]}
         />
       </Card>
@@ -69,7 +134,7 @@ export function ProcessingLotReportPage() {
       <Card p="md">
         <Text fw={600}>Sorted at the station vs delivered to dry mill</Text>
         <Text size="xs" c="dimmed" mb="sm">
-          What each station has sorted into parchment (all-time, not limited by the date filter above) minus what it has already sent to HQ dry mill as stock receipts - the balance is still sitting at the station.
+          What each station has sorted into parchment (all-time, not limited by the date filter above, but limited to the chosen station / process / sub-process) minus what it has already sent to HQ dry mill as stock receipts - the balance is still sitting at the station.
         </Text>
         <DataTable
           rows={s?.cws_stock ?? []}

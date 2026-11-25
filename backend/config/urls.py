@@ -16,6 +16,7 @@ api_v1 = [
     path("labor/", include("baho.labor.api.urls")),
     path("inventory/", include("baho.inventory.api.urls")),
     path("imports/", include("baho.imports.api.urls")),
+    path("core/", include("baho.core.api.urls")),
     path("notifications/", include("baho.notifications.api.urls")),
 ]
 

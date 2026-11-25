@@ -48,7 +48,7 @@ export function StockLedgerPage() {
       <PageHeader
         eyebrow="Dry mill"
         title="Stock Ledger"
-        description="Every movement in and out of HQ stock, oldest first, with the running balance after each one. Voided records are left out."
+        description="Every movement in and out of HQ stock, oldest first, with the running balance after each one. Deleted records are left out."
       />
       <Card p="lg">
         <Group align="flex-end" gap="md">

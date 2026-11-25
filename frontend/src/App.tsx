@@ -12,6 +12,7 @@ import {
   IconDroplet,
   IconFileImport,
   IconKey,
+  IconTrash,
   IconLayoutGrid,
   IconListDetails,
   IconLogout,
@@ -47,6 +48,7 @@ import { StockLedgerPage } from './features/drymill/StockLedgerPage';
 import { LaborPage } from './features/labor/LaborPage';
 import { FarmersPage } from './features/reception/FarmersPage';
 import { SyncPage } from './features/sync/SyncPage';
+import { TrashPage } from './features/trash/TrashPage';
 import { SyncIndicator } from './components/SyncIndicator';
 import { MobileAppBar, MobileMoreSheet, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
 import { confirmAction } from './lib/confirm';
@@ -101,6 +103,7 @@ const accountSection: { label: string; items: NavItem[] } = {
   label: 'This device & account',
   items: [
     { to: '/sync', label: 'Sync & offline', icon: IconCloudUpload },
+    { to: '/trash', label: 'Trash', icon: IconTrash },
     { to: '/account/password', label: 'Change password', icon: IconKey },
   ],
 };
@@ -414,6 +417,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardLandingPage />} />
           <Route path="/account/password" element={<ChangePasswordPage />} />
           <Route path="/sync" element={<SyncPage />} />
+          <Route path="/trash" element={<TrashPage />} />
           <Route path="/drymill/stock" element={<StockUpdatePage />} />
           <Route path="/drymill/ledger" element={<StockLedgerPage />} />
           <Route path="/cws/farmers" element={<FarmersPage />} />

@@ -65,12 +65,25 @@ def _replace_roles(user: User, assignments: list[dict]) -> None:
 
 @transaction.atomic
 def create_user(
-    *, email: str, full_name: str, password: str, phone: str = "", roles: list[dict]
+    *,
+    email: str,
+    password: str,
+    roles: list[dict],
+    phone: str = "",
+    first_name: str = "",
+    last_name: str = "",
+    full_name: str = "",
 ) -> User:
     email = _normalise_email(email)
     if User.objects.filter(email__iexact=email).exists():
         raise ValidationError({"email": ["A user with this email already exists."]})
-    user = User(email=email, full_name=full_name.strip(), phone=phone.strip())
+    user = User(
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        full_name=full_name.strip(),  # only used when no first/last name (old clients)
+        phone=phone.strip(),
+    )
     _check_password(password, user)
     user.set_password(password)
     user.must_change_password = True  # the admin knows it; the user picks their own
@@ -100,6 +113,8 @@ def update_user(
     user: User,
     *,
     acting_user: User,
+    first_name: str | None = None,
+    last_name: str | None = None,
     full_name: str | None = None,
     phone: str | None = None,
     is_active: bool | None = None,
@@ -118,7 +133,11 @@ def update_user(
         )
     _ensure_an_admin_remains(user, keeps_admin=keeps_admin, stays_active=stays_active)
 
-    if full_name is not None:
+    if first_name is not None or last_name is not None:
+        user.first_name = first_name if first_name is not None else user.first_name
+        user.last_name = last_name if last_name is not None else user.last_name
+    elif full_name is not None:
+        user.first_name = user.last_name = ""  # re-split from the full name
         user.full_name = full_name.strip()
     if phone is not None:
         user.phone = phone.strip()

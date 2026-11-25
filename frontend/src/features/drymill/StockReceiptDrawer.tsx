@@ -13,13 +13,20 @@ import type { HistoryEntry, HqStockReceiptDetail } from '../../lib/types';
 import { errorText, useApi } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
 
+/** 'voided' is the API's code for a record deleted to the Trash. */
+const HISTORY_LABEL: Record<HistoryEntry['type'], string> = {
+  created: 'Created',
+  changed: 'Changed',
+  voided: 'Deleted',
+  deleted: 'Permanently removed',
+};
 
 interface Props {
   receiptId: string | null;
   writable: boolean;
   onClose: () => void;
   onEdit: (receipt: HqStockReceiptDetail) => void;
-  /** Something changed (quality, adjustment, void): refresh the list. */
+  /** Something changed (quality, adjustment, delete): refresh the list. */
   onChanged: () => void;
 }
 
@@ -177,7 +184,7 @@ export function StockReceiptDrawer({ receiptId, writable, onClose, onEdit, onCha
               ) : (
                 <Timeline bulletSize={18} lineWidth={2}>
                   {history.data.map((entry, i) => (
-                    <Timeline.Item key={i} title={`${entry.type.charAt(0).toUpperCase()}${entry.type.slice(1)} by ${entry.user}`}>
+                    <Timeline.Item key={i} title={`${HISTORY_LABEL[entry.type]} by ${entry.user}`}>
                       <Text size="xs" c="dimmed">{new Date(entry.date).toLocaleString()}</Text>
                       {entry.changes.map((c, j) => (
                         <Text key={j} size="sm">

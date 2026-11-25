@@ -76,7 +76,7 @@ class ExportShipmentViewSet(
 
     def check_can_void(self, instance):
         if instance.status != ExportShipment.Status.PLANNED:
-            raise ValidationError(["Only planned shipments can be voided."])
+            raise ValidationError(["Only planned shipments can be deleted."])
 
     def perform_create(self, serializer):
         shipment = create_shipment(user=self.request.user, **serializer.validated_data)

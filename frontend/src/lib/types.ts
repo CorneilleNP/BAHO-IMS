@@ -23,6 +23,9 @@ export interface Facility extends Located {
 export interface Farmer extends Located {
   id: string;
   farmer_code: string;
+  first_name: string;
+  last_name: string;
+  /** "First Last", derived by the server. */
   full_name: string;
   gender: '' | 'M' | 'F' | 'O';
   national_id: string;
@@ -32,7 +35,7 @@ export interface Farmer extends Located {
   household_size: number | null;
   land_area_ha: Decimal | null;
   is_active: boolean;
-  /** Totals over the farmer's non-voided GRNs. */
+  /** Totals over the farmer's non-deleted GRNs. */
   grn_count?: number;
   delivered_kg?: Decimal;
   last_delivery?: string | null;
@@ -614,6 +617,8 @@ export interface RoleOption {
 export interface ManagedUser {
   id: string;
   email: string;
+  first_name: string;
+  last_name: string;
   full_name: string;
   phone: string;
   is_active: boolean;

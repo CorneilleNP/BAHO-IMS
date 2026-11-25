@@ -18,11 +18,22 @@ import { useMyStations } from '../../lib/stations';
 import type { ProcessingLot, ProcessType } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
+import { LotDetailDrawer } from './LotDetailDrawer';
 import { LotWizard } from './LotWizard';
+import type { LotWithVariance } from './variance';
 
 const statusColor: Record<ProcessingLot['status'], string> = { IN_PROGRESS: 'blue', SORTED: 'teal', CLOSED: 'gray' };
 const statusLabel: Record<ProcessingLot['status'], string> = { IN_PROGRESS: 'In progress', SORTED: 'Sorted', CLOSED: 'Closed' };
 const PAGE_SIZE = 25;
+
+/** Full status label, never squeezed into "Sort…" by a narrow column. */
+function StatusBadge({ status }: { status: ProcessingLot['status'] }) {
+  return (
+    <Badge color={statusColor[status]} variant="light" styles={{ root: { minWidth: 'max-content', overflow: 'visible' }, label: { overflow: 'visible' } }}>
+      {statusLabel[status]}
+    </Badge>
+  );
+}
 
 /** Processing lots of the selected station; new lots are recorded with the lot wizard. */
 export function ProcessingLotForm() {
@@ -39,6 +50,8 @@ export function ProcessingLotForm() {
   const lots = useList<ProcessingLot>(lotsQuery && `${lotsQuery}&page=${page}&page_size=${PAGE_SIZE}`);
   const [actualsLot, setActualsLot] = useState<ProcessingLot | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detail = useApi<LotWithVariance>(detailId ? `/processing/lots/${detailId}/` : null);
 
   if (stations.loading && !station) return <PageSkeleton />;
   if (!station) return <EmptyState title="No station assigned">Ask an administrator to assign you to a CWS.</EmptyState>;
@@ -70,15 +83,16 @@ export function ProcessingLotForm() {
           rowKey={(lot) => lot.id}
           loading={lots.loading}
           error={lots.error}
-          minWidth={820}
+          minWidth={900}
+          onRowClick={(lot) => setDetailId(lot.id)}
           pagination={{ page, pageSize: PAGE_SIZE, total: lots.total, onChange: setPage }}
           empty={{ title: 'No lots yet', hint: 'Use “New lot” to record one.' }}
           exportName={`processing-lots-${station.code}`}
           fetchAll={() => fetchAllPages<ProcessingLot>(lotsQuery ?? '')}
           columns={[
             { key: 'lot', header: 'Lot', mono: true, render: (lot) => lot.lot_number },
-            { key: 'date', header: 'Date', render: (lot) => lot.lot_date },
-            { key: 'process', header: 'Process', render: (lot) => lot.process_label },
+            { key: 'date', header: 'Date', nowrap: true, render: (lot) => lot.lot_date },
+            { key: 'process', header: 'Process', mobile: 'subtitle', render: (lot) => lot.process_label },
             { key: 'cherry', header: 'Cherry (kg)', align: 'right', render: (lot) => kg(lot.cherry_input_kg), exportValue: (lot) => lot.cherry_input_kg },
             { key: 'est', header: 'Estimated (kg)', align: 'right', render: (lot) => kg(lot.total_estimated_kg, 2), exportValue: (lot) => lot.total_estimated_kg },
             { key: 'act', header: 'Actual (kg)', align: 'right', render: (lot) => (lot.total_actual_kg === null ? '—' : kg(lot.total_actual_kg, 2)), exportValue: (lot) => lot.total_actual_kg },
@@ -86,8 +100,9 @@ export function ProcessingLotForm() {
             {
               key: 'status',
               header: 'Status',
+              nowrap: true,
               exportValue: (lot) => statusLabel[lot.status],
-              render: (lot) => <Badge color={statusColor[lot.status]} variant="light">{statusLabel[lot.status]}</Badge>,
+              render: (lot) => <StatusBadge status={lot.status} />,
             },
             writable && {
               key: 'actions',
@@ -95,7 +110,8 @@ export function ProcessingLotForm() {
               exportValue: false,
               render: (lot) =>
                 lot.status !== 'CLOSED' && (
-                  <Group gap={4} wrap="nowrap">
+                  // Clicks here (and in the void dialog, which bubbles through React) must not open the drawer.
+                  <Group gap={4} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
                     <Button size="compact-xs" variant="light" leftSection={<IconClipboardCheck size={14} />} onClick={() => setActualsLot(lot)}>
                       Actuals
                     </Button>
@@ -119,6 +135,14 @@ export function ProcessingLotForm() {
         />
       )}
 
+      <LotDetailDrawer
+        lotId={detailId}
+        detail={detail}
+        statusBadge={(lot) => <StatusBadge status={lot.status} />}
+        onRecordActuals={writable ? (lot) => setActualsLot(lot) : undefined}
+        onClose={() => setDetailId(null)}
+      />
+
       {actualsLot && (
         <ActualsModal
           lot={actualsLot}
@@ -127,6 +151,7 @@ export function ProcessingLotForm() {
             setActualsLot(null);
             toast.success(`Actuals updated for lot ${lot.lot_number}.`);
             lots.reload();
+            if (detailId === lot.id) detail.reload();
           }}
         />
       )}

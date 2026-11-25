@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from baho.core.access import get_user_access
+from baho.core.names import PersonNameSerializerMixin
 from baho.organization.models import Facility
 
 from ..models import Role, User
@@ -60,7 +61,17 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "full_name", "phone", "is_global", "must_change_password", "roles"]
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "full_name",
+            "phone",
+            "is_global",
+            "must_change_password",
+            "roles",
+        ]
 
     def get_roles(self, user) -> list[dict]:
         return RoleAssignmentSerializer(user_role_assignments(user), many=True).data
@@ -106,6 +117,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "email",
+            "first_name",
+            "last_name",
             "full_name",
             "phone",
             "is_active",
@@ -117,15 +130,15 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class UserCreateSerializer(serializers.Serializer):
+class UserCreateSerializer(PersonNameSerializerMixin, serializers.Serializer):
     email = serializers.EmailField()
-    full_name = serializers.CharField(max_length=150)
+    full_name = serializers.CharField(max_length=150, required=False)
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
     password = serializers.CharField(trim_whitespace=False, min_length=8)
     roles = RoleAssignmentInputSerializer(many=True)
 
 
-class UserUpdateSerializer(serializers.Serializer):
+class UserUpdateSerializer(PersonNameSerializerMixin, serializers.Serializer):
     full_name = serializers.CharField(max_length=150, required=False)
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)

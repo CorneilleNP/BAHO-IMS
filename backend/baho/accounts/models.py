@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from baho.core.access import GLOBAL_ROLE_CODES
 from baho.core.models import TimeStampedModel
+from baho.core.names import PersonNameMixin
 
 
 class UserManager(BaseUserManager):
@@ -40,7 +41,7 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(PersonNameMixin, AbstractBaseUser, PermissionsMixin):
     """Signs in with email. Accounts are created by an admin (no self sign-up)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

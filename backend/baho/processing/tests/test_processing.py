@@ -158,3 +158,47 @@ def test_other_station_cannot_correct_my_process(api, gitoki_clerk, bugoyi_clerk
     login(api, bugoyi_clerk)
     res = api.patch(f"{PROCESSES}{process['id']}/", {"is_active": False}, format="json")
     assert res.status_code in (403, 404)
+
+
+def test_lot_shows_estimate_vs_actual_variance_per_grade(api, gitoki_clerk, gitoki):
+    """355 kg cherry -> estimates A1 49.70, A2 14.20. Actual A1 52.20 is a gain of
+    2.50 kg (+5.03%), A2 12.00 a loss of 2.20 kg (-15.49%). A3/HPC have no actual
+    yet, so they show no variance and stay out of the lot total."""
+    login(api, gitoki_clerk)
+    process = register_fw(api, gitoki).data
+    lot = api.post(
+        LOTS, {"process_type": process["id"], "cherry_input_kg": "355"}, format="json"
+    ).data
+    grades = {g["code"]: g["id"] for g in process["grades"]}
+    actuals = {"A1": "52.20", "A2": "12", "A3": None, "HPC": None}
+    res = api.post(
+        f"{LOTS}{lot['id']}/actuals/",
+        {"actuals": [{"grade": grades[c], "actual_kg": v} for c, v in actuals.items()]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+
+    rows = {r["grade_code"]: r for r in api.get(f"{LOTS}{lot['id']}/").data["results"]}
+    assert Decimal(rows["A1"]["variance_kg"]) == Decimal("2.50")
+    assert Decimal(rows["A1"]["variance_pct"]) == Decimal("5.03")
+    assert Decimal(rows["A2"]["variance_kg"]) == Decimal("-2.20")
+    assert Decimal(rows["A2"]["variance_pct"]) == Decimal("-15.49")
+    assert rows["A3"]["variance_kg"] is None
+    assert rows["HPC"]["variance_pct"] is None
+
+    total = res.data["variance"]
+    assert Decimal(total["compared_estimated_kg"]) == Decimal("63.90")
+    assert Decimal(total["variance_kg"]) == Decimal("0.30")
+    assert Decimal(total["variance_pct"]) == Decimal("0.47")
+
+
+def test_lot_without_actuals_has_no_variance(api, gitoki_clerk, gitoki):
+    login(api, gitoki_clerk)
+    process = register_fw(api, gitoki).data
+    res = api.post(LOTS, {"process_type": process["id"], "cherry_input_kg": "100"}, format="json")
+    assert res.data["variance"] == {
+        "compared_estimated_kg": None,
+        "variance_kg": None,
+        "variance_pct": None,
+    }
+    assert all(r["variance_kg"] is None for r in res.data["results"])

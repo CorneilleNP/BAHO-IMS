@@ -74,12 +74,13 @@ services:
       retries: 5
       start_period: 60s
 
-  # Retries SMS that failed to send (provider down, no network) every 10 minutes.
+  # Every 10 minutes: retries SMS that failed to send, and empties the Trash of
+  # records deleted more than TRASH_RETENTION_HOURS ago (default 24).
   sms-worker:
     build:
       context: ./backend
     restart: unless-stopped
-    command: ["sh", "-c", "while true; do python manage.py send_pending_sms || true; sleep 600; done"]
+    command: ["sh", "-c", "while true; do python manage.py send_pending_sms || true; python manage.py purge_trash || true; sleep 600; done"]
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the server .env file}
@@ -91,6 +92,7 @@ services:
       SMS_SENDER_ID: ${SMS_SENDER_ID:-}
       AFRICASTALKING_USERNAME: ${AFRICASTALKING_USERNAME:-}
       AFRICASTALKING_API_KEY: ${AFRICASTALKING_API_KEY:-}
+      TRASH_RETENTION_HOURS: ${TRASH_RETENTION_HOURS:-24}
     networks:
       - data  # not internal, so the worker can reach the SMS provider
     depends_on:

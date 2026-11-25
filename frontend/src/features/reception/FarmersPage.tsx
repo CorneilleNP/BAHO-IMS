@@ -45,7 +45,8 @@ function dateLabel(value: string | null | undefined): string {
 function FarmerDrawer({ farmer, editable, onClose, onSaved }: { farmer: Farmer; editable: boolean; onClose: () => void; onSaved: () => void }) {
   const submit = useSubmit();
   const [form, setForm] = useState({
-    full_name: farmer.full_name,
+    first_name: farmer.first_name ?? '',
+    last_name: farmer.last_name ?? '',
     gender: farmer.gender as string,
     national_id: farmer.national_id,
     phone: farmer.phone,
@@ -58,7 +59,7 @@ function FarmerDrawer({ farmer, editable, onClose, onSaved }: { farmer: Farmer; 
   const deliveries = useApi<FarmerDelivery[]>(`/farmers/${farmer.id}/deliveries/`);
 
   const save = async () => {
-    if (!form.full_name.trim()) return submit.fail('Enter the farmer’s full name.');
+    if (!form.first_name.trim() && !form.last_name.trim()) return submit.fail('Enter a first name or a last name (at least one).');
     const body = {
       ...form,
       household_size: form.household_size === '' ? null : form.household_size,
@@ -75,7 +76,8 @@ function FarmerDrawer({ farmer, editable, onClose, onSaved }: { farmer: Farmer; 
       <Stack>
         <ErrorMessage>{submit.error}</ErrorMessage>
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          <TextInput label="Full name" value={form.full_name} onChange={(e) => set('full_name')(e.currentTarget.value)} disabled={!editable} required />
+          <TextInput label="First name" value={form.first_name} onChange={(e) => set('first_name')(e.currentTarget.value)} disabled={!editable} />
+          <TextInput label="Last name" value={form.last_name} onChange={(e) => set('last_name')(e.currentTarget.value)} disabled={!editable} />
           <Select label="Gender" data={GENDERS} value={form.gender || null} onChange={(v) => set('gender')(v ?? '')} clearable disabled={!editable} />
           <TextInput label="National ID" value={form.national_id} onChange={(e) => set('national_id')(e.currentTarget.value)} disabled={!editable} />
           <TextInput label="Phone" description="Receives an SMS for every GRN" placeholder="07…" value={form.phone} onChange={(e) => set('phone')(e.currentTarget.value)} disabled={!editable} />
@@ -107,9 +109,9 @@ function FarmerDrawer({ farmer, editable, onClose, onSaved }: { farmer: Farmer; 
             {
               key: 'status',
               header: 'Status',
-              exportValue: (d) => (d.is_voided ? 'Voided' : d.payment_status),
+              exportValue: (d) => (d.is_voided ? 'Deleted' : d.payment_status),
               render: (d) =>
-                d.is_voided ? <Badge color="gray" variant="light">Voided</Badge> : <Badge color={d.payment_status === 'PAID' ? 'teal' : 'yellow'} variant="light">{d.payment_status.toLowerCase()}</Badge>,
+                d.is_voided ? <Badge color="gray" variant="light">Deleted</Badge> : <Badge color={d.payment_status === 'PAID' ? 'teal' : 'yellow'} variant="light">{d.payment_status.toLowerCase()}</Badge>,
             },
           ]}
         />
@@ -148,7 +150,7 @@ export function FarmersPage() {
       <PageHeader
         eyebrow="CWS operations"
         title="Farmers"
-        description="Every farmer registered at the station, with what they delivered (voided GRNs excluded)."
+        description="Every farmer registered at the station, with what they delivered (deleted GRNs excluded)."
         actions={
           <>
             <StationSelect stations={stations} />

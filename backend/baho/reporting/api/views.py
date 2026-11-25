@@ -31,6 +31,14 @@ class _Filters(serializers.Serializer):
     export_grade = serializers.UUIDField(required=False, allow_null=True)
 
 
+class _LotFilters(serializers.Serializer):
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    station = serializers.UUIDField(required=False, allow_null=True)
+    process = serializers.UUIDField(required=False, allow_null=True)
+    sub_process = serializers.UUIDField(required=False, allow_null=True)
+
+
 def _filters(request) -> dict:
     data = _Filters(data=request.query_params)
     data.is_valid(raise_exception=True)
@@ -158,9 +166,9 @@ class CwsSummaryView(APIView):
 
 
 class LotSummaryView(APIView):
-    """Processing Lots dashboard: cherry input, estimated vs actual, out-turn %,
-    by grade / station / process. Admin/HQ roles see every station; a CWS clerk
-    sees their own."""
+    """Processing Lots dashboard: cherry input, estimated vs actual (with per-grade
+    variance), out-turn %, by grade / station / process. Admin/HQ roles see every
+    station; a CWS clerk sees their own - the station filter only narrows that."""
 
     permission_classes = [RoleAccess]
     read_roles = CWS_READ_ROLES
@@ -170,16 +178,28 @@ class LotSummaryView(APIView):
         parameters=[
             OpenApiParameter("date_from", OpenApiTypes.DATE),
             OpenApiParameter("date_to", OpenApiTypes.DATE),
+            OpenApiParameter("station", OpenApiTypes.UUID, description="CWS facility id"),
+            OpenApiParameter("process", OpenApiTypes.UUID, description="Catalogue process id"),
+            OpenApiParameter(
+                "sub_process", OpenApiTypes.UUID, description="Catalogue sub-process id"
+            ),
         ],
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request):
-        f = _filters(request)
+        data = _LotFilters(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        f = data.validated_data
         access = get_user_access(request.user)
         facility_ids = None if access.is_global else access.facility_ids
         return Response(
             lot_summary(
-                facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
+                facility_ids=facility_ids,
+                station=str(f["station"]) if f.get("station") else "",
+                process=str(f["process"]) if f.get("process") else "",
+                sub_process=str(f["sub_process"]) if f.get("sub_process") else "",
+                date_from=f.get("date_from"),
+                date_to=f.get("date_to"),
             )
         )
 

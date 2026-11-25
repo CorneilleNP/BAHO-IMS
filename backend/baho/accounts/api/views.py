@@ -184,7 +184,7 @@ class UserViewSet(
     @extend_schema(request=UserUpdateSerializer, responses=UserSerializer)
     def partial_update(self, request, pk=None):
         user = self.get_object()
-        data = UserUpdateSerializer(data=request.data, partial=True)
+        data = UserUpdateSerializer(user, data=request.data, partial=True)
         data.is_valid(raise_exception=True)
         services.update_user(user, acting_user=request.user, **data.validated_data)
         return Response(UserSerializer(selectors.user_list().get(pk=user.pk)).data)

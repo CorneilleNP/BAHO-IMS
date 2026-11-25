@@ -10,7 +10,8 @@ import { useSubmit } from '../../lib/useSubmit';
 type Num = number | '';
 
 interface FarmerForm {
-  full_name: string;
+  first_name: string;
+  last_name: string;
   gender: string;
   national_id: string;
   location: string | null;
@@ -20,7 +21,8 @@ interface FarmerForm {
 }
 
 const blank = (): FarmerForm => ({
-  full_name: '',
+  first_name: '',
+  last_name: '',
   gender: '',
   national_id: '',
   location: null,
@@ -36,17 +38,19 @@ const GENDERS = [
 
 /** Register a farmer at a station: identity → where they live → contact → review. */
 export function FarmerWizard({ stationId, stationName, onClose, onSaved }: { stationId: string; stationName: string; onClose: () => void; onSaved: (farmer: Farmer) => void }) {
-  const draft = useDraft<FarmerForm>(`farmer-${stationId}`, blank);
+  // v2: first/last name (drafts saved before the change had only full_name).
+  const draft = useDraft<FarmerForm>(`farmer-v2-${stationId}`, blank);
   const form = draft.value;
   const submit = useSubmit();
 
   const steps = [
     {
       label: 'Identity',
-      validate: () => (!form.full_name.trim() ? 'Enter the farmer’s full name.' : null),
+      validate: () => (!form.first_name.trim() && !form.last_name.trim() ? 'Enter a first name or a last name (at least one).' : null),
       content: (
-        <SimpleGrid cols={{ base: 1, sm: 3 }}>
-          <TextInput label="Full name" required value={form.full_name} onChange={(e) => draft.set('full_name')(e.currentTarget.value)} data-autofocus />
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>
+          <TextInput label="First name" description="First name or last name: at least one" value={form.first_name} onChange={(e) => draft.set('first_name')(e.currentTarget.value)} data-autofocus />
+          <TextInput label="Last name" description="Family name" value={form.last_name} onChange={(e) => draft.set('last_name')(e.currentTarget.value)} />
           <Select label="Gender" data={GENDERS} value={form.gender || null} onChange={(v) => draft.set('gender')(v ?? '')} clearable />
           <TextInput label="National ID" value={form.national_id} onChange={(e) => draft.set('national_id')(e.currentTarget.value)} />
         </SimpleGrid>
@@ -71,7 +75,8 @@ export function FarmerWizard({ stationId, stationName, onClose, onSaved }: { sta
   const review = (
     <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
       {[
-        ['Name', form.full_name],
+        ['First name', form.first_name],
+        ['Last name', form.last_name],
         ['Gender', GENDERS.find((g) => g.value === form.gender)?.label ?? ''],
         ['National ID', form.national_id],
         ['Phone', form.phone],

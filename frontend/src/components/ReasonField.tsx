@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { Textarea } from '@mantine/core';
 
 interface ReasonFieldProps {
+  /** Question shown above the box. */
+  label?: string;
   onChange: (reason: string) => void;
   /** Receives a function the dialog calls to show "reason required". */
   registerShowError: (show: () => void) => void;
 }
 
-/** Required "Reason" box inside confirmation dialogs (e.g. voiding a GRN). */
-export function ReasonField({ onChange, registerShowError }: ReasonFieldProps) {
+/** Required "Reason" box inside confirmation dialogs (e.g. deleting a GRN). */
+export function ReasonField({ label = 'Reason', onChange, registerShowError }: ReasonFieldProps) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +20,7 @@ export function ReasonField({ onChange, registerShowError }: ReasonFieldProps) {
 
   return (
     <Textarea
-      label="Reason"
+      label={label}
       required
       autosize
       minRows={2}

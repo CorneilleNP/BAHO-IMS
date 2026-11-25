@@ -6,7 +6,7 @@ from rest_framework import serializers
 from baho.organization.models import Facility
 
 from ..models import LotGradeResult, Process, ProcessingLot, ProcessType, SubProcess
-from ..selectors import current_ratio
+from ..selectors import current_ratio, lot_variance, variance
 
 ZERO = Decimal("0")
 
@@ -117,6 +117,12 @@ class LotResultSerializer(serializers.ModelSerializer):
     grade_code = serializers.CharField(source="grade.code", read_only=True)
     grade_name = serializers.CharField(source="grade.name", read_only=True)
     outturn_pct = serializers.SerializerMethodField()
+    variance_kg = serializers.SerializerMethodField(
+        help_text="Actual minus estimated kg; null until the actual is recorded."
+    )
+    variance_pct = serializers.SerializerMethodField(
+        help_text="Variance as a % of the estimate (gain > 0, loss < 0)."
+    )
 
     class Meta:
         model = LotGradeResult
@@ -128,7 +134,17 @@ class LotResultSerializer(serializers.ModelSerializer):
             "estimated_kg",
             "actual_kg",
             "outturn_pct",
+            "variance_kg",
+            "variance_pct",
         ]
+
+    def get_variance_kg(self, obj) -> str | None:
+        value = variance(obj.estimated_kg, obj.actual_kg)["variance_kg"]
+        return None if value is None else str(value)
+
+    def get_variance_pct(self, obj) -> str | None:
+        value = variance(obj.estimated_kg, obj.actual_kg)["variance_pct"]
+        return None if value is None else str(value)
 
     def get_outturn_pct(self, obj) -> str | None:
         value = outturn_pct(obj.actual_kg, obj.lot.cherry_input_kg)
@@ -166,6 +182,10 @@ class ProcessingLotSerializer(serializers.ModelSerializer):
     total_estimated_kg = serializers.SerializerMethodField()
     total_actual_kg = serializers.SerializerMethodField()
     total_outturn_pct = serializers.SerializerMethodField()
+    variance = serializers.SerializerMethodField(
+        help_text="Estimate vs actual over the grades with an actual recorded: "
+        "compared_estimated_kg, variance_kg, variance_pct (all null without actuals)."
+    )
 
     class Meta:
         model = ProcessingLot
@@ -184,6 +204,7 @@ class ProcessingLotSerializer(serializers.ModelSerializer):
             "total_estimated_kg",
             "total_actual_kg",
             "total_outturn_pct",
+            "variance",
             "created_at",
         ]
 
@@ -202,3 +223,8 @@ class ProcessingLotSerializer(serializers.ModelSerializer):
         total = self.get_total_actual_kg(obj)
         value = outturn_pct(total, obj.cherry_input_kg) if total is not None else None
         return None if value is None else str(value)
+
+    def get_variance(self, obj) -> dict:
+        return {
+            key: None if value is None else str(value) for key, value in lot_variance(obj).items()
+        }

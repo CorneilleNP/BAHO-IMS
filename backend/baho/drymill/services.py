@@ -223,7 +223,7 @@ def adjust_stock(*, user, receipt, qty_kg, reason: str, adjusted_on: date | None
 def check_receipt_can_be_voided(receipt: HqStockReceipt) -> None:
     if has_stock_movements(receipt):
         raise ValidationError(
-            ["This receipt has been milled or adjusted; void those batches/adjustments first."]
+            ["This receipt has been milled or adjusted; delete those batches/adjustments first."]
         )
 
 

@@ -18,10 +18,11 @@ import {
   TextInput,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconCalendarPlus, IconUserPlus } from '@tabler/icons-react';
+import { IconCalendarCheck, IconCalendarPlus, IconUserPlus } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import { DataTable } from '../../components/DataTable';
-import { ErrorMessage } from '../../components/Feedback';
+import { EmptyState, ErrorMessage } from '../../components/Feedback';
+import { LocationPicker } from '../../components/LocationPicker';
 import { PageHeader } from '../../components/PageHeader';
 import { StationSelect } from '../../components/StationSelect';
 import { canWrite } from '../../lib/access';
@@ -30,14 +31,16 @@ import { useAuth } from '../../lib/authContext';
 import { num, rwf } from '../../lib/format';
 import { useMyStations } from '../../lib/stations';
 import { toast } from '../../lib/toast';
-import type { Decimal } from '../../lib/types';
+import type { Decimal, Located } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
 
-interface Laborer {
+interface Laborer extends Located {
   id: string;
   facility: string;
   facility_name: string;
+  first_name: string;
+  last_name: string;
   full_name: string;
   national_id: string;
   phone: string;
@@ -86,8 +89,10 @@ const fmtDate = (d: string) => dayjs(d).format('DD MMM YYYY');
 function LaborerModal({ laborer, stationId, onClose, onSaved }: { laborer: Laborer | null; stationId: string; onClose: () => void; onSaved: () => void }) {
   const submit = useSubmit();
   const [form, setForm] = useState({
-    full_name: laborer?.full_name ?? '',
+    first_name: laborer?.first_name ?? '',
+    last_name: laborer?.last_name ?? '',
     national_id: laborer?.national_id ?? '',
+    location: laborer?.location ?? (null as string | null),
     phone: laborer?.phone ?? '',
     daily_rate: laborer ? num(laborer.daily_rate) : ('' as number | ''),
     is_active: laborer?.is_active ?? true,
@@ -95,7 +100,7 @@ function LaborerModal({ laborer, stationId, onClose, onSaved }: { laborer: Labor
   const set = <K extends keyof typeof form>(key: K) => (value: (typeof form)[K]) => setForm((f) => ({ ...f, [key]: value }));
 
   const save = async () => {
-    if (!form.full_name.trim()) return submit.fail('Enter the full name.');
+    if (!form.first_name.trim() && !form.last_name.trim()) return submit.fail('Enter a first name or a last name (at least one).');
     if (form.daily_rate === '') return submit.fail('Enter the daily rate.');
     const saved = await submit.run(() =>
       laborer
@@ -103,19 +108,23 @@ function LaborerModal({ laborer, stationId, onClose, onSaved }: { laborer: Labor
         : api('/labor/laborers/', { method: 'POST', body: { ...form, facility: stationId } }),
     );
     if (saved === undefined) return;
-    toast.success(form.full_name, laborer ? 'Laborer updated' : 'Laborer registered');
+    toast.success(`${form.first_name} ${form.last_name}`.trim(), laborer ? 'Laborer updated' : 'Laborer registered');
     onSaved();
   };
 
   return (
-    <Modal opened onClose={onClose} title={laborer ? `Edit ${laborer.full_name}` : 'Register casual laborer'}>
+    <Modal opened onClose={onClose} title={laborer ? `Edit ${laborer.full_name}` : 'Register casual laborer'} size="lg">
       <Stack>
         <ErrorMessage>{submit.error}</ErrorMessage>
-        <TextInput label="Full name" required value={form.full_name} onChange={(e) => set('full_name')(e.currentTarget.value)} data-autofocus />
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>
+          <TextInput label="First name" description="First or last name: at least one" value={form.first_name} onChange={(e) => set('first_name')(e.currentTarget.value)} data-autofocus />
+          <TextInput label="Last name" description="Family name" value={form.last_name} onChange={(e) => set('last_name')(e.currentTarget.value)} />
+        </SimpleGrid>
         <SimpleGrid cols={2}>
           <TextInput label="National ID" value={form.national_id} onChange={(e) => set('national_id')(e.currentTarget.value)} />
           <TextInput label="Phone" placeholder="07…" value={form.phone} onChange={(e) => set('phone')(e.currentTarget.value)} />
         </SimpleGrid>
+        <LocationPicker legend="Where they live (Rwanda)" value={form.location} onChange={set('location')} />
         <NumberInput label="Daily rate (RWF)" required min={0} thousandSeparator="," value={form.daily_rate} onChange={(v) => set('daily_rate')(v === '' ? '' : Number(v))} hideControls />
         {laborer && <Switch label="Active" checked={form.is_active} onChange={(e) => set('is_active')(e.currentTarget.checked)} />}
         <Group justify="flex-end">
@@ -157,12 +166,13 @@ function NewPeriodModal({ stationId, onClose, onSaved }: { stationId: string; on
   );
 }
 
-/** One day's roll call: tick who worked, save. Sending the day again replaces it. */
-function RollCall({ period, laborers, onSaved }: { period: PayPeriod; laborers: Laborer[]; onSaved: () => void }) {
+/**
+ * One day's roll call at a pay period: tick who worked, save. Sending the same
+ * day again replaces it (nobody is counted twice). Pay = daily rate x days present.
+ */
+function DayChecklist({ period, day, laborers, onSaved, readOnly = false }: { period: PayPeriod; day: string; laborers: Laborer[]; onSaved: () => void; readOnly?: boolean }) {
   const submit = useSubmit();
-  const lastDay = dayjs(period.period_end).isAfter(dayjs()) ? dayjs().format('YYYY-MM-DD') : period.period_end;
-  const [day, setDay] = useState<string | null>(lastDay);
-  const existing = useApi<AttendanceRow[]>(day ? `/labor/pay-periods/${period.id}/attendance/${query({ work_date: day })}` : null);
+  const existing = useApi<AttendanceRow[]>(`/labor/pay-periods/${period.id}/attendance/${query({ work_date: day })}`);
   const [present, setPresent] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -171,6 +181,7 @@ function RollCall({ period, laborers, onSaved }: { period: PayPeriod; laborers: 
   }, [existing.data]);
 
   const active = laborers.filter((l) => l.is_active || present.has(l.id));
+  const dayPay = active.filter((l) => present.has(l.id)).reduce((sum, l) => sum + num(l.daily_rate), 0);
   const toggle = (id: string) => setPresent((s) => {
     const next = new Set(s);
     if (next.has(id)) next.delete(id);
@@ -179,7 +190,6 @@ function RollCall({ period, laborers, onSaved }: { period: PayPeriod; laborers: 
   });
 
   const save = async () => {
-    if (!day) return submit.fail('Choose the day.');
     const saved = await submit.run(() => api(`/labor/pay-periods/${period.id}/attendance/`, { method: 'POST', body: { work_date: day, present_laborers: [...present] } }));
     if (saved === undefined) return;
     toast.success(`${present.size} present on ${fmtDate(day)}`, 'Attendance saved');
@@ -187,27 +197,147 @@ function RollCall({ period, laborers, onSaved }: { period: PayPeriod; laborers: 
     onSaved();
   };
 
+  if (active.length === 0) {
+    return <EmptyState title="No laborers registered yet">Register the station&apos;s casual laborers first (Laborers tab); then tick who came each day.</EmptyState>;
+  }
+
   return (
     <Stack>
       <ErrorMessage>{submit.error}</ErrorMessage>
-      <Group align="flex-end">
-        <DatePickerInput label="Day" value={day} onChange={setDay} valueFormat="ddd DD MMM YYYY" minDate={period.period_start} maxDate={lastDay} w={220} />
-        <Button variant="subtle" size="xs" onClick={() => setPresent(new Set(active.filter((l) => l.is_active).map((l) => l.id)))}>All present</Button>
-        <Button variant="subtle" size="xs" onClick={() => setPresent(new Set())}>Clear</Button>
-      </Group>
-      {active.length === 0 ? (
-        <Text c="dimmed" size="sm">Register laborers first (Laborers tab).</Text>
-      ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing={6}>
-          {active.map((l) => (
-            <Checkbox key={l.id} label={`${l.full_name} · ${rwf(l.daily_rate)}`} checked={present.has(l.id)} onChange={() => toggle(l.id)} disabled={existing.loading} />
-          ))}
-        </SimpleGrid>
+      {!readOnly && (
+        <Group gap="xs">
+          <Button variant="light" size="xs" onClick={() => setPresent(new Set(active.filter((l) => l.is_active).map((l) => l.id)))}>All present</Button>
+          <Button variant="subtle" size="xs" onClick={() => setPresent(new Set())}>Clear</Button>
+        </Group>
       )}
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xs">
+        {active.map((l) => {
+          const isPresent = present.has(l.id);
+          return (
+            <Card
+              key={l.id}
+              padding="sm"
+              shadow="xs"
+              onClick={() => !readOnly && toggle(l.id)}
+              style={{
+                cursor: readOnly ? 'default' : 'pointer',
+                borderColor: isPresent ? 'var(--mantine-color-baho-4)' : undefined,
+                background: isPresent ? 'var(--mantine-color-baho-0)' : undefined,
+              }}
+            >
+              <Group wrap="nowrap" gap="sm">
+                <Checkbox
+                  checked={isPresent}
+                  onChange={() => toggle(l.id)}
+                  disabled={readOnly || existing.loading}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={l.full_name}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <Text fw={600} size="sm" lineClamp={1}>{l.full_name}</Text>
+                  <Text size="xs" c="dimmed" lineClamp={1}>
+                    {rwf(l.daily_rate)} / day{l.location_label ? ` · ${l.location_label}` : ''}
+                  </Text>
+                </div>
+              </Group>
+            </Card>
+          );
+        })}
+      </SimpleGrid>
       <Group justify="space-between">
-        <Text size="sm" c="dimmed">{present.size} of {active.length} present</Text>
-        <Button onClick={save} loading={submit.saving} disabled={!day}>Save day</Button>
+        <Text size="sm" c="dimmed">
+          <b>{present.size}</b> of {active.length} present · pay for the day <b>{rwf(dayPay)}</b>
+        </Text>
+        {!readOnly && (
+          <Button onClick={save} loading={submit.saving} leftSection={<IconCalendarCheck size={16} />}>
+            Save attendance
+          </Button>
+        )}
       </Group>
+    </Stack>
+  );
+}
+
+/** Roll call inside a pay period: choose a day of the period, then the checklist. */
+function RollCall({ period, laborers, onSaved }: { period: PayPeriod; laborers: Laborer[]; onSaved: () => void }) {
+  const lastDay = dayjs(period.period_end).isAfter(dayjs()) ? dayjs().format('YYYY-MM-DD') : period.period_end;
+  const [day, setDay] = useState<string | null>(lastDay);
+  return (
+    <Stack>
+      <DatePickerInput label="Day" value={day} onChange={setDay} valueFormat="ddd DD MMM YYYY" minDate={period.period_start} maxDate={lastDay} w={220} />
+      {day && <DayChecklist key={day} period={period} day={day} laborers={laborers} onSaved={onSaved} />}
+    </Stack>
+  );
+}
+
+/**
+ * Daily attendance (the everyday screen): pick a day, tick who came, save.
+ * The day is recorded in the pay period that covers it; pay is worked out from
+ * the attendance in that period. Laborers must be registered first.
+ */
+function DailyAttendance({ stationId, laborers, canEdit, onChanged }: { stationId: string; laborers: Laborer[]; canEdit: boolean; onChanged: () => void }) {
+  const submit = useSubmit();
+  const today = dayjs().format('YYYY-MM-DD');
+  const [day, setDay] = useState<string | null>(today);
+  const periods = useList<PayPeriod>(
+    day ? `/labor/pay-periods/${query({ facility: stationId, period_start__lte: day, period_end__gte: day, page_size: 5 })}` : null,
+  );
+  const period = periods.items[0];
+
+  const openMonth = async () => {
+    if (!day) return;
+    const start = dayjs(day).startOf('month').format('YYYY-MM-DD');
+    const end = dayjs(day).endOf('month').format('YYYY-MM-DD');
+    const saved = await submit.run(() => api('/labor/pay-periods/', { method: 'POST', body: { facility: stationId, period_start: start, period_end: end } }));
+    if (saved === undefined) return;
+    toast.success(`${fmtDate(start)} – ${fmtDate(end)}`, 'Pay period opened');
+    periods.reload();
+    onChanged();
+  };
+
+  return (
+    <Stack>
+      <Group align="flex-end" gap="md">
+        <DatePickerInput label="Day" value={day} onChange={setDay} valueFormat="dddd DD MMM YYYY" maxDate={today} w={{ base: '100%', sm: 260 }} />
+        {period && (
+          <Group gap={6} pb={8}>
+            <Text size="sm" c="dimmed">
+              Pay period {fmtDate(period.period_start)} – {fmtDate(period.period_end)}
+            </Text>
+            <Badge color={STATUS_COLOR[period.status]} variant="light">{period.status.toLowerCase()}</Badge>
+          </Group>
+        )}
+      </Group>
+      <ErrorMessage>{submit.error}</ErrorMessage>
+      {!day ? null : periods.loading && !periods.data ? (
+        <Text c="dimmed" size="sm">Loading…</Text>
+      ) : !period ? (
+        <Card padding="lg">
+          <Stack align="flex-start" gap="xs">
+            <Text fw={700}>No pay period covers {fmtDate(day)} yet</Text>
+            <Text size="sm" c="dimmed">Attendance is paid per pay period. Open one for this month, then tick who came.</Text>
+            {canEdit && (
+              <Button leftSection={<IconCalendarPlus size={16} />} onClick={openMonth} loading={submit.saving}>
+                Open pay period for {dayjs(day).format('MMMM YYYY')}
+              </Button>
+            )}
+          </Stack>
+        </Card>
+      ) : (
+        <>
+          {period.status !== 'OPEN' && (
+            <Text size="sm" c="orange.8">This pay period is {period.status.toLowerCase()}: attendance can no longer change.</Text>
+          )}
+          <DayChecklist
+            key={`${period.id}-${day}`}
+            period={period}
+            day={day}
+            laborers={laborers}
+            onSaved={onChanged}
+            readOnly={!canEdit || period.status !== 'OPEN'}
+          />
+        </>
+      )}
     </Stack>
   );
 }
@@ -287,7 +417,7 @@ export function LaborPage() {
   const canEdit = canWrite(user, 'cws');
   const canClose = canWrite(user, 'cwsManage');
   const canPay = canClose || Boolean(user?.roles.some((r) => r.role === 'HQ_FINANCE'));
-  const [tab, setTab] = useState<string | null>('periods');
+  const [tab, setTab] = useState<string | null>('attendance');
   const [status, setStatus] = useState('All');
   const [openPeriod, setOpenPeriod] = useState<string | null>(null);
   const [newPeriod, setNewPeriod] = useState(false);
@@ -314,9 +444,13 @@ export function LaborPage() {
       <Card p="lg">
         <Tabs value={tab} onChange={setTab}>
           <Tabs.List mb="md">
+            <Tabs.Tab value="attendance">Daily attendance</Tabs.Tab>
             <Tabs.Tab value="periods">Pay periods</Tabs.Tab>
             <Tabs.Tab value="laborers">Laborers</Tabs.Tab>
           </Tabs.List>
+          <Tabs.Panel value="attendance">
+            {station && <DailyAttendance stationId={station.id} laborers={laborerRows} canEdit={canEdit} onChanged={periods.reload} />}
+          </Tabs.Panel>
           <Tabs.Panel value="periods">
             <Stack>
               <SegmentedControl

@@ -1,12 +1,13 @@
 from rest_framework import serializers
 
 from baho.core.fields import ActiveFlagField
+from baho.core.names import PersonNameSerializerMixin
 from baho.organization.api.serializers import LocationFieldsMixin
 
 from ..models import Farmer
 
 
-class FarmerSerializer(LocationFieldsMixin, serializers.ModelSerializer):
+class FarmerSerializer(PersonNameSerializerMixin, LocationFieldsMixin, serializers.ModelSerializer):
     is_active = ActiveFlagField()
 
     home_facility_name = serializers.CharField(source="home_facility.name", read_only=True)
@@ -16,6 +17,8 @@ class FarmerSerializer(LocationFieldsMixin, serializers.ModelSerializer):
         fields = [
             "id",
             "farmer_code",
+            "first_name",
+            "last_name",
             "full_name",
             "gender",
             "national_id",
@@ -32,6 +35,8 @@ class FarmerSerializer(LocationFieldsMixin, serializers.ModelSerializer):
             "last_delivery",
         ]
         read_only_fields = ["farmer_code", "created_at"]
+        # Derived from first/last name; still accepted on its own from older clients.
+        extra_kwargs = {"full_name": {"required": False}}
 
     # Present on list/detail (annotated by selectors.farmers_with_totals).
     grn_count = serializers.IntegerField(read_only=True, default=0)

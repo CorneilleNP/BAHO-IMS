@@ -9,9 +9,11 @@ from django.db import models
 from django.db.models import F, Q
 
 from baho.core.models import AuditedModel
+from baho.core.names import PersonNameMixin
+from baho.organization.models import location_field
 
 
-class CasualLaborer(AuditedModel):
+class CasualLaborer(PersonNameMixin, AuditedModel):
     """A day worker registered at one CWS. Never deleted: deactivate instead."""
 
     facility = models.ForeignKey(
@@ -20,6 +22,8 @@ class CasualLaborer(AuditedModel):
     full_name = models.CharField(max_length=150)
     national_id = models.CharField(max_length=30, blank=True)
     phone = models.CharField(max_length=30, blank=True)
+    # Where the laborer lives (Rwanda Province > District > Sector > Cell > Village).
+    location = location_field()
     daily_rate = models.DecimalField(
         max_digits=10,
         decimal_places=2,

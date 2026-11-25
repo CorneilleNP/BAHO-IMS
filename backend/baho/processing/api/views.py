@@ -91,7 +91,7 @@ class ProcessingLotViewSet(
 
     def check_can_void(self, instance):
         if instance.status == ProcessingLot.Status.CLOSED:
-            raise ValidationError(["A closed lot cannot be voided."])
+            raise ValidationError(["A closed lot cannot be deleted."])
 
     @staticmethod
     def _actuals_map(rows):

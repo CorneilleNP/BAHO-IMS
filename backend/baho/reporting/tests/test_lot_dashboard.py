@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from baho.processing.models import Process
+from baho.processing.models import Process, SubProcess
 from tests.factories import stock_receipt
 from tests.helpers import login
 
@@ -118,3 +118,104 @@ def test_cws_stock_shows_processed_vs_delivered_to_dry_mill(api, gitoki_clerk, g
     assert Decimal(a2["processed_kg"]) == Decimal("5")
     assert Decimal(a2["delivered_kg"]) == Decimal("0")
     assert Decimal(a2["balance_kg"]) == Decimal("5")
+
+
+def test_by_grade_variance_ignores_grades_awaiting_actuals(api, gitoki_clerk, gitoki):
+    """Lot 1 (355 kg): A1 est 49.70 -> 45 actual, A2 est 14.20 -> 15 actual.
+    Lot 2 (100 kg) has no actuals: its estimates must not count as a loss."""
+    login(api, gitoki_clerk)
+    process = register_process(api, gitoki, "FW")
+    lot = new_lot(api, process, "355")
+    record_actuals(api, lot, process, "45", "15")
+    new_lot(api, process, "100")
+
+    res = api.get(URL)
+    a1 = next(g for g in res.data["by_grade"] if g["code"] == "A1")
+    assert Decimal(a1["estimated_kg"]) == Decimal("63.70")  # 49.70 + 14.00
+    assert Decimal(a1["compared_estimated_kg"]) == Decimal("49.70")
+    assert Decimal(a1["variance_kg"]) == Decimal("-4.70")
+    assert Decimal(a1["variance_pct"]) == Decimal("-9.46")
+    a2 = next(g for g in res.data["by_grade"] if g["code"] == "A2")
+    assert Decimal(a2["variance_kg"]) == Decimal("0.80")
+    assert Decimal(a2["variance_pct"]) == Decimal("5.63")
+    assert Decimal(res.data["compared_estimated_kg"]) == Decimal("63.90")
+    assert Decimal(res.data["variance_kg"]) == Decimal("-3.90")
+    assert Decimal(res.data["variance_pct"]) == Decimal("-6.10")
+
+
+def _two_station_lots(api, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi):
+    login(api, gitoki_clerk)
+    new_lot(api, register_process(api, gitoki, "FW"), "100")
+    login(api, bugoyi_clerk)
+    new_lot(api, register_process(api, bugoyi, "NN"), "60")
+
+
+def test_report_filters_by_station_and_process(
+    api, hq_finance, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi
+):
+    _two_station_lots(api, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi)
+    login(api, hq_finance)
+
+    res = api.get(URL, {"station": str(gitoki.id)})
+    assert res.status_code == 200, res.data
+    assert res.data["lots"] == 1
+    assert Decimal(res.data["cherry_input_kg"]) == Decimal("100")
+    assert [r["label"] for r in res.data["by_station"]] == ["Gitoki CWS"]
+
+    res = api.get(URL, {"process": str(Process.objects.get(code="NN").id)})
+    assert res.data["lots"] == 1
+    assert Decimal(res.data["cherry_input_kg"]) == Decimal("60")
+    assert [r["label"] for r in res.data["by_process"]] == ["Normal Natural"]
+
+    res = api.get(
+        URL, {"station": str(gitoki.id), "process": str(Process.objects.get(code="NN").id)}
+    )
+    assert res.data["lots"] == 0
+
+    assert api.get(URL, {"station": "not-a-uuid"}).status_code == 400
+
+
+def test_report_filters_by_sub_process_including_cws_stock(api, hq_finance, gitoki_clerk, gitoki):
+    fw = Process.objects.get(code="FW")
+    sub = SubProcess.objects.create(process=fw, name="WASHED NO 1")
+    login(api, gitoki_clerk)
+    plain = register_process(api, gitoki, "FW")
+    lot = new_lot(api, plain, "100")
+    record_actuals(api, lot, plain, "10", "2")
+    with_sub = api.post(
+        PROCESSES,
+        {
+            "facility": str(gitoki.id),
+            "process": str(fw.id),
+            "sub_process": str(sub.id),
+            "grades": FW_GRADES,
+        },
+        format="json",
+    ).data
+    lot = new_lot(api, with_sub, "40")
+    record_actuals(api, lot, with_sub, "6", "1")
+
+    login(api, hq_finance)
+    res = api.get(URL, {"process": str(fw.id), "sub_process": str(sub.id)})
+    assert res.data["lots"] == 1
+    assert Decimal(res.data["cherry_input_kg"]) == Decimal("40")
+    assert Decimal(res.data["actual_kg"]) == Decimal("7")
+    assert {r["sub_process_name"] for r in res.data["cws_stock"]} == {"WASHED NO 1"}
+
+    res = api.get(URL, {"process": str(fw.id)})
+    assert res.data["lots"] == 2
+
+
+def test_clerk_cannot_see_another_station_through_the_station_filter(
+    api, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi, hq
+):
+    _two_station_lots(api, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi)
+    stock_receipt(gitoki, net="20", bags="0")
+
+    login(api, bugoyi_clerk)
+    res = api.get(URL, {"station": str(gitoki.id)})
+    assert res.status_code == 200, res.data
+    assert res.data["lots"] == 0
+    assert res.data["cherry_input_kg"] == 0
+    assert res.data["by_station"] == []
+    assert res.data["cws_stock"] == []

@@ -55,7 +55,16 @@ def register_laborer(*, user, facility, **fields) -> CasualLaborer:
     )
 
 
-UPDATABLE_LABORER_FIELDS = {"full_name", "national_id", "phone", "daily_rate", "is_active"}
+UPDATABLE_LABORER_FIELDS = {
+    "first_name",
+    "last_name",
+    "full_name",
+    "national_id",
+    "phone",
+    "location",
+    "daily_rate",
+    "is_active",
+}
 
 
 @transaction.atomic
@@ -262,7 +271,7 @@ def void_pay_period(*, user, pay_period, reason: str) -> LaborPayPeriod:
     period = _lock_period(pay_period)
     ensure_facility_access(user, period.facility)
     if period.status != LaborPayPeriod.Status.OPEN:
-        raise ValidationError(["Only an open pay period can be voided."])
+        raise ValidationError(["Only an open pay period can be deleted."])
     now = timezone.now()
     period.attendance.update(
         is_deleted=True, deleted_at=now, void_reason=reason, updated_by=user, updated_at=now

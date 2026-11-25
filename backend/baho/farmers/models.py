@@ -4,10 +4,11 @@ from django.db import models
 from django.db.models import Q
 
 from baho.core.models import AuditedModel
+from baho.core.names import PersonNameMixin
 from baho.organization.models import location_field
 
 
-class Farmer(AuditedModel):
+class Farmer(PersonNameMixin, AuditedModel):
     class Gender(models.TextChoices):
         MALE = "M", "Male"
         FEMALE = "F", "Female"
@@ -26,7 +27,7 @@ class Farmer(AuditedModel):
         null=True, blank=True, help_text="Number of people in the farmer's household."
     )
     land_area_ha = models.DecimalField(
-        max_digits=6,
+        max_digits=10,
         decimal_places=3,
         null=True,
         blank=True,
