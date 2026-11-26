@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Badge, Button, Card, Group, Modal, NumberInput, Stack, Text } from '@mantine/core';
-import { IconClipboardCheck, IconPlus } from '@tabler/icons-react';
+import { Alert, Badge, Button, Card, Group, Modal, NumberInput, Stack, Text } from '@mantine/core';
+import { IconClipboardCheck, IconLock, IconPlus } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
 import { DateRangeFilter } from '../../components/DateRangeFilter';
 import { EmptyState, ErrorMessage } from '../../components/Feedback';
@@ -9,7 +9,7 @@ import { PageSkeleton } from '../../components/Skeletons';
 import { StationSelect } from '../../components/StationSelect';
 import { VoidButton } from '../../components/VoidButton';
 import { api } from '../../lib/api';
-import { canWrite } from '../../lib/access';
+import { canWrite, isAdmin } from '../../lib/access';
 import { useAuth } from '../../lib/authContext';
 import { fetchAllPages } from '../../lib/exportTable';
 import { ANY_DATE, kg, num, pct, type DateRange } from '../../lib/format';
@@ -27,7 +27,7 @@ const statusLabel: Record<ProcessingLot['status'], string> = { IN_PROGRESS: 'In 
 const PAGE_SIZE = 25;
 
 /** Full status label, never squeezed into "Sort…" by a narrow column. */
-function StatusBadge({ status }: { status: ProcessingLot['status'] }) {
+export function StatusBadge({ status }: { status: ProcessingLot['status'] }) {
   return (
     <Badge color={statusColor[status]} variant="light" styles={{ root: { minWidth: 'max-content', overflow: 'visible' }, label: { overflow: 'visible' } }}>
       {statusLabel[status]}
@@ -146,6 +146,7 @@ export function ProcessingLotForm() {
       {actualsLot && (
         <ActualsModal
           lot={actualsLot}
+          canChangeSaved={isAdmin(user)}
           onClose={() => setActualsLot(null)}
           onSaved={(lot) => {
             setActualsLot(null);
@@ -159,7 +160,24 @@ export function ProcessingLotForm() {
   );
 }
 
-function ActualsModal({ lot, onClose, onSaved }: { lot: ProcessingLot; onClose: () => void; onSaved: (lot: ProcessingLot) => void }) {
+/**
+ * Actual sorted kg per grade. Station staff fill in grades that have no actual
+ * yet; an actual already saved is locked for them and only an administrator
+ * can change it (the server enforces the same rule).
+ */
+function ActualsModal({
+  lot,
+  canChangeSaved,
+  onClose,
+  onSaved,
+}: {
+  lot: ProcessingLot;
+  canChangeSaved: boolean;
+  onClose: () => void;
+  onSaved: (lot: ProcessingLot) => void;
+}) {
+  const locked = (r: ProcessingLot['results'][number]) => !canChangeSaved && r.actual_kg !== null;
+  const allLocked = lot.results.every(locked);
   const [values, setValues] = useState<Record<string, number | ''>>(() =>
     Object.fromEntries(lot.results.map((r) => [r.grade, r.actual_kg === null ? '' : num(r.actual_kg)])),
   );
@@ -179,6 +197,11 @@ function ActualsModal({ lot, onClose, onSaved }: { lot: ProcessingLot; onClose: 
     <Modal opened onClose={onClose} title={`Actual sorted quantities: ${lot.lot_number}`}>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">Cherry input {kg(lot.cherry_input_kg)} kg · {lot.process_label}</Text>
+        {lot.results.some(locked) && (
+          <Alert variant="light" color="gray" icon={<IconLock size={16} />} p="xs">
+            Actuals already saved are locked. Only an administrator can change them: ask your Baho administrator if one is wrong.
+          </Alert>
+        )}
         {lot.results.map((r) => (
           <Group key={r.grade} grow>
             <Text size="sm" fw={600}>
@@ -190,11 +213,13 @@ function ActualsModal({ lot, onClose, onSaved }: { lot: ProcessingLot; onClose: 
               onChange={(v) => setValues((prev) => ({ ...prev, [r.grade]: v === '' ? '' : Number(v) }))}
               min={0}
               hideControls
+              disabled={locked(r)}
+              rightSection={locked(r) ? <IconLock size={14} /> : undefined}
             />
           </Group>
         ))}
         <ErrorMessage>{submit.error}</ErrorMessage>
-        <Button onClick={save} loading={submit.saving}>Save actuals</Button>
+        <Button onClick={save} loading={submit.saving} disabled={allLocked}>Save actuals</Button>
       </Stack>
     </Modal>
   );

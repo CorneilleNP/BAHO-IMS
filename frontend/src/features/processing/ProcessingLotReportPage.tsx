@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Card, Group, Select, SimpleGrid, Stack, Text } from '@mantine/core';
-import { IconClipboardList, IconDroplet, IconPercentage, IconScale } from '@tabler/icons-react';
+import { Card, Group, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { useDebouncedValue } from '@mantine/hooks';
+import { IconClipboardList, IconDroplet, IconPercentage, IconScale, IconSearch } from '@tabler/icons-react';
 import { ChartCard } from '../../components/ChartCard';
 import { DataTable } from '../../components/DataTable';
 import { DateRangeFilter } from '../../components/DateRangeFilter';
@@ -11,8 +12,15 @@ import { ProcessPicker } from '../../components/ProcessPicker';
 import { ANY_DATE, changeLabel, kgWhole, num, pct, type DateRange } from '../../lib/format';
 import { useMyStations } from '../../lib/stations';
 import type { Decimal, LotSummary } from '../../lib/types';
-import { query, useApi } from '../../lib/useApi';
-import { VarianceKg, VariancePct, type Variance } from './variance';
+import { fetchAllPages } from '../../lib/exportTable';
+import type { ProcessingLot } from '../../lib/types';
+import { query, useApi, useList } from '../../lib/useApi';
+import { LotDetailDrawer } from './LotDetailDrawer';
+import { StatusBadge } from './ProcessingLotForm';
+import { VarianceKg, VariancePct, type LotWithVariance, type Variance } from './variance';
+
+const LOTS_PAGE_SIZE = 25;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Estimate vs actual compares only grade results with an actual recorded (`compared_estimated_kg`). */
 type GradeVariance = Variance & { compared_estimated_kg: Decimal };
@@ -32,6 +40,11 @@ export function ProcessingLotReportPage() {
   const stations = useMyStations();
   const [station, setStation] = useState<string | null>(null);
   const [process, setProcess] = useState<{ process: string | null; subProcess: string | null }>({ process: null, subProcess: null });
+  // Lot number (any part, any case) or the lot's id; narrows every figure and the lots table.
+  const [lotSearch, setLotSearch] = useState('');
+  const [lot] = useDebouncedValue(lotSearch.trim(), 350);
+  const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const summary = useApi<LotReport>(
     `/reporting/cws/lots/${query({
       date_from: range[0],
@@ -39,8 +52,20 @@ export function ProcessingLotReportPage() {
       station,
       process: process.process,
       sub_process: process.subProcess,
+      lot,
     })}`,
   );
+  const lotsQuery = `/processing/lots/${query({
+    facility: station,
+    process_type__process: process.process,
+    process_type__sub_process_ref: process.subProcess,
+    lot_date__gte: range[0],
+    lot_date__lte: range[1],
+    ...(UUID_RE.test(lot) ? { id: lot } : { search: lot }),
+    ordering: '-lot_date',
+  })}`;
+  const lotList = useList<ProcessingLot>(`${lotsQuery}${lotsQuery.includes('?') ? '&' : '?'}page=${page}&page_size=${LOTS_PAGE_SIZE}`);
+  const detail = useApi<LotWithVariance>(detailId ? `/processing/lots/${detailId}/` : null);
   const s = summary.data;
   const kpiLoading = summary.loading && !s;
 
@@ -58,13 +83,21 @@ export function ProcessingLotReportPage() {
             placeholder={stations.loading ? 'Loading…' : stations.options.length > 1 ? 'All stations' : 'My station'}
             data={stations.options}
             value={station}
-            onChange={setStation}
+            onChange={(v) => { setStation(v); setPage(1); }}
             clearable
             searchable
             w={220}
           />
-          <ProcessPicker process={process.process} subProcess={process.subProcess} onChange={setProcess} required={false} />
-          <DateRangeFilter value={range} onChange={setRange} label="Lot date" />
+          <TextInput
+            label="Lot ID / number"
+            placeholder="e.g. GTK-FW-014"
+            leftSection={<IconSearch size={16} />}
+            value={lotSearch}
+            onChange={(e) => { setLotSearch(e.currentTarget.value); setPage(1); }}
+            w={220}
+          />
+          <ProcessPicker process={process.process} subProcess={process.subProcess} onChange={(v) => { setProcess(v); setPage(1); }} required={false} />
+          <DateRangeFilter value={range} onChange={(v) => { setRange(v); setPage(1); }} label="Lot date" />
         </Group>
       </Card>
 
@@ -125,6 +158,43 @@ export function ProcessingLotReportPage() {
           ]}
         />
       </Card>
+
+      <Card p="md">
+        <Text fw={600}>Lots</Text>
+        <Text size="xs" c="dimmed" mb="sm">
+          The lots behind the figures above (same filters). Click a lot to see its estimate vs actual by grade.
+        </Text>
+        <DataTable
+          rows={lotList.items}
+          rowKey={(l) => l.id}
+          loading={lotList.loading}
+          error={lotList.error}
+          minWidth={960}
+          onRowClick={(l) => setDetailId(l.id)}
+          pagination={{ page, pageSize: LOTS_PAGE_SIZE, total: lotList.total, onChange: setPage }}
+          empty={{ title: lot ? `No lot matches “${lot}”` : 'No lots', hint: lot ? 'Check the lot number or clear the other filters.' : undefined }}
+          exportName="processing-lots"
+          fetchAll={() => fetchAllPages<ProcessingLot>(lotsQuery)}
+          columns={[
+            { key: 'lot', header: 'Lot', mono: true, mobile: 'title', render: (l) => l.lot_number },
+            { key: 'date', header: 'Date', nowrap: true, render: (l) => l.lot_date },
+            { key: 'station', header: 'Station', render: (l) => l.facility_name },
+            { key: 'process', header: 'Process', mobile: 'subtitle', render: (l) => l.process_label },
+            { key: 'cherry', header: 'Cherry (kg)', align: 'right', render: (l) => kgWhole(l.cherry_input_kg), exportValue: (l) => l.cherry_input_kg },
+            { key: 'est', header: 'Estimated (kg)', align: 'right', render: (l) => kgWhole(l.total_estimated_kg), exportValue: (l) => l.total_estimated_kg },
+            { key: 'act', header: 'Actual (kg)', align: 'right', render: (l) => (l.total_actual_kg === null ? '—' : kgWhole(l.total_actual_kg)), exportValue: (l) => l.total_actual_kg },
+            { key: 'out', header: 'Out-turn %', align: 'right', render: (l) => (l.total_outturn_pct === null ? '—' : pct(l.total_outturn_pct, 2)), exportValue: (l) => l.total_outturn_pct },
+            { key: 'status', header: 'Status', nowrap: true, render: (l) => <StatusBadge status={l.status} />, exportValue: (l) => l.status },
+          ]}
+        />
+      </Card>
+
+      <LotDetailDrawer
+        lotId={detailId}
+        detail={detail}
+        statusBadge={(l) => <StatusBadge status={l.status} />}
+        onClose={() => setDetailId(null)}
+      />
 
       <SimpleGrid cols={{ base: 1, lg: 2 }}>
         <ChartCard title="Cherry input by station (kg)" rows={s?.by_station ?? []} loading={kpiLoading} color="coffee.6" />

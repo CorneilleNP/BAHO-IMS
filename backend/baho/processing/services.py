@@ -4,8 +4,9 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from baho.core.access import RoleCode, get_user_access
 from baho.core.dates import crop_year_for
 from baho.core.numbering import next_sequence
 from baho.core.permissions import ensure_facility_access
@@ -175,17 +176,35 @@ def create_lot(
     return lot
 
 
+SAVED_ACTUAL_LOCKED = (
+    "Actuals already saved for {grades} can only be changed by an administrator. "
+    "Ask your Baho administrator to correct them."
+)
+
+
 @transaction.atomic
 def record_actuals(*, user, lot: ProcessingLot, actuals) -> ProcessingLot:
-    """Set actual sorted kg per grade: {grade_id: Decimal kg or None}."""
+    """Set actual sorted kg per grade: {grade_id: Decimal kg or None}.
+
+    Station staff (clerks, managers) may fill in grades that have no actual
+    yet; changing or clearing an actual that is already saved needs ADMIN.
+    """
     ensure_facility_access(user, lot.facility)
     if lot.status == ProcessingLot.Status.CLOSED:
         raise ValidationError(["This lot is closed and can no longer be changed."])
-    results = {str(r.grade_id): r for r in lot.results.all()}
+    results = {str(r.grade_id): r for r in lot.results.select_related("grade")}
+    is_admin = get_user_access(user).has_any_role(RoleCode.ADMIN) or user.is_superuser
+    changes = []
     for grade_id, kg in actuals.items():
         result = results.get(str(grade_id))
         if result is None:
             raise ValidationError({"actuals": ["Unknown grade for this lot."]})
+        changes.append((result, kg))
+    changes = [(result, kg) for result, kg in changes if kg != result.actual_kg]
+    locked = [result.grade.name for result, _ in changes if result.actual_kg is not None]
+    if locked and not is_admin:
+        raise PermissionDenied(SAVED_ACTUAL_LOCKED.format(grades=", ".join(locked)))
+    for result, kg in changes:
         result.actual_kg = kg
         result.save(update_fields=["actual_kg", "updated_at"])
     lot.updated_by = user

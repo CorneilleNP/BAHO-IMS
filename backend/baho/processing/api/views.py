@@ -78,8 +78,11 @@ class ProcessingLotViewSet(
     read_roles = CWS_READ_ROLES
     write_roles = CWS_WRITE_ROLES
     filterset_fields = {
+        "id": ["exact"],
         "facility": ["exact"],
         "process_type": ["exact"],
+        "process_type__process": ["exact"],
+        "process_type__sub_process_ref": ["exact"],
         "status": ["exact"],
         "lot_date": ["exact", "gte", "lte"],
     }

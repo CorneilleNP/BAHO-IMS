@@ -1,5 +1,6 @@
 """Dashboard figures, always calculated from the stored records (nothing cached)."""
 
+import uuid
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -564,6 +565,17 @@ def recent_farmers(*, facility_ids: frozenset | None = None, limit: int = 10) ->
     ]
 
 
+def lots_matching(lots, text: str):
+    """Lots whose number contains `text` (any case), or the lot with that id."""
+    text = (text or "").strip()
+    if not text:
+        return lots
+    try:
+        return lots.filter(Q(pk=uuid.UUID(text)) | Q(lot_number__icontains=text))
+    except ValueError:
+        return lots.filter(lot_number__icontains=text)
+
+
 def _lot_scope(
     lots,
     *,
@@ -602,6 +614,7 @@ def lot_summary(
     sub_process: str = "",
     date_from: date | None = None,
     date_to: date | None = None,
+    lot: str = "",
 ) -> dict:
     """Processing Lots dashboard: cherry input, estimated vs actual sorted kg,
     out-turn %, by grade / station / process. Admin/HQ roles see every station's
@@ -618,6 +631,7 @@ def lot_summary(
     }
     lots = _lot_scope(ProcessingLot.objects.all(), **scope)
     lots = _in_range(lots, "lot_date", date_from, date_to)
+    lots = lots_matching(lots, lot)
     results = LotGradeResult.objects.filter(lot__in=lots)
     measured = Q(actual_kg__isnull=False)
 

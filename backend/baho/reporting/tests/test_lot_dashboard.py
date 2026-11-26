@@ -219,3 +219,28 @@ def test_clerk_cannot_see_another_station_through_the_station_filter(
     assert res.data["cherry_input_kg"] == 0
     assert res.data["by_station"] == []
     assert res.data["cws_stock"] == []
+
+
+def test_search_by_lot_number_or_id_narrows_the_report(api, gitoki_clerk, gitoki):
+    login(api, gitoki_clerk)
+    process = register_process(api, gitoki, "FW")
+    first = api.post(
+        LOTS,
+        {"process_type": process["id"], "cherry_input_kg": "300", "lot_number": "GTK-FW-014"},
+        format="json",
+    ).data
+    new_lot(api, process, "100")
+
+    assert api.get(URL).data["lots"] == 2
+    by_number = api.get(URL, {"lot": "fw-014"}).data  # part of the number, any case
+    assert by_number["lots"] == 1
+    assert Decimal(by_number["cherry_input_kg"]) == Decimal("300")
+    by_id = api.get(URL, {"lot": first["id"]}).data
+    assert by_id["lots"] == 1
+    assert api.get(URL, {"lot": "nothing-like-this"}).data["lots"] == 0
+
+    # The lots list behind the report table: same search, plus the catalogue process.
+    fw = Process.objects.get(code="FW")
+    listed = api.get(LOTS, {"search": "FW-014", "process_type__process": str(fw.id)}).data
+    assert [lot["lot_number"] for lot in listed["results"]] == ["GTK-FW-014"]
+    assert api.get(LOTS, {"id": first["id"]}).data["count"] == 1

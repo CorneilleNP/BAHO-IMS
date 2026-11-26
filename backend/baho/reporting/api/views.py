@@ -37,6 +37,7 @@ class _LotFilters(serializers.Serializer):
     station = serializers.UUIDField(required=False, allow_null=True)
     process = serializers.UUIDField(required=False, allow_null=True)
     sub_process = serializers.UUIDField(required=False, allow_null=True)
+    lot = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
 
 def _filters(request) -> dict:
@@ -192,6 +193,7 @@ class LotSummaryView(APIView):
             OpenApiParameter(
                 "sub_process", OpenApiTypes.UUID, description="Catalogue sub-process id"
             ),
+            OpenApiParameter("lot", str, description="Lot number (contains) or lot id"),
         ],
         responses=OpenApiTypes.OBJECT,
     )
@@ -209,6 +211,7 @@ class LotSummaryView(APIView):
                 sub_process=str(f["sub_process"]) if f.get("sub_process") else "",
                 date_from=f.get("date_from"),
                 date_to=f.get("date_to"),
+                lot=f.get("lot", ""),
             )
         )
 

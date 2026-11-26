@@ -202,3 +202,66 @@ def test_lot_without_actuals_has_no_variance(api, gitoki_clerk, gitoki):
         "variance_pct": None,
     }
     assert all(r["variance_kg"] is None for r in res.data["results"])
+
+
+def _lot_with_a1_actual(api, user, facility):
+    login(api, user)
+    process = register_fw(api, facility).data
+    lot = api.post(LOTS, {"process_type": process["id"], "cherry_input_kg": "355"}, format="json")
+    grades = {g["code"]: g["id"] for g in process["grades"]}
+    res = api.post(
+        f"{LOTS}{lot.data['id']}/actuals/",
+        {"actuals": [{"grade": grades["A1"], "actual_kg": "50"}]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    return lot.data["id"], grades
+
+
+@pytest.mark.parametrize("role", ["CWS_MANAGER", "CWS_CLERK"])
+def test_station_staff_cannot_change_saved_actuals(api, gitoki, role):
+    from tests.factories import UserFactory, assign
+
+    user = UserFactory(email=f"{role.lower()}@test.local")
+    assign(user, role, gitoki)
+    lot_id, grades = _lot_with_a1_actual(api, user, gitoki)
+    url = f"{LOTS}{lot_id}/actuals/"
+
+    changed = api.post(
+        url, {"actuals": [{"grade": grades["A1"], "actual_kg": "55"}]}, format="json"
+    )
+    assert changed.status_code == 403
+    assert "administrator" in str(changed.data["detail"])
+    cleared = api.post(
+        url, {"actuals": [{"grade": grades["A1"], "actual_kg": None}]}, format="json"
+    )
+    assert cleared.status_code == 403
+
+    # Re-sending the saved value unchanged and filling a missing grade is fine.
+    res = api.post(
+        url,
+        {
+            "actuals": [
+                {"grade": grades["A1"], "actual_kg": "50.00"},
+                {"grade": grades["A2"], "actual_kg": "12"},
+            ]
+        },
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    rows = {r["grade_code"]: r for r in res.data["results"]}
+    assert Decimal(rows["A1"]["actual_kg"]) == Decimal("50")
+    assert Decimal(rows["A2"]["actual_kg"]) == Decimal("12")
+
+
+def test_admin_can_correct_saved_actuals(api, gitoki_clerk, baho_admin, gitoki):
+    lot_id, grades = _lot_with_a1_actual(api, gitoki_clerk, gitoki)
+    login(api, baho_admin)
+    res = api.post(
+        f"{LOTS}{lot_id}/actuals/",
+        {"actuals": [{"grade": grades["A1"], "actual_kg": "55"}]},
+        format="json",
+    )
+    assert res.status_code == 200, res.data
+    rows = {r["grade_code"]: r for r in res.data["results"]}
+    assert Decimal(rows["A1"]["actual_kg"]) == Decimal("55")
