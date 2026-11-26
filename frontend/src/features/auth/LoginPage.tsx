@@ -166,7 +166,7 @@ function ServerSetting() {
       setEditing(false);
       setError(null);
     } catch {
-      setError('Enter a server address like baho.izere.work');
+      setError('Enter a server address like ims.bahocoffee.com');
     }
   };
 

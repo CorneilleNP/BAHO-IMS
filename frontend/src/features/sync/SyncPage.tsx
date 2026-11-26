@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Badge, Button, Card, Group, Stack, Text } from '@mantine/core';
 import { IconCloudDownload, IconRefresh, IconTrash } from '@tabler/icons-react';
 import { DataTable } from '../../components/DataTable';
+import { InstallAppCard } from '../../components/InstallAppCard';
 import { PageHeader } from '../../components/PageHeader';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/authContext';
@@ -121,6 +122,8 @@ export function SyncPage() {
           {isNative && ` · server ${serverUrl()}`}
         </Text>
       </Group>
+
+      <InstallAppCard />
 
       {status.failed > 0 && (
         <Alert color="red" variant="light" title="Some saves were refused by the server">

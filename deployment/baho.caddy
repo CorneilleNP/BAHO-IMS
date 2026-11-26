@@ -1,4 +1,4 @@
-baho.izere.work {
+ims.bahocoffee.com {
     encode zstd gzip
     reverse_proxy baho-web:80
 }

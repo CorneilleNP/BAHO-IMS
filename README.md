@@ -128,11 +128,30 @@ project and its config (see [mobile/README.md](mobile/README.md)).
 - The app can be closed and reopened offline: it keeps working as the last
   signed-in user. Signing out clears the saved data (not the waiting saves).
 
-**Server address**: the app connects to `https://baho.izere.work` by default.
+**Server address**: the app connects to `https://ims.bahocoffee.com` by default.
 On the login screen, *Server: … Change* points it elsewhere (e.g.
 `http://192.168.1.20:8000`, your PC on the office Wi-Fi, for testing).
 The server must run this version of the backend (mobile sign-in, CORS for
 `https://localhost`, idempotent writes).
+
+### Install the website as an app (PWA)
+
+The website at `https://ims.bahocoffee.com` can be installed on any phone or
+computer without the APK: Chrome/Edge show **Install app** (on the section
+chooser and the Sync page); on iPhone/iPad use Safari **Share → Add to Home
+Screen**. The installed app opens full screen and starts without internet.
+
+- `frontend/public/manifest.webmanifest` + `pwa-*.png` icons describe the app.
+- `frontend/pwa/sw.js` is the service worker template; the build
+  (`vite.config.ts`) writes `dist/sw.js` with the list of this build's files.
+  It only keeps the app's own files; data offline is still `lib/offline`
+  (IndexedDB), and `/api/` and `/static/` are never cached by it.
+- Pages come from the server first (6 s timeout), so a new release reaches
+  people on their next online visit; old cached files are dropped then.
+- `src/lib/pwa.ts` registers it (production builds only, never in the APK) and
+  handles the install button.
+- Offline data is kept per web address: saves waiting under an old address
+  must be synced there before switching to the new one.
 
 ### Building the APK (Windows)
 

@@ -9,7 +9,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 
-export const DEFAULT_SERVER = 'https://baho.izere.work';
+export const DEFAULT_SERVER = 'https://ims.bahocoffee.com';
 const SERVER_KEY = 'baho.server';
 
 export const isNative = Capacitor.isNativePlatform();
@@ -27,7 +27,7 @@ export function serverUrl(): string {
   return server;
 }
 
-/** Normalise and save the server address ("baho.izere.work" -> "https://baho.izere.work"). */
+/** Normalise and save the server address ("ims.bahocoffee.com" -> "https://ims.bahocoffee.com"). */
 export async function setServerUrl(value: string): Promise<string> {
   let url = value.trim().replace(/\/+$/, '');
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;

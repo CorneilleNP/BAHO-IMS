@@ -50,6 +50,7 @@ import { FarmersPage } from './features/reception/FarmersPage';
 import { SyncPage } from './features/sync/SyncPage';
 import { TrashPage } from './features/trash/TrashPage';
 import { SyncIndicator } from './components/SyncIndicator';
+import { InstallAppCard } from './components/InstallAppCard';
 import { MobileAppBar, MobileMoreSheet, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
 import { confirmAction } from './lib/confirm';
 import { getSyncStatus } from './lib/offline/store';
@@ -199,6 +200,7 @@ function DashboardLandingPage() {
           </UnstyledButton>
         ))}
       </SimpleGrid>
+      <InstallAppCard dismissible />
     </Stack>
   );
 }

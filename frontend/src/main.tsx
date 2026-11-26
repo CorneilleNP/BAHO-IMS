@@ -14,7 +14,10 @@ import App from './App.tsx'
 import { AuthProvider } from './lib/auth'
 import { theme } from './theme'
 import { initPlatform } from './lib/platform'
+import { initPwa } from './lib/pwa'
 
+// Before React renders: catch the browser's "install app" event (it fires early).
+initPwa()
 // Load the saved server address (Android app) before anything calls the API.
 await initPlatform()
 

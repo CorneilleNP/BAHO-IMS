@@ -30,7 +30,7 @@ directory separate from any existing project, for example
 4. Copy `.env.deploy.example` to `.env` in the deployment directory and set
    the unique project name and strong, unique secrets. Generate secrets with
    `openssl rand -hex 32`.
-5. Point `baho.izere.work` DNS to the VPS and set the matching host and HTTPS
+5. Point `ims.bahocoffee.com` DNS to the VPS and set the matching host and HTTPS
    origin in `.env`.
 6. Add `deployment/baho.caddy` as a new site file in `/opt/edge/sites/`, then
    reload Caddy. Do not edit the existing site files or proxy Compose project.
