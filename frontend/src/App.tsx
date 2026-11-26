@@ -11,6 +11,7 @@ import {
   IconCloudUpload,
   IconDroplet,
   IconFileImport,
+  IconFileSpreadsheet,
   IconKey,
   IconTrash,
   IconLayoutGrid,
@@ -49,6 +50,7 @@ import { LaborPage } from './features/labor/LaborPage';
 import { FarmersPage } from './features/reception/FarmersPage';
 import { SyncPage } from './features/sync/SyncPage';
 import { TrashPage } from './features/trash/TrashPage';
+import { DetailedReportsPage } from './features/reports/DetailedReportsPage';
 import { SyncIndicator } from './components/SyncIndicator';
 import { InstallAppCard } from './components/InstallAppCard';
 import { MobileAppBar, MobileMoreSheet, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
@@ -73,6 +75,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
       { to: '/drymill/processes', label: 'Processes', icon: IconSitemap },
       { to: '/drymill/processing', label: 'Parchment Processing', icon: IconDroplet },
       { to: '/drymill/export', label: 'Export Updates', icon: IconShip },
+      { to: '/drymill/reports', label: 'Detailed Reports', icon: IconFileSpreadsheet },
     ],
   },
   {
@@ -84,6 +87,7 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
       { to: '/processing', label: 'Processing Lots', icon: IconUsers },
       { to: '/cws/lots-report', label: 'Lots Report', icon: IconClipboardList },
       { to: '/cws/transfers', label: 'Transfers to Dry Mill', icon: IconTruckDelivery },
+      { to: '/cws/reports', label: 'Detailed Reports', icon: IconFileSpreadsheet },
       { to: '/cws/labor', label: 'Casual Labor', icon: IconUsers },
       { to: '/cws/process', label: 'Register Process', icon: IconUsers },
       { to: '/cws/stations', label: 'Register CWS', icon: IconBuildingWarehouse, adminOnly: true },
@@ -438,6 +442,8 @@ function App() {
           <Route path="/cws/transfers" element={<CwsTransfersPage />} />
           <Route path="/cws/process" element={<ProcessOnCwsPage />} />
           <Route path="/cws/stations" element={<CwsStationsPage />} />
+          <Route path="/cws/reports" element={<DetailedReportsPage section="cws" />} />
+          <Route path="/drymill/reports" element={<DetailedReportsPage section="drymill" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell.Main>
