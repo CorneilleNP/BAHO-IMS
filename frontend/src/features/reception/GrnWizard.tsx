@@ -5,7 +5,7 @@ import { FormWizard } from '../../components/FormWizard';
 import { api } from '../../lib/api';
 import { kg, num, rwf, today } from '../../lib/format';
 import { toast } from '../../lib/toast';
-import type { CherryGrade, CherryReceipt, Facility, Farmer, PaymentMethod } from '../../lib/types';
+import type { CherryGrade, CherryReceipt, Facility, Farmer, PaymentMethod, PaymentStatus } from '../../lib/types';
 import { query, useList } from '../../lib/useApi';
 import { useDraft } from '../../lib/useDraft';
 import { useSubmit } from '../../lib/useSubmit';
@@ -23,8 +23,10 @@ interface GrnForm {
   farmer: string | null;
   received_on: string;
   lines: Record<CherryGrade, Line>;
-  payment_status: 'UNPAID' | 'PAID';
+  payment_status: PaymentStatus;
   payment_method: PaymentMethod;
+  /** Paid at weighing when only part of the amount is paid now. */
+  amount_paid: Num;
 }
 
 const GRADES: Array<{ grade: CherryGrade; label: string }> = [
@@ -44,6 +46,7 @@ const blank = (): GrnForm => ({
   lines: { GOOD: emptyLine(), FLOAT: emptyLine() },
   payment_status: 'UNPAID',
   payment_method: 'CASH',
+  amount_paid: '',
 });
 
 function fromReceipt(r: CherryReceipt): GrnForm {
@@ -61,7 +64,8 @@ function fromReceipt(r: CherryReceipt): GrnForm {
     received_on: r.received_on,
     lines,
     payment_status: r.payment_status,
-    payment_method: r.payment_method,
+    payment_method: r.payment_method || 'CASH',
+    amount_paid: num(r.amount_paid),
   };
 }
 
@@ -92,6 +96,8 @@ export function GrnWizard({ station, receipt, onClose, onSaved }: Props) {
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
   const totalAmount = rows.reduce((s, r) => s + r.amount + r.extras, 0);
   const farmer = farmers.items.find((f) => f.id === form.farmer);
+  const paidNow = form.payment_status === 'PAID' ? totalAmount : form.payment_status === 'PARTIAL' ? num(form.amount_paid) : 0;
+  const owed = Math.max(totalAmount - paidNow, 0);
 
   const setLine = (grade: CherryGrade, field: keyof Line, value: number | string) =>
     draft.setValue((prev) => ({ ...prev, lines: { ...prev.lines, [grade]: { ...prev.lines[grade], [field]: value === '' ? '' : Number(value) } } }));
@@ -161,35 +167,67 @@ export function GrnWizard({ station, receipt, onClose, onSaved }: Props) {
     },
     {
       label: 'Payment',
-      content: (
-        <Group align="flex-end" gap="md">
+      validate: () =>
+        editing || form.payment_status !== 'PARTIAL'
+          ? null
+          : num(form.amount_paid) <= 0
+            ? 'Enter the amount paid now.'
+            : num(form.amount_paid) >= totalAmount
+              ? 'That is the full amount: choose "Paid in full".'
+              : null,
+      content: editing ? (
+        <Text size="sm" c="dimmed">
+          Paid so far: <strong>{rwf(receipt!.amount_paid)}</strong>. Payments are recorded with <strong>Record payment</strong> on the GRN
+          list (each with its date), not here.
+        </Text>
+      ) : (
+        <Stack gap="sm">
           <div>
             <Text size="sm" fw={500} mb={4}>Payment</Text>
             <SegmentedControl
               value={form.payment_status}
-              onChange={(v) => draft.set('payment_status')(v as GrnForm['payment_status'])}
+              onChange={(v) => draft.set('payment_status')(v as PaymentStatus)}
               data={[
-                { value: 'UNPAID', label: 'Not paid yet' },
-                { value: 'PAID', label: 'Paid now' },
+                { value: 'UNPAID', label: 'Not paid' },
+                { value: 'PARTIAL', label: 'Partly paid' },
+                { value: 'PAID', label: 'Paid in full' },
               ]}
             />
           </div>
-          {form.payment_status === 'PAID' && (
-            <Select
-              label="Paid by"
-              data={[
-                { value: 'CASH', label: 'Cash' },
-                { value: 'BANK', label: 'Bank' },
-                { value: 'MOBILE_MONEY', label: 'Mobile money' },
-              ]}
-              value={form.payment_method}
-              onChange={(v) => draft.set('payment_method')((v ?? 'CASH') as PaymentMethod)}
-              allowDeselect={false}
-              w={180}
-            />
-          )}
-          <Text size="sm">Amount due: <strong>{rwf(totalAmount)}</strong></Text>
-        </Group>
+          <Group align="flex-end" gap="md">
+            {form.payment_status === 'PARTIAL' && (
+              <NumberInput
+                label="Amount paid now (RWF)"
+                value={form.amount_paid}
+                onChange={(v) => draft.set('amount_paid')(v === '' ? '' : Number(v))}
+                min={0}
+                max={totalAmount}
+                hideControls
+                thousandSeparator=","
+                w={200}
+              />
+            )}
+            {form.payment_status !== 'UNPAID' && (
+              <Select
+                label="Paid by"
+                data={[
+                  { value: 'CASH', label: 'Cash' },
+                  { value: 'BANK', label: 'Bank' },
+                  { value: 'MOBILE_MONEY', label: 'Mobile money' },
+                ]}
+                value={form.payment_method}
+                onChange={(v) => draft.set('payment_method')((v ?? 'CASH') as PaymentMethod)}
+                allowDeselect={false}
+                w={180}
+              />
+            )}
+          </Group>
+          <SimpleGrid cols={{ base: 1, xs: 3 }} maw={560}>
+            <Fig label="Amount due" value={rwf(totalAmount)} />
+            <Fig label="Paid now" value={rwf(paidNow)} />
+            <Fig label="Still owed to the farmer" value={rwf(owed)} />
+          </SimpleGrid>
+        </Stack>
       ),
     },
   ];
@@ -204,19 +242,30 @@ export function GrnWizard({ station, receipt, onClose, onSaved }: Props) {
       </SimpleGrid>
       <Text size="sm" c="dimmed">
         {rows.filter((r) => r.qty > 0).map((r) => `${r.label}: ${kg(r.qty)} kg × ${rwf(form.lines[r.grade].pricePerKg)}`).join(' · ')} ·{' '}
-        {form.payment_status === 'PAID' ? `paid by ${form.payment_method.replace('_', ' ').toLowerCase()}` : 'not paid yet'}
+        {editing
+          ? `paid so far ${rwf(receipt!.amount_paid)}`
+          : form.payment_status === 'UNPAID'
+            ? 'not paid yet'
+            : `${form.payment_status === 'PAID' ? 'paid in full' : `${rwf(paidNow)} paid now, ${rwf(owed)} still owed`} by ${form.payment_method.replace('_', ' ').toLowerCase()}`}
       </Text>
       <Text size="xs" c="dimmed">{editing ? `GRN ${receipt!.grn_number} (number never changes).` : 'The GRN number is assigned automatically when saved.'}</Text>
     </Stack>
   );
 
   async function save() {
+    // Payments are never changed by editing a GRN (they have their own records).
+    const payment = editing
+      ? {}
+      : {
+          payment_status: form.payment_status,
+          payment_method: form.payment_status === 'UNPAID' ? '' : form.payment_method,
+          amount_paid: form.payment_status === 'PARTIAL' ? num(form.amount_paid) : null,
+        };
     const body = {
       facility: station.id,
       farmer: form.farmer,
       received_on: form.received_on,
-      payment_status: form.payment_status,
-      payment_method: form.payment_status === 'PAID' ? form.payment_method : '',
+      ...payment,
       lines: rows
         .filter((r) => r.qty > 0)
         .map((r) => ({

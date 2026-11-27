@@ -85,3 +85,9 @@ DRYMILL_READ_ROLES = (
 )
 DRYMILL_WRITE_ROLES = (RoleCode.ADMIN, RoleCode.HQ_DRY_MILL_OPERATOR)
 EXPORT_WRITE_ROLES = (RoleCode.ADMIN, RoleCode.HQ_EXPORT_MANAGER)
+
+# Finance: station managers see and record their own station's spending; the
+# HQ roles see every station and alone assign funds or correct entries.
+FINANCE_READ_ROLES = (RoleCode.ADMIN, RoleCode.HQ_FINANCE, RoleCode.CWS_MANAGER)
+EXPENSE_WRITE_ROLES = (RoleCode.ADMIN, RoleCode.HQ_FINANCE, RoleCode.CWS_MANAGER)
+FINANCE_ADMIN_ROLES = (RoleCode.ADMIN, RoleCode.HQ_FINANCE)

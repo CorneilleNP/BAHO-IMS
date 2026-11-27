@@ -19,7 +19,7 @@ from baho.processing.models import Process, ProcessingLot
 from baho.reception.models import CherryReceipt
 from baho.sales.models import Client, ExportShipment
 from baho.sales.services import create_shipment, green_balance
-from tests.factories import produce_green, stock_receipt
+from tests.factories import UserFactory, assign, produce_green, stock_receipt
 from tests.helpers import login
 
 pytestmark = pytest.mark.django_db
@@ -56,6 +56,14 @@ def make_grn(api, user, facility, kg="10"):
 def void(api, path, reason="Entered by mistake"):
     res = api.post(f"{path}void/", {"reason": reason})
     assert res.status_code == 200, res.data
+
+
+def void_grn(api, grn, reason="Entered by mistake"):
+    """Only an administrator may delete a saved GRN."""
+    admin = UserFactory(email=f"grn-admin-{grn['id'][:8]}@test.local")
+    assign(admin, "ADMIN")
+    login(api, admin)
+    void(api, f"{RECEIPTS}{grn['id']}/", reason)
 
 
 def make_lot(api, clerk, facility):
@@ -100,14 +108,14 @@ def everything_deleted(api, baho_admin, gitoki_clerk, drymill_operator, gitoki, 
     from tests.factories import UserFactory, assign
 
     grn = make_grn(api, gitoki_clerk, gitoki)
-    void(api, f"{RECEIPTS}{grn['id']}/", "Entered twice")
+    void_grn(api, grn, "Entered twice")
     lot = make_lot(api, gitoki_clerk, gitoki)
     void(api, f"/api/v1/processing/lots/{lot['id']}/")
 
     other_clerk = UserFactory(email="other@test.local")
     assign(other_clerk, "CWS_CLERK", bugoyi)
     other_grn = make_grn(api, other_clerk, bugoyi)
-    void(api, f"{RECEIPTS}{other_grn['id']}/")
+    void_grn(api, other_grn)
 
     batch = produce_green(gitoki, "15PLUS", kg="700", parch="1000")
     shipment = make_shipment()
@@ -180,7 +188,7 @@ def test_station_clerk_sees_only_own_station(api, gitoki_clerk, everything_delet
     res = api.get(TRASH)
     assert {r["type"] for r in res.data["results"]} == {"grn", "lot", "pay_period"}
     assert everything_deleted["other_grn"] not in {r["id"] for r in res.data["results"]}
-    assert {t["code"] for t in res.data["types"]} == {"grn", "lot", "pay_period"}
+    assert {t["code"] for t in res.data["types"]} == {"grn", "cherry_payment", "lot", "pay_period"}
     # Asking for another station's records returns nothing.
     assert api.get(f"{TRASH}?facility={bugoyi.id}").data["results"] == []
 
@@ -207,7 +215,7 @@ def test_live_records_are_not_in_trash(api, baho_admin, gitoki_clerk, gitoki):
 def test_purge_removes_only_expired_deleted_records(api, everything_deleted, gitoki_clerk, gitoki):
     live = make_grn(api, gitoki_clerk, gitoki)
     fresh = make_grn(api, gitoki_clerk, gitoki)
-    void(api, f"{RECEIPTS}{fresh['id']}/")
+    void_grn(api, fresh)
     # Everything in the fixture was deleted more than 24 h ago; `fresh` just now.
     expired = timezone.now() - timedelta(hours=25)
     for model in (CherryReceipt, ProcessingLot, HqStockReceipt, DryMillBatch, ExportShipment):
@@ -222,6 +230,9 @@ def test_purge_removes_only_expired_deleted_records(api, everything_deleted, git
         "stock_receipt": {"purged": 1, "skipped": 0},
         "lot": {"purged": 1, "skipped": 0},
         "grn": {"purged": 2, "skipped": 0},
+        "cherry_payment": {"purged": 0, "skipped": 0},
+        "expense": {"purged": 0, "skipped": 0},
+        "fund_allocation": {"purged": 0, "skipped": 0},
         "pay_period": {"purged": 1, "skipped": 0},
     }
     assert set(CherryReceipt.all_objects.values_list("id", flat=True)) == {
@@ -238,7 +249,7 @@ def test_purge_removes_only_expired_deleted_records(api, everything_deleted, git
 
 def test_purge_uses_the_retention_setting(api, settings, gitoki_clerk, gitoki):
     grn = make_grn(api, gitoki_clerk, gitoki)
-    void(api, f"{RECEIPTS}{grn['id']}/")
+    void_grn(api, grn)
     settings.TRASH_RETENTION_HOURS = 48
     assert purge_trash(now=later(25))["grn"]["purged"] == 0
     assert purge_trash(now=later(49))["grn"]["purged"] == 1
@@ -282,7 +293,7 @@ def test_imported_grn_is_kept(api, gitoki_clerk, gitoki):
         source_file="book.xlsx",
         source_row=3,
     )
-    void(api, f"{RECEIPTS}{grn['id']}/")
+    void_grn(api, grn)
     assert purge_trash(now=later())["grn"] == {"purged": 0, "skipped": 1}
     assert CherryReceipt.all_objects.filter(pk=grn["id"]).exists()
 
@@ -358,7 +369,7 @@ def test_purged_receipt_and_batch_keep_a_deletion_history_row(api, drymill_opera
 
 def test_document_numbers_not_reused_after_purge(api, gitoki_clerk, drymill_operator, gitoki, hq):
     first = make_grn(api, gitoki_clerk, gitoki)
-    void(api, f"{RECEIPTS}{first['id']}/")
+    void_grn(api, first)
     receipt = stock_receipt(gitoki, net="100")
     batch = produce_green(gitoki, "15PLUS", kg="50", parch="100")
     login(api, drymill_operator)

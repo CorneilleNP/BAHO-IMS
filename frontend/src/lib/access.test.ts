@@ -11,6 +11,7 @@ describe('sections', () => {
     expect(sectionForPath('/cws/farmers')).toBe('cws');
     expect(sectionForPath('/reception')).toBe('cws');
     expect(sectionForPath('/admin/users')).toBe('admin');
+    expect(sectionForPath('/finance/expenses')).toBe('finance');
     expect(sectionForPath('/account/password')).toBeNull();
     expect(sectionForPath('/dashboard')).toBeNull();
   });
@@ -21,11 +22,16 @@ describe('sections', () => {
     expect(canAccessPath(clerk, '/cws/labor')).toBe(true);
     expect(canAccessPath(clerk, '/drymill/ledger')).toBe(false);
     expect(canAccessPath(clerk, '/admin/users')).toBe(false);
+    expect(canAccessPath(clerk, '/finance/dashboard')).toBe(false);
+  });
+
+  it('gives a station manager CWS and their station finance', () => {
+    expect(allowedSections(withRoles('CWS_MANAGER'))).toEqual(['cws', 'finance']);
   });
 
   it('gives an admin every section', () => {
     const admin = withRoles('ADMIN');
-    expect(allowedSections(admin)).toEqual(['drymill', 'cws', 'admin']);
+    expect(allowedSections(admin)).toEqual(['drymill', 'cws', 'finance', 'admin']);
     expect(isAdmin(admin)).toBe(true);
   });
 
@@ -46,6 +52,6 @@ describe('write permissions mirror the backend', () => {
     const finance = withRoles('HQ_FINANCE');
     expect(canWrite(finance, 'cws')).toBe(false);
     expect(canWrite(finance, 'drymill')).toBe(false);
-    expect(allowedSections(finance)).toEqual(['drymill', 'cws']);
+    expect(allowedSections(finance)).toEqual(['drymill', 'cws', 'finance']);
   });
 });

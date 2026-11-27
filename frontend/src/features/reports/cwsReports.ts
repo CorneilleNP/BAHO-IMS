@@ -18,6 +18,7 @@ export interface CwsReportFilters {
 }
 
 const PAYMENT: Record<string, string> = { '': '', CASH: 'Cash', BANK: 'Bank', MOBILE_MONEY: 'Mobile money' };
+const STATUS: Record<string, string> = { PAID: 'Paid', PARTIAL: 'Partly paid', UNPAID: 'Not paid' };
 const GENDER: Record<string, string> = { '': '', M: 'Male', F: 'Female', O: 'Other' };
 const LOT_STATUS: Record<string, string> = { IN_PROGRESS: 'In progress', SORTED: 'Sorted', CLOSED: 'Closed' };
 
@@ -48,6 +49,8 @@ interface GrnRow {
   transport: number;
   commission: number;
   total: number;
+  paid: number;
+  owed: number;
 }
 
 function grnRow(r: CherryReceipt, farmer: Farmer | undefined): GrnRow {
@@ -66,6 +69,8 @@ function grnRow(r: CherryReceipt, farmer: Farmer | undefined): GrnRow {
     transport: r.lines.reduce((t, l) => t + num(l.transport_cost), 0),
     commission: r.lines.reduce((t, l) => t + num(l.commission), 0),
     total: num(r.total_amount),
+    paid: num(r.amount_paid),
+    owed: num(r.balance),
   };
 }
 
@@ -106,7 +111,9 @@ export async function downloadReceptionReport(f: CwsReportFilters): Promise<numb
       ['Float cherry (kg)', sum(rows, (x) => x.floatKg)],
       ['Total cherry (kg)', sum(rows, (x) => x.totalKg)],
       ['Transport (RWF)', sum(rows, (x) => x.transport)],
-      ['Total paid / to pay (RWF)', sum(rows, (x) => x.total)],
+      ['Total amount due (RWF)', sum(rows, (x) => x.total)],
+      ['Paid to farmers (RWF)', sum(rows, (x) => x.paid)],
+      ['Still owed to farmers (RWF)', sum(rows, (x) => x.owed)],
     ]),
     [
       {
@@ -139,8 +146,10 @@ export async function downloadReceptionReport(f: CwsReportFilters): Promise<numb
           { header: 'Total transport (RWF)', value: (x: GrnRow) => x.transport },
           { header: 'Commission (RWF)', value: (x: GrnRow) => x.commission },
           { header: 'TOTAL AMOUNT (RWF)', value: (x: GrnRow) => x.total },
-          { header: 'Payment method', value: (x: GrnRow) => PAYMENT[x.r.payment_method] ?? x.r.payment_method },
-          { header: 'Payment status', value: (x: GrnRow) => (x.r.payment_status === 'PAID' ? 'Paid' : 'Unpaid') },
+          { header: 'Amount paid (RWF)', value: (x: GrnRow) => x.paid },
+          { header: 'Still owed (RWF)', value: (x: GrnRow) => x.owed },
+          { header: 'Payment status', value: (x: GrnRow) => STATUS[x.r.payment_status] ?? x.r.payment_status },
+          { header: 'Last payment method', value: (x: GrnRow) => PAYMENT[x.r.payment_method] ?? x.r.payment_method },
           { header: 'Weighing clerk', value: (x: GrnRow) => x.r.created_by_name },
           { header: 'Notes', value: (x: GrnRow) => x.r.notes },
         ],
@@ -153,6 +162,8 @@ export async function downloadReceptionReport(f: CwsReportFilters): Promise<numb
           'Total transport (RWF)': sum(rows, (x) => x.transport),
           'Commission (RWF)': sum(rows, (x) => x.commission),
           'TOTAL AMOUNT (RWF)': sum(rows, (x) => x.total),
+          'Amount paid (RWF)': sum(rows, (x) => x.paid),
+          'Still owed (RWF)': sum(rows, (x) => x.owed),
         },
       },
       {
@@ -178,7 +189,8 @@ export async function downloadReceptionReport(f: CwsReportFilters): Promise<numb
           { header: 'Cherry amount (RWF)', value: (g: (typeof farmerRows)[number]) => sum(g.list, (x) => x.goodAmount + x.floatAmount) },
           { header: 'Transport (RWF)', value: (g: (typeof farmerRows)[number]) => sum(g.list, (x) => x.transport) },
           { header: 'TOTAL AMOUNT (RWF)', value: (g: (typeof farmerRows)[number]) => sum(g.list, (x) => x.total) },
-          { header: 'Unpaid (RWF)', value: (g: (typeof farmerRows)[number]) => sum(g.list.filter((x) => x.r.payment_status !== 'PAID'), (x) => x.total) },
+          { header: 'Paid (RWF)', value: (g: (typeof farmerRows)[number]) => sum(g.list, (x) => x.paid) },
+          { header: 'Still owed (RWF)', value: (g: (typeof farmerRows)[number]) => sum(g.list, (x) => x.owed) },
         ],
         totals: {
           'Deliveries (GRNs)': rows.length,
@@ -188,7 +200,8 @@ export async function downloadReceptionReport(f: CwsReportFilters): Promise<numb
           'Cherry amount (RWF)': sum(rows, (x) => x.goodAmount + x.floatAmount),
           'Transport (RWF)': sum(rows, (x) => x.transport),
           'TOTAL AMOUNT (RWF)': sum(rows, (x) => x.total),
-          'Unpaid (RWF)': sum(rows.filter((x) => x.r.payment_status !== 'PAID'), (x) => x.total),
+          'Paid (RWF)': sum(rows, (x) => x.paid),
+          'Still owed (RWF)': sum(rows, (x) => x.owed),
         },
       },
       {
@@ -206,6 +219,8 @@ export async function downloadReceptionReport(f: CwsReportFilters): Promise<numb
           { header: 'Transport (RWF)', value: (list: GrnRow[]) => sum(list, (x) => x.transport) },
           { header: 'Commission (RWF)', value: (list: GrnRow[]) => sum(list, (x) => x.commission) },
           { header: 'TOTAL AMOUNT (RWF)', value: (list: GrnRow[]) => sum(list, (x) => x.total) },
+          { header: 'Paid (RWF)', value: (list: GrnRow[]) => sum(list, (x) => x.paid) },
+          { header: 'Still owed (RWF)', value: (list: GrnRow[]) => sum(list, (x) => x.owed) },
         ],
         totals: {
           GRNs: rows.length,

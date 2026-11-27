@@ -13,7 +13,8 @@ class CherryReceipt(AuditedModel):
         MOBILE_MONEY = "MOBILE_MONEY", "Mobile money"
 
     class PaymentStatus(models.TextChoices):
-        UNPAID = "UNPAID", "Unpaid"
+        UNPAID = "UNPAID", "Not paid"
+        PARTIAL = "PARTIAL", "Partially paid"
         PAID = "PAID", "Paid"
 
     grn_number = models.CharField(max_length=40, unique=True, editable=False)
@@ -28,14 +29,27 @@ class CherryReceipt(AuditedModel):
     )
     received_on = models.DateField()
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, blank=True)
+    # Derived from the GRN total and its payments (see services.refresh_payment);
+    # never set directly. The method is the one of the latest payment.
     payment_status = models.CharField(
         max_length=10, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID
+    )
+    amount_paid = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        default=0,
+        help_text="Sum of the GRN's live payments (CherryPayment).",
     )
     notes = models.TextField(blank=True)
 
     class Meta(AuditedModel.Meta):
         ordering = ["-received_on", "-created_at"]
         indexes = [models.Index(fields=["facility", "received_on"])]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(amount_paid__gte=0), name="receipt_amount_paid_non_negative"
+            ),
+        ]
 
     def __str__(self):
         return self.grn_number
@@ -72,3 +86,25 @@ class CherryReceiptLine(TimeStampedModel):
                 name="receipt_line_non_negative",
             ),
         ]
+
+
+class CherryPayment(AuditedModel):
+    """Money paid to the farmer for one GRN. A GRN can be paid in several parts;
+    each payment is a cash outflow of its station on `paid_on` (finance)."""
+
+    receipt = models.ForeignKey(CherryReceipt, on_delete=models.PROTECT, related_name="payments")
+    paid_on = models.DateField()
+    amount = models.DecimalField(max_digits=16, decimal_places=2)
+    method = models.CharField(max_length=20, choices=CherryReceipt.PaymentMethod.choices)
+    reference = models.CharField(max_length=100, blank=True, help_text="Bank / MoMo reference.")
+    notes = models.TextField(blank=True)
+
+    class Meta(AuditedModel.Meta):
+        ordering = ["paid_on", "created_at"]
+        indexes = [models.Index(fields=["paid_on"])]
+        constraints = [
+            models.CheckConstraint(condition=Q(amount__gt=0), name="cherry_payment_positive"),
+        ]
+
+    def __str__(self):
+        return f"{self.receipt.grn_number} {self.amount} on {self.paid_on}"

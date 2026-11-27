@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from django.apps import apps
 from django.conf import settings
 
-from .access import CWS_READ_ROLES, DRYMILL_READ_ROLES
+from .access import CWS_READ_ROLES, DRYMILL_READ_ROLES, FINANCE_READ_ROLES
 
 
 def retention_hours() -> float:
@@ -43,6 +43,13 @@ def _grn_keep_reason(receipt) -> str:
     if apps.get_model("imports", "CherryReceiptImport").objects.filter(receipt=receipt).exists():
         return "imported from a workbook (purging would let the import create it again)"
     return ""
+
+
+def _grn_payments(receipt) -> None:
+    # A GRN is only deleted once its payments are; they go with it.
+    apps.get_model("reception", "CherryPayment").all_objects.filter(
+        receipt=receipt, is_deleted=True
+    ).delete()
 
 
 def _batch_receipts(batch) -> list:
@@ -130,6 +137,29 @@ TRASH_TYPES: tuple[TrashType, ...] = (
         read_roles=CWS_READ_ROLES,
         number=lambda o: o.grn_number,
         keep_reason=_grn_keep_reason,
+        before_purge=_grn_payments,
+    ),
+    TrashType(
+        code="cherry_payment",
+        label="Payment to farmer",
+        model="reception.CherryPayment",
+        read_roles=CWS_READ_ROLES,
+        number=lambda o: f"{o.receipt.grn_number} · {o.amount:,.0f} RWF",
+        facility_field="receipt__facility",
+    ),
+    TrashType(
+        code="expense",
+        label="Expense",
+        model="finance.Expense",
+        read_roles=FINANCE_READ_ROLES,
+        number=lambda o: o.expense_number,
+    ),
+    TrashType(
+        code="fund_allocation",
+        label="Funds given to a station",
+        model="finance.FundAllocation",
+        read_roles=FINANCE_READ_ROLES,
+        number=lambda o: o.allocation_number,
     ),
     TrashType(
         code="pay_period",

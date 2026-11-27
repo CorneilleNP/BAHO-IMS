@@ -55,6 +55,24 @@ class FarmerDeliverySerializer(serializers.Serializer):
     is_voided = serializers.BooleanField(source="is_deleted")
     good_kg = serializers.SerializerMethodField()
     float_kg = serializers.SerializerMethodField()
+    total_amount = serializers.SerializerMethodField()
+    amount_paid = serializers.DecimalField(max_digits=16, decimal_places=2)
+    balance = serializers.SerializerMethodField()
+
+    def _total(self, receipt):
+        return sum(
+            (
+                line.line_amount + line.transport_cost + line.commission
+                for line in receipt.lines.all()
+            ),
+            0,
+        )
+
+    def get_total_amount(self, receipt) -> str:
+        return str(self._total(receipt))
+
+    def get_balance(self, receipt) -> str:
+        return str(self._total(receipt) - receipt.amount_paid)
 
     def _kg(self, receipt, grade):
         return str(

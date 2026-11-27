@@ -38,7 +38,8 @@ def test_void_requires_a_reason(api, receipt_id):
     assert "reason" in res.data
 
 
-def test_voided_receipt_disappears_but_is_kept(api, receipt_id):
+def test_voided_receipt_disappears_but_is_kept(api, receipt_id, baho_admin):
+    login(api, baho_admin)
     res = api.post(f"{RECEIPTS}{receipt_id}/void/", {"reason": "Entered twice"})
     assert res.status_code == 200, res.data
     assert api.get(RECEIPTS).data["count"] == 0
@@ -46,7 +47,8 @@ def test_voided_receipt_disappears_but_is_kept(api, receipt_id):
     assert kept.is_deleted and kept.void_reason == "Entered twice"
 
 
-def test_grn_number_is_not_reused_after_void(api, receipt_id, gitoki):
+def test_grn_number_is_not_reused_after_void(api, receipt_id, gitoki, baho_admin):
+    login(api, baho_admin)
     api.post(f"{RECEIPTS}{receipt_id}/void/", {"reason": "Mistake"})
     farmer = Farmer.objects.get(farmer_code="GITOKI-F00001")
     res = api.post(
@@ -130,3 +132,9 @@ def test_receipt_date_range_filter(api, receipt_id):
     today = date.today().isoformat()
     assert api.get(f"{RECEIPTS}?received_on__gte={today}").data["count"] == 1
     assert api.get(f"{RECEIPTS}?received_on__lte=2000-01-01").data["count"] == 0
+
+
+def test_station_staff_cannot_delete_a_saved_grn(api, receipt_id):
+    res = api.post(f"{RECEIPTS}{receipt_id}/void/", {"reason": "Mistake"})
+    assert res.status_code == 403
+    assert "administrator" in str(res.data["detail"])

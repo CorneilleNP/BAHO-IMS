@@ -90,9 +90,10 @@ def test_date_outside_any_crop_year_creates_one_automatically(api, gitoki_clerk,
     assert crop_year.end_date.isoformat() == "1999-11-30"
 
 
-def test_receipt_lines_can_be_corrected(api, gitoki_clerk, gitoki, farmer):
+def test_admin_can_correct_receipt_lines(api, gitoki_clerk, baho_admin, gitoki, farmer):
     login(api, gitoki_clerk)
     created = api.post(URL, receipt_payload(gitoki, farmer), format="json").data
+    login(api, baho_admin)
     res = api.patch(
         f"{URL}{created['id']}/",
         {"lines": [{"cherry_grade": "GOOD", "quantity_kg": "150", "price_per_kg": "600"}]},
@@ -105,20 +106,31 @@ def test_receipt_lines_can_be_corrected(api, gitoki_clerk, gitoki, farmer):
     assert len(res.data["lines"]) == 1
 
 
-def test_receipt_payment_and_farmer_can_be_corrected(api, gitoki_clerk, gitoki, farmer):
+def test_admin_can_change_the_farmer(api, gitoki_clerk, baho_admin, gitoki, farmer):
     login(api, gitoki_clerk)
     other = Farmer.objects.create(
         farmer_code="GITOKI-F00002", full_name="Alice", home_facility=gitoki
     )
     created = api.post(URL, receipt_payload(gitoki, farmer), format="json").data
+    login(api, baho_admin)
+    res = api.patch(f"{URL}{created['id']}/", {"farmer": str(other.id)}, format="json")
+    assert res.status_code == 200, res.data
+    assert res.data["farmer_name"] == "Alice"
+
+
+def test_old_app_marking_paid_pays_the_balance(api, gitoki_clerk, gitoki, farmer):
+    """Older app versions (and saves queued offline) PATCH payment_status=PAID."""
+    login(api, gitoki_clerk)
+    created = api.post(URL, receipt_payload(gitoki, farmer), format="json").data
     res = api.patch(
         f"{URL}{created['id']}/",
-        {"farmer": str(other.id), "payment_status": "PAID", "payment_method": "CASH"},
+        {"payment_status": "PAID", "payment_method": "CASH"},
         format="json",
     )
     assert res.status_code == 200, res.data
-    assert res.data["farmer_name"] == "Alice"
     assert res.data["payment_status"] == "PAID"
+    assert Decimal(res.data["amount_paid"]) == Decimal("55000")
+    assert Decimal(res.data["balance"]) == Decimal("0")
 
 
 def test_marking_paid_without_a_method_is_rejected(api, gitoki_clerk, gitoki, farmer):

@@ -12,7 +12,7 @@ from ..selectors import (
     export_summary,
     lot_summary,
     processing_summary,
-    recent_farmers,
+    recent_receipts,
     stock_summary,
     transfer_reconciliation_summary,
 )
@@ -141,8 +141,9 @@ class ExportSummaryView(DryMillReport):
 
 class CwsSummaryView(APIView):
     """Cherry Reception dashboard: total bought, good vs float, average cost per kg
-    (including transport & commission), quantity by station, and recently registered
-    farmers. Admin/HQ roles see every station; a CWS clerk sees their own."""
+    (including transport & commission), paid vs still owed to farmers, quantity by
+    station, and the latest cherry deliveries. Admin/HQ roles see every station; a CWS
+    clerk sees their own."""
 
     permission_classes = [RoleAccess]
     read_roles = CWS_READ_ROLES
@@ -171,7 +172,7 @@ class CwsSummaryView(APIView):
         summary = cherry_summary(
             facility_ids=facility_ids, date_from=f.get("date_from"), date_to=f.get("date_to")
         )
-        summary["recent_farmers"] = recent_farmers(facility_ids=facility_ids)
+        summary["recent_receipts"] = recent_receipts(facility_ids=facility_ids)
         return Response(summary)
 
 

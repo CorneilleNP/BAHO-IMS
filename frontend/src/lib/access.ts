@@ -33,13 +33,15 @@ export interface CurrentUser {
   roles: RoleAssignment[];
 }
 
-export type Section = 'cws' | 'drymill' | 'admin';
+export type Section = 'cws' | 'drymill' | 'finance' | 'admin';
 
 // Which roles may open each section of the app. The backend enforces the
 // real data access; this only decides what the menu shows.
 const SECTION_ROLES: Record<Section, RoleCode[]> = {
   cws: ['ADMIN', 'HQ_FINANCE', 'CWS_CLERK', 'CWS_MANAGER'],
   drymill: ['ADMIN', 'HQ_FINANCE', 'HQ_DRY_MILL_OPERATOR', 'HQ_EXPORT_MANAGER'],
+  // Station managers see and record their own station's spending; HQ sees all.
+  finance: ['ADMIN', 'HQ_FINANCE', 'CWS_MANAGER'],
   admin: ['ADMIN'],
 };
 
@@ -49,7 +51,7 @@ export function canAccessSection(user: CurrentUser | null, section: Section): bo
 }
 
 export function allowedSections(user: CurrentUser | null): Section[] {
-  return (['drymill', 'cws', 'admin'] as Section[]).filter((section) => canAccessSection(user, section));
+  return (['drymill', 'cws', 'finance', 'admin'] as Section[]).filter((section) => canAccessSection(user, section));
 }
 
 export type WriteArea = 'cws' | 'drymill' | 'export' | 'cwsManage';
@@ -78,6 +80,7 @@ export function isAdmin(user: CurrentUser | null): boolean {
 export function sectionForPath(pathname: string): Section | null {
   if (pathname.startsWith('/drymill/')) return 'drymill';
   if (pathname.startsWith('/admin/')) return 'admin';
+  if (pathname.startsWith('/finance/')) return 'finance';
   if (pathname.startsWith('/cws/') || pathname === '/reception' || pathname === '/processing') return 'cws';
   return null;
 }

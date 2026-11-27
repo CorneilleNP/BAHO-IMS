@@ -56,9 +56,11 @@ def test_cws_dashboard_totals_include_transport(api, gitoki_clerk, gitoki):
     assert Decimal(res.data["good"]["avg_cost_per_kg"]) == Decimal("510.00")
     assert Decimal(res.data["total_kg"]) == Decimal("100")
     assert res.data["by_station"] == [{"label": "Gitoki CWS", "kg": Decimal("100.00")}]
-    assert res.data["recent_farmers"][0]["full_name"] == "Akingeneye Clementine"
-    assert res.data["recent_farmers"][0]["household_size"] == 5
-    assert Decimal(res.data["recent_farmers"][0]["land_area_ha"]) == Decimal("0.250")
+    recent = res.data["recent_receipts"][0]
+    assert recent["farmer_name"] == "Akingeneye Clementine"
+    assert Decimal(recent["good_kg"]) == Decimal("100")
+    assert Decimal(recent["total_amount"]) == Decimal("51000")
+    assert recent["payment_status"] == "UNPAID"
 
 
 def test_cws_clerk_only_sees_own_station(api, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi):
@@ -73,7 +75,7 @@ def test_cws_clerk_only_sees_own_station(api, gitoki_clerk, bugoyi_clerk, gitoki
     res = api.get(URL)
     assert Decimal(res.data["total_kg"]) == Decimal("30")
     assert res.data["by_station"] == [{"label": "Bugoyi CWS", "kg": Decimal("30.00")}]
-    assert [f["full_name"] for f in res.data["recent_farmers"]] == ["Bugoyi Farmer"]
+    assert [r["farmer_name"] for r in res.data["recent_receipts"]] == ["Bugoyi Farmer"]
 
 
 def test_admin_sees_every_station(api, hq_finance, gitoki_clerk, bugoyi_clerk, gitoki, bugoyi):
@@ -86,7 +88,7 @@ def test_admin_sees_every_station(api, hq_finance, gitoki_clerk, bugoyi_clerk, g
     res = api.get(URL)
     assert Decimal(res.data["total_kg"]) == Decimal("80")
     assert {row["label"] for row in res.data["by_station"]} == {"Gitoki CWS", "Bugoyi CWS"}
-    assert len(res.data["recent_farmers"]) == 2
+    assert len(res.data["recent_receipts"]) == 2
 
 
 def test_household_and_land_area_are_optional(api, gitoki_clerk, gitoki):
@@ -125,10 +127,26 @@ def test_station_filter_narrows_everything(
     assert Decimal(all_["total_kg"]) == Decimal("140")
     assert Decimal(only["total_kg"]) == Decimal("40")
     assert [r["label"] for r in only["by_station"]] == [bugoyi.name]
-    assert [f["home_facility_name"] for f in only["recent_farmers"]] == [bugoyi.name]
+    assert [r["facility_name"] for r in only["recent_receipts"]] == [bugoyi.name]
 
     # A station clerk cannot widen their view with the filter.
     login(api, gitoki_clerk)
     other = api.get("/api/v1/reporting/cws/", {"station": str(bugoyi.id)}).data
     assert Decimal(other["total_kg"]) == Decimal("0")
-    assert other["recent_farmers"] == []
+    assert other["recent_receipts"] == []
+
+
+def test_dashboard_shows_paid_and_still_owed(api, gitoki_clerk, gitoki):
+    login(api, gitoki_clerk)
+    farmer_id = register(api, gitoki, "Payee")
+    first = deliver(api, gitoki, farmer_id, good_kg="100", price="500")  # 50,000
+    deliver(api, gitoki, farmer_id, good_kg="10", price="500")  # 5,000
+    api.post(f"{RECEIPTS}{first['id']}/pay/", {"amount": "20000", "method": "CASH"})
+
+    res = api.get(URL).data
+    assert Decimal(res["total_amount"]) == Decimal("55000")
+    assert Decimal(res["amount_paid"]) == Decimal("20000")
+    assert Decimal(res["amount_owed"]) == Decimal("35000")
+    assert res["payment_status_counts"] == {"PAID": 0, "PARTIAL": 1, "UNPAID": 1}
+    latest = {r["grn_number"]: r for r in res["recent_receipts"]}[first["grn_number"]]
+    assert Decimal(latest["balance"]) == Decimal("30000")

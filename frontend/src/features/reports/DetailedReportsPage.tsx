@@ -105,8 +105,8 @@ export function DetailedReportsPage({ section }: { section: 'cws' | 'drymill' })
             sheets={[
               'every delivery (GRN) on its own row by date, with farmer details (name, ID, phone, gender, province to village)',
               'good and float cherry kg, price and amount',
-              'transport per kg and total, commission, total amount, payment',
-              'totals per farmer (deliveries, first/last date, unpaid) and per day',
+              'transport per kg and total, commission, total amount, amount paid and still owed',
+              'totals per farmer (deliveries, first/last date, paid, still owed) and per day',
             ]}
             run={() => downloadReceptionReport(cwsFilters)}
           />

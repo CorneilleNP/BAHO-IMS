@@ -270,6 +270,33 @@ app's own numbers (the sheet's GRN goes into the notes), and re-importing the
 same rows never duplicates them. Imported (historical) GRNs never send an SMS
 to the farmer; only GRNs recorded in the app do.
 
+## GRN payments
+
+- A saved GRN is locked: only an **ADMIN** may correct its farmer, date,
+  quantities, prices, transport or commission, or delete it. Station staff
+  (clerks, managers) only **record payments** (`POST /reception/receipts/<id>/pay/`).
+- Payment status is derived: **Not paid**, **Partly paid** (amount paid entered,
+  balance = total - paid) or **Paid**. Each payment is a `CherryPayment` with its
+  own date, method and reference, so a GRN can be paid in parts. Only an ADMIN
+  deletes a wrong payment (Trash); a GRN with payments is deleted after them.
+- GRNs marked Paid before payments existed got one payment of their total on
+  the delivery date (migration `reception.0003`).
+
+## Finance (station funds and spending)
+
+- HQ (**ADMIN**, **HQ_FINANCE**) gives funds to a CWS (`FundAllocation`).
+- Station managers record **expenses** for their station: category (the 19 Baho
+  categories plus "Other expenses", editable in Django admin), amount,
+  justification, and optionally
+  quantity / unit / unit price. Once saved only HQ corrects or deletes them.
+- Spending of a station = expenses + **payments to farmers** (on the day paid) +
+  **casual labor** pay periods marked paid. Balance = funds given - spending;
+  it may go negative. "Owed to farmers" is the unpaid part of GRNs.
+- Pages: Finance Dashboard (daily / weekly / monthly), Expenses, Funds to
+  Stations, Finance Reports (per CWS: PDF and Excel cash book with running
+  balance). API: `/api/v1/finance/` (`summary/`, `ledger/`, `expenses/`,
+  `allocations/`, `categories/`). Clerks have no finance access.
+
 ## Voiding records
 
 GRNs, processing lots (unless closed), stock receipts, dry mill batches,

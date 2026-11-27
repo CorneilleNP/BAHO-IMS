@@ -2,12 +2,12 @@ import { useState, type FormEvent } from 'react';
 import { Alert, Button, PasswordInput, Text, TextInput } from '@mantine/core';
 import { IconArrowRight, IconCloudCheck, IconLeaf, IconLock, IconMail, IconRoute, IconServer, IconWifiOff } from '@tabler/icons-react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { allowedSections, canAccessPath, type CurrentUser } from '../../lib/access';
+import { allowedSections, canAccessPath, type CurrentUser, type Section } from '../../lib/access';
 import { isNative, serverUrl, setServerUrl } from '../../lib/platform';
 import { useAuth } from '../../lib/authContext';
 import './LoginPage.css';
 
-const SECTION_HOME = { drymill: '/drymill/stock', cws: '/cws/process', admin: '/admin/users' } as const;
+const SECTION_HOME: Record<Section, string> = { drymill: '/drymill/stock', cws: '/cws/process', finance: '/finance/dashboard', admin: '/admin/users' };
 
 /**
  * Where to land after login: the page they were sent away from (only if

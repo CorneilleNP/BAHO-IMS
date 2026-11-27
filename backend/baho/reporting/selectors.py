@@ -14,8 +14,6 @@ from baho.drymill.models import (
     ExportGrade,
     HqStockReceipt,
 )
-from baho.farmers.models import Farmer
-from baho.organization.locations import location_label
 from baho.processing.models import LotGradeResult, Process, ProcessingLot
 from baho.reception.models import CherryReceipt, CherryReceiptLine
 from baho.sales.models import ExportShipmentLine
@@ -520,10 +518,24 @@ def cherry_summary(
         reverse=True,
     )
 
+    amount_paid = receipts.aggregate(v=Coalesce(Sum("amount_paid"), ZERO))["v"]
+    by_status = dict(
+        receipts.values_list("payment_status")
+        .annotate(n=Count("id"))
+        .values_list("payment_status", "n")
+    )
     return {
         "receipts": receipts.count(),
         "total_kg": total_kg,
         "total_amount": total_amount,
+        # Paid so far to the farmers for these GRNs, and what is still owed.
+        "amount_paid": amount_paid,
+        "amount_owed": total_amount - amount_paid,
+        "payment_status_counts": {
+            "PAID": by_status.get("PAID", 0),
+            "PARTIAL": by_status.get("PARTIAL", 0),
+            "UNPAID": by_status.get("UNPAID", 0),
+        },
         "good": {
             "kg": good["kg"],
             "amount": good["amount"],
@@ -544,25 +556,35 @@ def _div(amount: Decimal, kg: Decimal) -> Decimal:
     return (Decimal(amount) / Decimal(kg)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def recent_farmers(*, facility_ids: frozenset | None = None, limit: int = 10) -> list[dict]:
-    """The most recently registered farmers (admin/HQ see every station's)."""
-    qs = Farmer.objects.select_related("home_facility", "location__parent__parent__parent__parent")
+def recent_receipts(*, facility_ids: frozenset | None = None, limit: int = 10) -> list[dict]:
+    """The latest cherry deliveries (GRNs) with kg, amount and what is still owed."""
+    from baho.reception.selectors import receipts_with_totals
+
+    qs = receipts_with_totals()
     if facility_ids is not None:
-        qs = qs.filter(home_facility_id__in=facility_ids)
-    return [
-        {
-            "id": str(f.id),
-            "farmer_code": f.farmer_code,
-            "full_name": f.full_name,
-            "phone": f.phone,
-            "home_facility_name": f.home_facility.name,
-            "location_label": location_label(f.location),
-            "household_size": f.household_size,
-            "land_area_ha": f.land_area_ha,
-            "created_at": f.created_at,
-        }
-        for f in qs.order_by("-created_at")[:limit]
-    ]
+        qs = qs.filter(facility_id__in=facility_ids)
+    rows = []
+    for r in qs.order_by("-received_on", "-created_at")[:limit]:
+        good = next((line for line in r.lines.all() if line.cherry_grade == "GOOD"), None)
+        float_ = next((line for line in r.lines.all() if line.cherry_grade == "FLOAT"), None)
+        rows.append(
+            {
+                "id": str(r.id),
+                "grn_number": r.grn_number,
+                "received_on": r.received_on,
+                "facility_name": r.facility.name,
+                "farmer_name": r.farmer.full_name,
+                "farmer_code": r.farmer.farmer_code,
+                "good_kg": good.quantity_kg if good else ZERO,
+                "float_kg": float_.quantity_kg if float_ else ZERO,
+                "total_kg": r.total_kg,
+                "total_amount": r.total_amount,
+                "amount_paid": r.amount_paid,
+                "balance": r.total_amount - r.amount_paid,
+                "payment_status": r.payment_status,
+            }
+        )
+    return rows
 
 
 def lots_matching(lots, text: str):

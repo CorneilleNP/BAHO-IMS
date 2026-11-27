@@ -7,7 +7,7 @@ from baho.organization.api.serializers import LocationPathSerializer
 from baho.organization.locations import location_path
 from baho.organization.models import Facility
 
-from ..models import CherryReceipt, CherryReceiptLine
+from ..models import CherryPayment, CherryReceipt, CherryReceiptLine
 
 ZERO = Decimal("0")
 
@@ -53,6 +53,11 @@ class CherryReceiptSerializer(serializers.ModelSerializer):
     )
     total_kg = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True)
     total_amount = serializers.DecimalField(max_digits=16, decimal_places=2, read_only=True)
+    # In: amount paid at weighing when payment_status is PARTIAL. Out: total paid so far.
+    amount_paid = serializers.DecimalField(
+        max_digits=16, decimal_places=2, min_value=ZERO, required=False, allow_null=True
+    )
+    balance = serializers.SerializerMethodField(help_text="Still owed to the farmer.")
 
     class Meta:
         model = CherryReceipt
@@ -75,9 +80,51 @@ class CherryReceiptSerializer(serializers.ModelSerializer):
             "lines",
             "total_kg",
             "total_amount",
+            "amount_paid",
+            "balance",
             "created_at",
         ]
         read_only_fields = ["grn_number", "created_at"]
 
+    def get_balance(self, obj) -> Decimal:
+        return getattr(obj, "total_amount", ZERO) - obj.amount_paid
+
     def get_farmer_location(self, obj) -> dict:
         return LocationPathSerializer(location_path(obj.farmer.location)).data
+
+
+class PaymentInputSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=16, decimal_places=2, min_value=Decimal("0.01"))
+    paid_on = serializers.DateField(required=False)
+    method = serializers.ChoiceField(choices=CherryReceipt.PaymentMethod.choices)
+    reference = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class CherryPaymentSerializer(serializers.ModelSerializer):
+    grn_number = serializers.CharField(source="receipt.grn_number", read_only=True)
+    farmer_name = serializers.CharField(source="receipt.farmer.full_name", read_only=True)
+    facility = serializers.UUIDField(source="receipt.facility_id", read_only=True)
+    facility_name = serializers.CharField(source="receipt.facility.name", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default=""
+    )
+
+    class Meta:
+        model = CherryPayment
+        fields = [
+            "id",
+            "receipt",
+            "grn_number",
+            "farmer_name",
+            "facility",
+            "facility_name",
+            "paid_on",
+            "amount",
+            "method",
+            "reference",
+            "notes",
+            "created_by_name",
+            "created_at",
+        ]
+        read_only_fields = fields

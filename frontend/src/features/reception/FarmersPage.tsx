@@ -23,12 +23,14 @@ import { StationSelect } from '../../components/StationSelect';
 import { canWrite } from '../../lib/access';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/authContext';
-import { kg, num } from '../../lib/format';
+import { kg, num, rwf } from '../../lib/format';
 import { useMyStations } from '../../lib/stations';
 import { toast } from '../../lib/toast';
 import type { Farmer, FarmerDelivery, Paginated } from '../../lib/types';
 import { query, useApi, useList } from '../../lib/useApi';
 import { useSubmit } from '../../lib/useSubmit';
+import { PAYMENT_LABEL } from './paymentLabels';
+import { PaymentBadge } from './payments';
 import { FarmerWizard } from './FarmerWizard';
 
 const GENDERS = [
@@ -98,7 +100,7 @@ function FarmerDrawer({ farmer, editable, onClose, onSaved }: { farmer: Farmer; 
           rowKey={(d) => d.id}
           loading={deliveries.loading}
           error={deliveries.error}
-          minWidth={560}
+          minWidth={760}
           empty={{ title: 'No deliveries yet' }}
           exportName={`deliveries-${farmer.farmer_code}`}
           columns={[
@@ -106,12 +108,21 @@ function FarmerDrawer({ farmer, editable, onClose, onSaved }: { farmer: Farmer; 
             { key: 'date', header: 'Date', nowrap: true, render: (d) => dateLabel(d.received_on), exportValue: (d) => d.received_on },
             { key: 'good', header: 'Good kg', align: 'right', render: (d) => kg(d.good_kg), exportValue: (d) => num(d.good_kg) },
             { key: 'float', header: 'Float kg', align: 'right', render: (d) => kg(d.float_kg), exportValue: (d) => num(d.float_kg) },
+            { key: 'amount', header: 'Amount', align: 'right', render: (d) => rwf(d.total_amount), exportValue: (d) => num(d.total_amount) },
+            { key: 'paid', header: 'Paid', align: 'right', render: (d) => rwf(d.amount_paid), exportValue: (d) => num(d.amount_paid) },
+            {
+              key: 'owed',
+              header: 'Still owed',
+              align: 'right',
+              render: (d) => <Text span size="sm" c={num(d.balance) > 0 && !d.is_voided ? 'red.7' : undefined}>{rwf(d.balance)}</Text>,
+              exportValue: (d) => num(d.balance),
+            },
             {
               key: 'status',
               header: 'Status',
-              exportValue: (d) => (d.is_voided ? 'Deleted' : d.payment_status),
-              render: (d) =>
-                d.is_voided ? <Badge color="gray" variant="light">Deleted</Badge> : <Badge color={d.payment_status === 'PAID' ? 'teal' : 'yellow'} variant="light">{d.payment_status.toLowerCase()}</Badge>,
+              nowrap: true,
+              exportValue: (d) => (d.is_voided ? 'Deleted' : PAYMENT_LABEL[d.payment_status]),
+              render: (d) => (d.is_voided ? <Badge color="gray" variant="light">Deleted</Badge> : <PaymentBadge status={d.payment_status} />),
             },
           ]}
         />

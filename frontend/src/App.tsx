@@ -12,6 +12,9 @@ import {
   IconDroplet,
   IconFileImport,
   IconFileSpreadsheet,
+  IconCash,
+  IconChartPie,
+  IconReceipt2,
   IconKey,
   IconTrash,
   IconLayoutGrid,
@@ -51,6 +54,10 @@ import { FarmersPage } from './features/reception/FarmersPage';
 import { SyncPage } from './features/sync/SyncPage';
 import { TrashPage } from './features/trash/TrashPage';
 import { DetailedReportsPage } from './features/reports/DetailedReportsPage';
+import { FinanceDashboardPage } from './features/finance/FinanceDashboardPage';
+import { ExpensesPage } from './features/finance/ExpensesPage';
+import { FundsPage } from './features/finance/FundsPage';
+import { FinanceReportsPage } from './features/finance/FinanceReportsPage';
 import { SyncIndicator } from './components/SyncIndicator';
 import { InstallAppCard } from './components/InstallAppCard';
 import { MobileAppBar, MobileMoreSheet, MobileTabBar, useIsMobile, type MobileTab } from './components/mobile';
@@ -94,6 +101,15 @@ const navSections: Array<{ label: string; items: NavItem[] }> = [
     ],
   },
   {
+    label: 'Finance',
+    items: [
+      { to: '/finance/dashboard', label: 'Finance Dashboard', icon: IconChartPie },
+      { to: '/finance/expenses', label: 'Expenses', icon: IconReceipt2 },
+      { to: '/finance/funds', label: 'Funds to Stations', icon: IconCash },
+      { to: '/finance/reports', label: 'Finance Reports', icon: IconFileSpreadsheet },
+    ],
+  },
+  {
     label: 'Administration',
     items: [
       { to: '/admin/users', label: 'Users', icon: IconUserCog },
@@ -113,12 +129,13 @@ const accountSection: { label: string; items: NavItem[] } = {
   ],
 };
 
-const SECTION_NAV: Record<Section, number> = { drymill: 0, cws: 1, admin: 2 };
+const SECTION_NAV: Record<Section, number> = { drymill: 0, cws: 1, finance: 2, admin: 3 };
 
 // Phone bottom bar: the screens used most in each section (the rest is under "More").
 const MOBILE_TABS: Record<Section, string[]> = {
   cws: ['/cws/dashboard', '/reception', '/cws/farmers', '/cws/labor'],
   drymill: ['/drymill/stock', '/drymill/ledger', '/drymill/processing', '/drymill/export'],
+  finance: ['/finance/dashboard', '/finance/expenses', '/finance/funds', '/finance/reports'],
   admin: ['/admin/users', '/admin/sms', '/admin/imports'],
 };
 
@@ -131,6 +148,9 @@ const SHORT_LABELS: Record<string, string> = {
   '/admin/imports': 'Import',
   '/admin/sms': 'SMS',
   '/cws/labor': 'Labor',
+  '/finance/dashboard': 'Finance',
+  '/finance/funds': 'Funds',
+  '/finance/reports': 'Reports',
 };
 
 const ALL_ITEMS: NavItem[] = [...navSections.flatMap((s) => s.items), ...accountSection.items];
@@ -151,6 +171,7 @@ function mobileTabs(section: Section | null): MobileTab[] {
 const SECTION_CARDS: Array<{ section: Section; title: string; text: string; to: string; icon: ComponentType<{ size?: number }>; color: string }> = [
   { section: 'cws', title: 'CWS', text: 'Cherry reception, farmers, processing lots, labor and transfers.', to: '/cws/dashboard', icon: IconCoffee, color: 'baho' },
   { section: 'drymill', title: 'Dry Mill', text: 'HQ stock, parchment milling, stock ledger and export.', to: '/drymill/stock', icon: IconBuildingWarehouse, color: 'coffee' },
+  { section: 'finance', title: 'Finance', text: 'Funds given to each CWS, expenses, cherry and labor payments, balance and reports.', to: '/finance/dashboard', icon: IconCash, color: 'teal' },
   { section: 'admin', title: 'Administration', text: 'Users and roles, SMS outbox, importing old sheets.', to: '/admin/users', icon: IconUserCog, color: 'gray' },
 ];
 
@@ -444,6 +465,10 @@ function App() {
           <Route path="/cws/stations" element={<CwsStationsPage />} />
           <Route path="/cws/reports" element={<DetailedReportsPage section="cws" />} />
           <Route path="/drymill/reports" element={<DetailedReportsPage section="drymill" />} />
+          <Route path="/finance/dashboard" element={<FinanceDashboardPage />} />
+          <Route path="/finance/expenses" element={<ExpensesPage />} />
+          <Route path="/finance/funds" element={<FundsPage />} />
+          <Route path="/finance/reports" element={<FinanceReportsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell.Main>

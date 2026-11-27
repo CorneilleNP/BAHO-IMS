@@ -46,14 +46,19 @@ export interface FarmerDelivery {
   grn_number: string;
   received_on: string;
   facility_name: string;
-  payment_status: 'PAID' | 'UNPAID';
+  payment_status: PaymentStatus;
   is_voided: boolean;
   good_kg: Decimal;
   float_kg: Decimal;
+  total_amount: Decimal;
+  amount_paid: Decimal;
+  balance: Decimal;
 }
 
 export type CherryGrade = 'GOOD' | 'FLOAT';
 export type PaymentMethod = '' | 'CASH' | 'BANK' | 'MOBILE_MONEY';
+/** Derived by the server from the GRN total and its payments. */
+export type PaymentStatus = 'UNPAID' | 'PARTIAL' | 'PAID';
 
 export interface CherryReceipt {
   id: string;
@@ -69,7 +74,7 @@ export interface CherryReceipt {
   created_by_name: string;
   received_on: string;
   payment_method: PaymentMethod;
-  payment_status: 'PAID' | 'UNPAID';
+  payment_status: PaymentStatus;
   notes: string;
   lines: Array<{
     cherry_grade: CherryGrade;
@@ -81,6 +86,26 @@ export interface CherryReceipt {
   }>;
   total_kg: Decimal;
   total_amount: Decimal;
+  /** Paid so far (sum of the GRN's payments) and what is still owed. */
+  amount_paid: Decimal;
+  balance: Decimal;
+}
+
+/** One payment to a farmer for a GRN (a GRN can be paid in parts). */
+export interface CherryPayment {
+  id: string;
+  receipt: string;
+  grn_number: string;
+  farmer_name: string;
+  facility: string;
+  facility_name: string;
+  paid_on: string;
+  amount: Decimal;
+  method: Exclude<PaymentMethod, ''>;
+  reference: string;
+  notes: string;
+  created_by_name: string;
+  created_at: string;
 }
 
 export interface ProcessGradeConfig {
@@ -449,16 +474,24 @@ export interface CwsSummary {
   good: CherryGradeFigures;
   float: CherryGradeFigures;
   by_station: RankedKg[];
-  recent_farmers: Array<{
+  /** Paid so far to farmers for these GRNs, and what is still owed. */
+  amount_paid: Decimal;
+  amount_owed: Decimal;
+  payment_status_counts: Record<PaymentStatus, number>;
+  recent_receipts: Array<{
     id: string;
+    grn_number: string;
+    received_on: string;
+    facility_name: string;
+    farmer_name: string;
     farmer_code: string;
-    full_name: string;
-    phone: string;
-    home_facility_name: string;
-    location_label: string;
-    household_size: number | null;
-    land_area_ha: Decimal | null;
-    created_at: string;
+    good_kg: Decimal;
+    float_kg: Decimal;
+    total_kg: Decimal;
+    total_amount: Decimal;
+    amount_paid: Decimal;
+    balance: Decimal;
+    payment_status: PaymentStatus;
   }>;
 }
 
